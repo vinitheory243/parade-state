@@ -796,8 +796,11 @@ function PDFPreviewModal({date,personnel,allTodRecs,total,allTodMarkedBy,onClose
 
 // ─── HISTORY SCREEN ─────────────────────────────────────────────
 function HistoryScreen({history,personnel,onPreview,onDelete,overrideUnlocked,setOverrideUnlocked,toast_,onEdit,isAdmin}){
-  const[openY,setOpenY]=useState(new Set());
-  const[openM,setOpenM]=useState(new Set());
+  // Auto-expand current year and month so recent records are visible immediately
+  const nowY=String(new Date().getFullYear());
+  const nowM=`${nowY}-${String(new Date().getMonth()+1).padStart(2,'0')}`;
+  const[openY,setOpenY]=useState(()=>new Set([nowY]));
+  const[openM,setOpenM]=useState(()=>new Set([nowM]));
   const[loading,setLoading]=useState(null);
   const[editingId,setEditingId]=useState(null);  // date string of card showing password prompt
   const[passInput,setPassInput]=useState('');
