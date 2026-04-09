@@ -978,7 +978,8 @@ function App({onLogout,onHome,initDate,initTod}){
   // Scroll to top whenever tab or date changes
   useEffect(()=>{window.scrollTo({top:0,left:0,behavior:'instant'});},[screen,date]);
   const[tod,setTod]=useState(()=>initTod||currentTod());
-  const[total,setTotal]=useState(127);
+  const[totalOverride,setTotalOverride]=useState(null); // null = auto from personnel
+  const total=totalOverride!==null?totalOverride:personnel.filter(p=>p.active).length;
   const[duty,setDuty]=useState(0);
   const[extra,setExtra]=useState('');
   const[submitted,setSubmitted]=useState({P1:false,P2:false,HQ:false});
@@ -1024,7 +1025,7 @@ function App({onLogout,onHome,initDate,initTod}){
       const d=snap.val();
       skipRef.current=true;
       if(d){
-        setRecords(d.records||{});setTotal(d.total??127);setDuty(d.duty??0);
+        setRecords(d.records||{});setTotalOverride(d.totalOverride??null);setDuty(d.duty??0);
         setExtra(d.extra||'');setSubmitted(d.submitted||{P1:false,P2:false,HQ:false});
         setMarkedBy(d.markedBy||{P1:'',P2:'',HQ:''});
       } else {
@@ -1061,8 +1062,8 @@ function App({onLogout,onHome,initDate,initTod}){
   // Write attendance to Firebase
   useEffect(()=>{
     if(skipRef.current)return;
-    DB.ref(fbAttPath(date,tod)).set({records,total,duty,extra,submitted,markedBy});
-  },[records,total,duty,extra,date,tod,submitted,markedBy]);
+    DB.ref(fbAttPath(date,tod)).set({records,total,totalOverride,duty,extra,submitted,markedBy});
+  },[records,total,totalOverride,duty,extra,date,tod,submitted,markedBy]);
   // History listener
   useEffect(()=>{
     const ref=DB.ref('jrn/history');
@@ -1181,7 +1182,7 @@ function App({onLogout,onHome,initDate,initTod}){
       </div>
       <div className="main">
         {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setAllPresent={setAllPresent} clearAll={clearAll} submitted={submitted} setSubmitted={setSubmitted} markedBy={markedBy} setMarkedBy={setMarkedBy} toast_={toast_} overrideUnlocked={overrideUnlocked} onPlatoonSubmit={saveToHistory}/>}
-        {screen==='telegram'&&<GenerateScreen msg={msg} total={total} setTotal={setTotal} extra={extra} setExtra={setExtra} toast_={toast_} date={date}/>}
+        {screen==='telegram'&&<GenerateScreen msg={msg} total={total} totalOverride={totalOverride} setTotalOverride={setTotalOverride} autoTotal={personnel.filter(p=>p.active).length} extra={extra} setExtra={setExtra} toast_={toast_} date={date}/>}
         {screen==='manage'&&<ManageScreen personnel={personnel} setPersonnel={setPersonnelAndSync} toast_={toast_} customSections={customSections} addCustomSection={addCustomSection}/>}
         {screen==='history'&&<HistoryScreen history={history} personnel={personnel} onPreview={(e,setL)=>loadDayAndPreview(e.date,setL)} onDelete={deleteHistory} overrideUnlocked={overrideUnlocked} setOverrideUnlocked={setOverrideUnlocked} toast_={toast_} onEdit={dateStr=>{setDate(dateStr);setScreen('attendance');}}/>}
       </div>
@@ -1485,7 +1486,7 @@ function PersonRow({person,record,setRec,setPersonLeave,tod,locked,currentDate})
 }
 
 // ─── GENERATE SCREEN ────────────────────────────────────────────
-function GenerateScreen({msg,total,setTotal,extra,setExtra,toast_,date}){
+function GenerateScreen({msg,total,totalOverride,setTotalOverride,autoTotal,extra,setExtra,toast_,date}){
   const[copied,setCopied]=useState(false);
   function copy(){
     const go=text=>{
@@ -1503,8 +1504,22 @@ function GenerateScreen({msg,total,setTotal,extra,setExtra,toast_,date}){
     <div>
       <div className="card" style={{padding:'14px'}}>
         <div style={{marginBottom:'10px'}}>
-          <div className="label">Total Node Strength</div>
-          <input type="number" value={total} min={0} onChange={e=>setTotal(Number(e.target.value))}/>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'4px'}}>
+            <div className="label" style={{marginBottom:0}}>Total Node Strength</div>
+            <span style={{fontSize:'11px',color:'#94a3b8'}}>Auto: {autoTotal} pax</span>
+          </div>
+          <div style={{display:'flex',gap:'8px',alignItems:'center'}}>
+            <input type="number" value={totalOverride!==null?totalOverride:autoTotal} min={0}
+              onChange={e=>setTotalOverride(Number(e.target.value))}
+              style={{flex:1}}/>
+            {totalOverride!==null&&(
+              <button onClick={()=>setTotalOverride(null)}
+                style={{padding:'8px 12px',background:'#f1f5f9',border:'1.5px solid #e2e8f0',borderRadius:'8px',fontSize:'12px',fontWeight:700,color:'#64748b',cursor:'pointer',flexShrink:0,whiteSpace:'nowrap'}}>
+                Reset to auto
+              </button>
+            )}
+          </div>
+          {totalOverride!==null&&<div style={{fontSize:'11px',color:'#f59e0b',fontWeight:600,marginTop:'4px'}}>⚠ Manual override active</div>}
         </div>
         <div className="label">Additional notes (appended at end)</div>
         <textarea value={extra} onChange={e=>setExtra(e.target.value)} rows={3} placeholder="e.g. extra remarks..." style={{resize:'vertical'}}/>
