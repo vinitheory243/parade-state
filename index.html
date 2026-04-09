@@ -978,7 +978,7 @@ function App({onLogout,onHome,initDate,initTod}){
   // Scroll to top whenever tab or date changes
   useEffect(()=>{window.scrollTo({top:0,left:0,behavior:'instant'});},[screen,date]);
   const[tod,setTod]=useState(()=>initTod||currentTod());
-  const[total,setTotal]=useState(()=>personnel.filter(p=>p.active).length||127);
+  const[total,setTotal]=useState(()=>IP.filter(p=>p.active).length||127);
   const[totalManual,setTotalManual]=useState(false); // true = user overrode it
   const[duty,setDuty]=useState(0);
   const[extra,setExtra]=useState('');
@@ -996,7 +996,9 @@ function App({onLogout,onHome,initDate,initTod}){
   const[customSections,setCustomSections]=useState({P1:[],P2:[],HQ:[]});
   const skipRef=useRef(false);
   const personnelRef=useRef(IP);
+  const totalManualRef=useRef(false);
   useEffect(()=>{personnelRef.current=personnel;},[personnel]);
+  useEffect(()=>{totalManualRef.current=totalManual;},[totalManual]);
   // Online indicator
   useEffect(()=>{
     const ref=DB.ref('.info/connected');
@@ -1012,7 +1014,7 @@ function App({onLogout,onHome,initDate,initTod}){
         skipRef.current=true;
         const ppl=Object.values(d).sort((a,b)=>a.id>b.id?1:-1);
         setPersonnel(ppl);
-        setTotalManual(prev=>{if(!prev)setTotal(ppl.filter(p=>p.active).length);return prev;});
+        if(!totalManualRef.current)setTotal(ppl.filter(p=>p.active).length);
         setTimeout(()=>{skipRef.current=false;},400);
       } else {
         const obj={};IP.forEach(p=>{obj[p.id]=p;});ref.set(obj);
