@@ -177,8 +177,9 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 /* ── PDF Modal ── */
 .pdf-overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:300;display:flex;flex-direction:column;overflow:hidden}
 .pdf-modal-bar{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#0f172a;color:#fff;flex-shrink:0;flex-wrap:wrap}
-.pdf-modal-title{font-size:14px;font-weight:800;flex:1}
-.pdf-modal-body{flex:1;overflow:auto;padding:12px 8px;display:flex;flex-direction:column;align-items:flex-start;gap:14px;-webkit-overflow-scrolling:touch}
+.pdf-modal-title{font-size:14px;font-weight:800;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pdf-modal-body{flex:1;overflow-y:auto;overflow-x:hidden;padding:12px 0;display:flex;flex-direction:column;align-items:center;gap:16px;-webkit-overflow-scrolling:touch}
+.pdf-page-wrap{width:100%;overflow-x:auto;display:flex;justify-content:center;padding:0 8px;box-sizing:border-box}
 .pdf-dl-btn{padding:9px 16px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
 .pdf-dl-btn:disabled{opacity:.6;cursor:not-allowed}
 .pdf-close-btn{padding:9px 14px;background:#475569;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer}
@@ -724,6 +725,21 @@ function PDFPreviewModal({date,personnel,allTodRecs,total,allTodMarkedBy,onClose
   const[downloading,setDownloading]=useState(false);
   const pageRefs=useRef([null,null,null]);
   const PAGES=['HQ','P1','P2'];
+  // Scale pages to fit viewport width on mobile
+  useEffect(()=>{
+    function scalePages(){
+      const vw=window.innerWidth-16;
+      pageRefs.current.forEach(el=>{
+        if(!el)return;
+        const scale=Math.min(1,vw/800);
+        el.style.transform=`scale(${scale})`;
+        el.style.marginBottom=`${(scale-1)*el.offsetHeight}px`;
+      });
+    }
+    scalePages();
+    window.addEventListener('resize',scalePages);
+    return()=>window.removeEventListener('resize',scalePages);
+  },[]);
   async function handleDownload(){
     setDownloading(true);
     try{
@@ -767,8 +783,10 @@ function PDFPreviewModal({date,personnel,allTodRecs,total,allTodMarkedBy,onClose
       </div>
       <div className="pdf-modal-body">
         {PAGES.map((plt,i)=>(
-          <div key={plt} ref={el=>pageRefs.current[i]=el} style={{boxShadow:'0 2px 16px rgba(0,0,0,.4)'}}>
-            <ParadeStatePDFPage plt={plt} personnel={personnel} allTodRecs={allTodRecs} date={date} total={total} allTodMarkedBy={allTodMarkedBy}/>
+          <div key={plt} className="pdf-page-wrap">
+            <div ref={el=>pageRefs.current[i]=el} style={{boxShadow:'0 2px 16px rgba(0,0,0,.4)',transformOrigin:'top center',flexShrink:0}}>
+              <ParadeStatePDFPage plt={plt} personnel={personnel} allTodRecs={allTodRecs} date={date} total={total} allTodMarkedBy={allTodMarkedBy}/>
+            </div>
           </div>
         ))}
       </div>
