@@ -1298,7 +1298,7 @@ function PlatoonFooter({plt,allPersonnel,records,pltColors,submitted,setSubmitte
           <select value={marker} onChange={e=>setMarkedBy(m=>({...m,[plt]:e.target.value}))} disabled={isSubmitted}
             style={{borderColor:!marker&&!isSubmitted?'#fcd34d':'',background:!marker&&!isSubmitted?'#fffbeb':''}}>
             <option value="">— Select your name —</option>
-            {commanders.map(c=><option key={c.id} value={c.id}>{c.rank} {c.name.split(' ').slice(0,2).join(' ')}</option>)}
+            {commanders.map(c=><option key={c.id} value={c.id}>{c.rank} {c.dn||c.name.split(' ')[0]}</option>)}
           </select>
         </div>
         {isSubmitted?(
