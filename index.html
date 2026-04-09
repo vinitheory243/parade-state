@@ -1113,13 +1113,14 @@ function App({onLogout,onHome,initDate,initTod}){
     try{
       const allTodRecs={};
       const allTodMarkedBy={};  // {tod: {P1, P2, HQ}}
-      let pTotal=total;
+      let pTotalManual=false;
+      let pTotal=personnel.filter(p=>p.active).length;
       await Promise.all(TODS.map(async tod=>{
         const snap=await DB.ref(fbAttPath(dateStr,tod)).once('value');
         const d=snap.val();
         allTodRecs[tod]=d?(d.records||{}):{};
         if(d){
-          if(d.total)pTotal=d.total;
+          if(d.totalManual&&d.total){pTotal=d.total;pTotalManual=true;}
           if(d.markedBy)allTodMarkedBy[tod]=d.markedBy;
         }
       }));
