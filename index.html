@@ -646,9 +646,8 @@ function ParadeStatePDFPage({plt,personnel,allTodRecs,date,total,allTodMarkedBy}
                 <tr className="pdf-sec-hdr"><td colSpan={10}>{lbl}</td></tr>
                 {ppl.map(p=>{
                   sn++;
-                  const isSO=getSiso(p).type!=='si';
                   return(
-                    <tr key={p.id} style={isSO?{background:'#fef9c3'}:{}}>
+                    <tr key={p.id}>
                       <td className="pdf-c-ctr">{sn}</td>
                       <td className="pdf-c-ctr">{p.rank}</td>
                       <td className="pdf-c-lft">{p.name}</td>
@@ -1114,7 +1113,7 @@ function App({onLogout,onHome,initDate,initTod}){
       const allTodRecs={};
       const allTodMarkedBy={};  // {tod: {P1, P2, HQ}}
       let pTotalManual=false;
-      let pTotal=personnel.filter(p=>p.active).length;
+      let pTotal=personnelRef.current.filter(p=>p.active).length;
       await Promise.all(TODS.map(async tod=>{
         const snap=await DB.ref(fbAttPath(dateStr,tod)).once('value');
         const d=snap.val();
