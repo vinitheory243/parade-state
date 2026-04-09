@@ -491,69 +491,108 @@ function genMsg(date,tod,total,records,personnel,extra){
     if(r&&r.s){grp[r.s]=grp[r.s]||[];grp[r.s].push({p,det:r.det||'',from:r.from||''});}
   });
   const cnt=k=>(grp[k]||[]).length;
+  // All non-duty statuses show rank + name (and date if applicable)
   const lst=(k,pre)=>{
     const items=grp[k]||[];
     if(!items.length)return'';
     return'\n'+items.map((x,i)=>{
-      let line=`${i+1}. ${dispName(x.p)}`;
+      let line=`${i+1}. ${x.p.rank} ${x.p.dn||x.p.name.split(' ')[0]}`;
       if(x.det){const d=fmtDetDate(x.det)||x.det;line+=pre?` ${pre}${d}`:` (${d})`;}
-      if(x.from&&x.from!==x.det){line+=` (From ${fmtDetDate(x.from)||x.from})`;}
+      if(x.from&&x.from!==x.det){line+=` - ${fmtDetDate(x.from)||x.from}`;}
       return line;
     }).join('\n');
   };
-  // Auto-count all duty-type statuses (no names shown)
+  const line=(label,k,pre)=>`${label}: ${cnt(k)}${lst(k,pre)}`;
+  // Auto-count all duty-type statuses (no names)
   const dutyCount=[...DUTY_STATUSES].reduce((s,k)=>s+cnt(k),0);
   const L=[];
   L.push(`JRN PARADE STATE  ${fmtDate(date)} ${TOD_LABEL[tod]||tod} (${tod})`);
-  L.push(`Total strength: ${total}`);L.push('');
-  L.push(`Duty Personnel: ${dutyCount}`);L.push('');
-  L.push(`Present: ${cnt('present')}`);L.push('');
-  if(cnt('so')||cnt('so_till')){
-    L.push(`Stay Out: ${cnt('so')}`);
-    L.push(`Stay Out Till: ${cnt('so_till')}${lst('so_till','TILL ')}`);L.push('');
-  }
-  L.push(`Late: ${cnt('late')}${lst('late')}`);L.push('');
-  L.push(`Detail: ${cnt('detail')}${lst('detail')}`);L.push('');
-  L.push(`ARF: ${cnt('arf')}${lst('arf')}`);L.push('');
-  L.push(`Duty/Detail Rest: ${cnt('ddr')}${lst('ddr')}`);L.push('');
-  L.push(`MA: ${cnt('ma')}${lst('ma')}`);L.push('');
-  L.push(`Medical Certificate: ${cnt('mc')}${lst('mc','TILL ')}`);L.push('');
-  L.push(`Hospitalisation Leave: ${cnt('hl')}${lst('hl','TILL ')}`);L.push('');
-  L.push(`Hospitalised: ${cnt('hospitalised')}`);L.push('');
-  L.push(`RSO: ${cnt('rso')}`);L.push('');
-  L.push(`RSI: ${cnt('rsi')}${lst('rsi')}`);L.push('');
-  L.push(`OFF: ${cnt('off')}${lst('off')}`);L.push('');
-  L.push(`OVERSEAS LEAVE: ${cnt('ol')}${lst('ol','TILL ')}`);L.push('');
-  L.push(`LOCAL LEAVE: ${cnt('ll')}${lst('ll','TILL ')}`);L.push('');
-  L.push(`ATTACHED OUT LOCAL: ${cnt('ao_local')}${lst('ao_local')}`);L.push('');
-  L.push(`ATTACHED OUT OVERSEAS: ${cnt('ao_overseas')}${lst('ao_overseas')}`);L.push('');
-  L.push(`SAFER/UPCAT: ${cnt('safer_upcat')}${lst('safer_upcat')}`);L.push('');
-  L.push(`URGENT LEAVE: ${cnt('ul')}`);
-  L.push(`FAMILY CARE LEAVE: ${cnt('fcl')}`);
-  L.push(`CL: ${cnt('cl')}`);
-  L.push(`CCL: ${cnt('ccl')}`);
-  L.push(`Court: ${cnt('court')}`);
-  L.push(`CA: ${cnt('ca')}`);
-  L.push(`Civil: ${cnt('civil')}`);
-  L.push(`DB / Prison: ${cnt('db_prison')}`);
-  L.push(`DO(GCM): ${cnt('do_gcm')}`);
-  L.push(`AWOL: ${cnt('awol')}`);
-  L.push(`SOL: ${cnt('sol')}`);
-  L.push(`Suspended: ${cnt('suspended')}`);
-  L.push('');L.push('- OTHERS -');L.push('');
-  L.push(`CSE: ${cnt('cse')}${lst('cse')}`);L.push('');
-  L.push(`LASHING: ${cnt('lashing')}`);
-  L.push(`DCP: ${cnt('dcp')}`);
-  L.push(`JC1: ${cnt('jc1')}`);
-  L.push(`HQ: ${cnt('hq')}`);
-  L.push(`DB visits: ${cnt('db_visits')}`);
-  L.push(`Meeting: ${cnt('meeting')}`);
-  L.push(`Rest In Bunk: ${cnt('rib')}`);
+  L.push(`Total strength: ${total}`);
   L.push('');
-  L.push(`6TON FAM (COE): ${cnt('6ton_fam')}${lst('6ton_fam')}`);L.push('');
-  L.push(`GP FAM: ${cnt('gp_fam')}`);
-  L.push(`Driving Course: ${cnt('driving')}`);
-  if(cnt('others')){L.push('');L.push(`Others: ${cnt('others')}${lst('others')}`);L.push('');}
+  L.push(`Duty Personnel: ${dutyCount}`);
+  L.push('');
+  L.push(`Present: ${cnt('present')}`);
+  L.push('');
+  L.push(line('Late','late'));
+  L.push('');
+  L.push(line('Detail','detail'));
+  L.push('');
+  L.push(line('ARF','arf'));
+  L.push('');
+  L.push(line('Duty/Detail Rest','ddr'));
+  L.push('');
+  L.push(line('MA','ma'));
+  L.push('');
+  L.push(line('Medical Certificate','mc','TILL '));
+  L.push('');
+  L.push(line('Hospitalisation Leave','hl','TILL '));
+  L.push('');
+  L.push(line('Hospitalised','hospitalised'));
+  L.push('');
+  L.push(line('RSO','rso'));
+  L.push('');
+  L.push(line('RSI','rsi'));
+  L.push('');
+  L.push(line('OFF','off'));
+  L.push('');
+  L.push(line('OVERSEAS LEAVE','ol','TILL '));
+  L.push('');
+  L.push(line('LOCAL LEAVE','ll','TILL '));
+  L.push('');
+  L.push(line('ATTACHED OUT LOCAL','ao_local'));
+  L.push('');
+  L.push(line('ATTACHED OUT OVERSEAS','ao_overseas'));
+  L.push('');
+  L.push(line('SAFER/UPCAT','safer_upcat'));
+  L.push('');
+  L.push(line('URGENT LEAVE','ul'));
+  L.push('');
+  L.push(line('FAMILY CARE LEAVE','fcl'));
+  L.push('');
+  L.push(line('CL','cl'));
+  L.push('');
+  L.push(line('CCL','ccl'));
+  L.push('');
+  L.push(line('Court','court'));
+  L.push('');
+  L.push(line('CA','ca'));
+  L.push('');
+  L.push(line('Civil','civil'));
+  L.push('');
+  L.push(line('DB / Prison','db_prison'));
+  L.push('');
+  L.push(line('DO(GCM)','do_gcm'));
+  L.push('');
+  L.push(line('AWOL','awol'));
+  L.push('');
+  L.push(line('SOL','sol'));
+  L.push('');
+  L.push(line('Suspended','suspended'));
+  L.push('');
+  L.push('- OTHERS -');
+  L.push('');
+  L.push(line('CSE','cse'));
+  L.push('');
+  L.push(line('LASHING','lashing'));
+  L.push('');
+  L.push(line('DCP','dcp'));
+  L.push('');
+  L.push(line('JC1','jc1'));
+  L.push('');
+  L.push(line('HQ','hq'));
+  L.push('');
+  L.push(line('DB visits','db_visits'));
+  L.push('');
+  L.push(line('Meeting','meeting'));
+  L.push('');
+  L.push(line('Rest In Bunk','rib'));
+  L.push('');
+  L.push(line('6TON FAM (COE)','6ton_fam'));
+  L.push('');
+  L.push(line('GP FAM','gp_fam'));
+  L.push('');
+  L.push(line('Driving Course','driving'));
+  if(cnt('others')){L.push('');L.push(line('Others','others'));}
   if(extra&&extra.trim()){L.push('');L.push(extra.trim());}
   return L.join('\n');
 }
