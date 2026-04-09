@@ -9,8 +9,9 @@
 <title>JRN Parade State</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#e8f0f5;color:#1e293b;min-height:100vh}
-.app{max-width:600px;margin:0 auto;min-height:100vh;position:relative}
+html{scroll-behavior:auto}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#e8f0f5;color:#1e293b;min-height:100vh;min-height:100dvh;overscroll-behavior:none}
+.app{max-width:600px;margin:0 auto;min-height:100vh;min-height:100dvh;position:relative}
 .hdr{background:linear-gradient(135deg,#0f2235 0%,#1a3a4a 100%);color:#fff;padding:14px 16px;position:sticky;top:0;z-index:50;box-shadow:0 3px 12px rgba(0,0,0,.35)}
 .hdr-title{font-size:19px;font-weight:800;letter-spacing:.5px;text-shadow:0 1px 3px rgba(0,0,0,.3)}
 .hdr-sub{font-size:11px;opacity:.8;margin-top:2px;letter-spacing:.2px}
@@ -86,7 +87,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .submit-btn-disabled{background:#e2e8f0;color:#94a3b8;cursor:not-allowed}
 .autosave-dot{display:inline-block;width:6px;height:6px;background:#4ade80;border-radius:50%;margin-right:4px;vertical-align:middle}
 /* ── Login Screen ── */
-.login-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(160deg,#0f2235 0%,#0d4a45 60%,#064e3b 100%);padding:24px}
+.login-wrap{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(160deg,#0f2235 0%,#0d4a45 60%,#064e3b 100%);padding:24px}
 .login-logo{width:72px;height:72px;background:rgba(255,255,255,.12);border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:36px;margin-bottom:20px;box-shadow:0 4px 20px rgba(0,0,0,.3)}
 .login-title{color:#fff;font-size:26px;font-weight:800;letter-spacing:.5px;margin-bottom:4px;text-shadow:0 2px 8px rgba(0,0,0,.3)}
 .login-sub{color:rgba(255,255,255,.6);font-size:13px;margin-bottom:36px;letter-spacing:.2px}
@@ -100,7 +101,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .login-err{background:#fff1f2;border:1.5px solid #fca5a5;border-radius:10px;padding:10px 14px;color:#dc2626;font-size:13px;font-weight:600;margin-bottom:14px;text-align:center}
 .login-footer{color:rgba(255,255,255,.35);font-size:11px;margin-top:28px;text-align:center}
 /* ── Landing / TOD Picker ── */
-.land-wrap{min-height:100vh;display:flex;flex-direction:column;background:linear-gradient(160deg,#0f2235 0%,#0d4a45 60%,#064e3b 100%);padding:0 0 env(safe-area-inset-bottom,0px)}
+.land-wrap{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;background:linear-gradient(160deg,#0f2235 0%,#0d4a45 60%,#064e3b 100%);padding:0 0 env(safe-area-inset-bottom,0px)}
 .land-hdr{padding:20px 20px 0;display:flex;align-items:center;justify-content:space-between}
 .land-hdr-title{color:#fff;font-size:20px;font-weight:800;letter-spacing:.4px}
 .land-hdr-sub{color:rgba(255,255,255,.55);font-size:12px;margin-top:2px}
@@ -868,6 +869,7 @@ function HistoryScreen({history,personnel,onPreview,onDelete,overrideUnlocked,se
 // ─── LOGIN ──────────────────────────────────────────────────────
 const USERS=[{user:'comd',pass:'comd123',label:'Commander'}];
 function LoginScreen({onLogin}){
+  useEffect(()=>{window.scrollTo({top:0,left:0,behavior:'instant'});},[]);
   const[user,setUser]=useState(()=>{try{return localStorage.getItem('jrn_saved_user')||''}catch{return ''}});
   const[pass,setPass]=useState(()=>{try{return localStorage.getItem('jrn_saved_pass')||''}catch{return ''}});
   const[err,setErr]=useState('');
@@ -921,6 +923,7 @@ function LoginScreen({onLogin}){
 // ─── LANDING SCREEN ─────────────────────────────────────────────
 const TOD_TIME = {'HLS':'Before 0745','0745':'0745 hrs','1300':'1300 hrs','1730':'1730 hrs','2030/2230':'2030 / 2230 hrs'};
 function LandingScreen({onPick,onLogout}){
+  useEffect(()=>{window.scrollTo({top:0,left:0,behavior:'instant'});},[]);
   const today=todayStr();
   const d=new Date(today+'T00:00:00');
   const dayStr=d.toLocaleDateString('en-MY',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
@@ -972,6 +975,8 @@ function Root(){
 function App({onLogout,onHome,initDate,initTod}){
   const[screen,setScreen]=useState('attendance');
   const[date,setDate]=useState(()=>initDate||todayStr());
+  // Scroll to top whenever tab or date changes
+  useEffect(()=>{window.scrollTo({top:0,left:0,behavior:'instant'});},[screen,date]);
   const[tod,setTod]=useState(()=>initTod||currentTod());
   const[total,setTotal]=useState(127);
   const[duty,setDuty]=useState(0);
