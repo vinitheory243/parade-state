@@ -1030,10 +1030,15 @@ function App({onLogout,onHome,initDate,initTod}){
       } else {
         const nr={};
         personnelRef.current.filter(p=>p.active).forEach(p=>{
-          // Auto-carry active date-range leaves (OL, LL, MC, HL)
+          // Auto-carry active date-range leaves (OL, LL, MC, HL etc.)
           const al=p.activeLeave;
           if(al&&al.det&&al.from&&date>=al.from&&date<=al.det){
-            nr[p.id]={s:al.s,det:al.det,from:al.from};return;
+            // On the last day at 2030/2230 they return — leave blank and clear the activeLeave
+            if(date===al.det&&tod==='2030/2230'){
+              DB.ref(`jrn/personnel/${p.id}/activeLeave`).remove();
+            } else {
+              nr[p.id]={s:al.s,det:al.det,from:al.from};return;
+            }
           }
           // Auto-mark S/O for 2030/2230
           if(tod==='2030/2230'){
