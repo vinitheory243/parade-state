@@ -1047,6 +1047,11 @@ function App({onLogout,onHome,initDate,initTod}){
             else if(si.type==='so_till')nr[p.id]={s:'so_till',det:si.date||'',from:''};
           }
         });
+        // For HLS: skip auto-carry if fewer than 10 pax would be marked
+        // (guards against auto-filling HLS when the parade didn't happen that day)
+        if(tod==='HLS'&&Object.keys(nr).length<10){
+          Object.keys(nr).forEach(k=>delete nr[k]);
+        }
         setRecords(nr);setSubmitted({P1:false,P2:false,HQ:false});setMarkedBy({P1:'',P2:'',HQ:''});
       }
       setTimeout(()=>{skipRef.current=false;},400);
