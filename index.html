@@ -795,7 +795,7 @@ function PDFPreviewModal({date,personnel,allTodRecs,total,allTodMarkedBy,onClose
 }
 
 // ─── HISTORY SCREEN ─────────────────────────────────────────────
-function HistoryScreen({history,personnel,onPreview,onDelete,overrideUnlocked,setOverrideUnlocked,toast_,onEdit}){
+function HistoryScreen({history,personnel,onPreview,onDelete,overrideUnlocked,setOverrideUnlocked,toast_,onEdit,isAdmin}){
   const[openY,setOpenY]=useState(new Set());
   const[openM,setOpenM]=useState(new Set());
   const[loading,setLoading]=useState(null);
@@ -832,7 +832,7 @@ function HistoryScreen({history,personnel,onPreview,onDelete,overrideUnlocked,se
 
   function renderCard(e){
     const isPast=e.date<todayStr();
-    const needsAuth=isPast&&!overrideUnlocked;
+    const needsAuth=isPast&&!overrideUnlocked&&!isAdmin;
     const isEditing=editingId===e.date;
     return(
       <div key={e.date} className="hist-card" style={{flexDirection:'column',alignItems:'stretch',gap:'10px'}}>
@@ -853,6 +853,9 @@ function HistoryScreen({history,personnel,onPreview,onDelete,overrideUnlocked,se
               )
             ):(
               <button onClick={()=>onEdit(e.date)} style={{padding:'7px 14px',background:'#0d9488',color:'#fff',border:'none',borderRadius:'8px',fontSize:'13px',fontWeight:700,cursor:'pointer'}}>Edit</button>
+            )}
+            {isAdmin&&(
+              <button onClick={()=>{if(window.confirm(`Delete history for ${fmtDate(e.date)}?`))onDelete(e.date);}} style={{padding:'7px 14px',background:'#dc2626',color:'#fff',border:'none',borderRadius:'8px',fontSize:'13px',fontWeight:700,cursor:'pointer'}}>Delete</button>
             )}
           </div>
         </div>
@@ -924,7 +927,7 @@ function HistoryScreen({history,personnel,onPreview,onDelete,overrideUnlocked,se
 }
 
 // ─── LOGIN ──────────────────────────────────────────────────────
-const USERS=[{user:'comd',pass:'comd123',label:'Commander'}];
+const USERS=[{user:'comd',pass:'comd123',label:'Commander'},{user:'admin',pass:'Transport1409$',label:'Admin',isAdmin:true}];
 function LoginScreen({onLogin}){
   useEffect(()=>{window.scrollTo({top:0,left:0,behavior:'instant'});},[]);
   const[user,setUser]=useState(()=>{try{return localStorage.getItem('jrn_saved_user')||''}catch{return ''}});
@@ -1020,16 +1023,37 @@ function LandingScreen({onPick,onLogout}){
 // ─── ROOT (auth gate) ───────────────────────────────────────────
 function Root(){
   const[loggedIn,setLoggedIn]=useState(()=>{try{return sessionStorage.getItem('jrn_auth')==='1'||localStorage.getItem('jrn_remember')==='1'}catch{return false}});
+  const[isAdmin,setIsAdmin]=useState(()=>{
+    try{
+      if(sessionStorage.getItem('jrn_admin')==='1')return true;
+      // Restore admin flag on remember-me auto-login (check saved credentials)
+      if(localStorage.getItem('jrn_remember')==='1'){
+        const su=localStorage.getItem('jrn_saved_user');
+        const sp=localStorage.getItem('jrn_saved_pass');
+        const found=USERS.find(u=>u.user===su&&u.pass===sp);
+        return !!(found&&found.isAdmin);
+      }
+    }catch{}
+    return false;
+  });
   const[picked,setPicked]=useState(null); // {date, tod}
-  function handleLogin(u){setLoggedIn(true);try{sessionStorage.setItem('jrn_auth','1');}catch{}}
-  function handleLogout(){setLoggedIn(false);setPicked(null);try{sessionStorage.removeItem('jrn_auth');}catch{}}
+  function handleLogin(u){
+    setLoggedIn(true);
+    const admin=!!(u&&u.isAdmin);
+    setIsAdmin(admin);
+    try{sessionStorage.setItem('jrn_auth','1');sessionStorage.setItem('jrn_admin',admin?'1':'0');}catch{}
+  }
+  function handleLogout(){
+    setLoggedIn(false);setIsAdmin(false);setPicked(null);
+    try{sessionStorage.removeItem('jrn_auth');sessionStorage.removeItem('jrn_admin');}catch{}
+  }
   if(!loggedIn)return <LoginScreen onLogin={handleLogin}/>;
   if(!picked)return <LandingScreen onPick={(date,tod)=>setPicked({date,tod})} onLogout={handleLogout}/>;
-  return <App initDate={picked.date} initTod={picked.tod} onHome={()=>setPicked(null)} onLogout={handleLogout}/>;
+  return <App initDate={picked.date} initTod={picked.tod} isAdmin={isAdmin} onHome={()=>setPicked(null)} onLogout={handleLogout}/>;
 }
 
 // ─── APP ────────────────────────────────────────────────────────
-function App({onLogout,onHome,initDate,initTod}){
+function App({onLogout,onHome,initDate,initTod,isAdmin}){
   const[screen,setScreen]=useState('attendance');
   const[date,setDate]=useState(()=>initDate||todayStr());
   // Scroll to top whenever tab or date changes
@@ -1243,10 +1267,10 @@ function App({onLogout,onHome,initDate,initTod}){
         </div>
       </div>
       <div className="main">
-        {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setAllPresent={setAllPresent} clearAll={clearAll} submitted={submitted} setSubmitted={setSubmitted} markedBy={markedBy} setMarkedBy={setMarkedBy} toast_={toast_} overrideUnlocked={overrideUnlocked} onPlatoonSubmit={saveToHistory}/>}
+        {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setAllPresent={setAllPresent} clearAll={clearAll} submitted={submitted} setSubmitted={setSubmitted} markedBy={markedBy} setMarkedBy={setMarkedBy} toast_={toast_} overrideUnlocked={isAdmin||overrideUnlocked} onPlatoonSubmit={saveToHistory}/>}
         {screen==='telegram'&&<GenerateScreen msg={msg} total={total} setTotal={setTotal} totalManual={totalManual} setTotalManual={setTotalManual} autoTotal={personnel.filter(p=>p.active).length} extra={extra} setExtra={setExtra} toast_={toast_} date={date}/>}
         {screen==='manage'&&<ManageScreen personnel={personnel} setPersonnel={setPersonnelAndSync} toast_={toast_} customSections={customSections} addCustomSection={addCustomSection}/>}
-        {screen==='history'&&<HistoryScreen history={history} personnel={personnel} onPreview={(e,setL)=>loadDayAndPreview(e.date,setL)} onDelete={deleteHistory} overrideUnlocked={overrideUnlocked} setOverrideUnlocked={setOverrideUnlocked} toast_={toast_} onEdit={dateStr=>{setDate(dateStr);setScreen('attendance');}}/>}
+        {screen==='history'&&<HistoryScreen history={history} personnel={personnel} onPreview={(e,setL)=>loadDayAndPreview(e.date,setL)} onDelete={deleteHistory} overrideUnlocked={isAdmin||overrideUnlocked} setOverrideUnlocked={setOverrideUnlocked} toast_={toast_} onEdit={dateStr=>{setDate(dateStr);setScreen('attendance');}} isAdmin={isAdmin}/>}
       </div>
       <nav className="bnav">
         {[
