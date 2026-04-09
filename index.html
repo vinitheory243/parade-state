@@ -978,8 +978,8 @@ function App({onLogout,onHome,initDate,initTod}){
   // Scroll to top whenever tab or date changes
   useEffect(()=>{window.scrollTo({top:0,left:0,behavior:'instant'});},[screen,date]);
   const[tod,setTod]=useState(()=>initTod||currentTod());
-  const[totalOverride,setTotalOverride]=useState(null); // null = auto from personnel
-  const total=useMemo(()=>totalOverride!==null?totalOverride:personnel.filter(p=>p.active).length,[totalOverride,personnel]);
+  const[total,setTotal]=useState(()=>personnel.filter(p=>p.active).length||127);
+  const[totalManual,setTotalManual]=useState(false); // true = user overrode it
   const[duty,setDuty]=useState(0);
   const[extra,setExtra]=useState('');
   const[submitted,setSubmitted]=useState({P1:false,P2:false,HQ:false});
@@ -1010,7 +1010,9 @@ function App({onLogout,onHome,initDate,initTod}){
       const d=snap.val();
       if(d){
         skipRef.current=true;
-        setPersonnel(Object.values(d).sort((a,b)=>a.id>b.id?1:-1));
+        const ppl=Object.values(d).sort((a,b)=>a.id>b.id?1:-1);
+        setPersonnel(ppl);
+        setTotalManual(prev=>{if(!prev)setTotal(ppl.filter(p=>p.active).length);return prev;});
         setTimeout(()=>{skipRef.current=false;},400);
       } else {
         const obj={};IP.forEach(p=>{obj[p.id]=p;});ref.set(obj);
@@ -1025,7 +1027,7 @@ function App({onLogout,onHome,initDate,initTod}){
       const d=snap.val();
       skipRef.current=true;
       if(d){
-        setRecords(d.records||{});setTotalOverride(d.totalOverride??null);setDuty(d.duty??0);
+        setRecords(d.records||{});if(d.totalManual&&d.total){setTotal(d.total);setTotalManual(true);}setDuty(d.duty??0);
         setExtra(d.extra||'');setSubmitted(d.submitted||{P1:false,P2:false,HQ:false});
         setMarkedBy(d.markedBy||{P1:'',P2:'',HQ:''});
       } else {
@@ -1062,8 +1064,8 @@ function App({onLogout,onHome,initDate,initTod}){
   // Write attendance to Firebase
   useEffect(()=>{
     if(skipRef.current)return;
-    DB.ref(fbAttPath(date,tod)).set({records,total,totalOverride,duty,extra,submitted,markedBy});
-  },[records,totalOverride,duty,extra,date,tod,submitted,markedBy]);
+    DB.ref(fbAttPath(date,tod)).set({records,total,totalManual,duty,extra,submitted,markedBy});
+  },[records,total,totalManual,duty,extra,date,tod,submitted,markedBy]);
   // History listener
   useEffect(()=>{
     const ref=DB.ref('jrn/history');
@@ -1182,7 +1184,7 @@ function App({onLogout,onHome,initDate,initTod}){
       </div>
       <div className="main">
         {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setAllPresent={setAllPresent} clearAll={clearAll} submitted={submitted} setSubmitted={setSubmitted} markedBy={markedBy} setMarkedBy={setMarkedBy} toast_={toast_} overrideUnlocked={overrideUnlocked} onPlatoonSubmit={saveToHistory}/>}
-        {screen==='telegram'&&<GenerateScreen msg={msg} total={total} totalOverride={totalOverride} setTotalOverride={setTotalOverride} autoTotal={personnel.filter(p=>p.active).length} extra={extra} setExtra={setExtra} toast_={toast_} date={date}/>}
+        {screen==='telegram'&&<GenerateScreen msg={msg} total={total} setTotal={setTotal} totalManual={totalManual} setTotalManual={setTotalManual} autoTotal={personnel.filter(p=>p.active).length} extra={extra} setExtra={setExtra} toast_={toast_} date={date}/>}
         {screen==='manage'&&<ManageScreen personnel={personnel} setPersonnel={setPersonnelAndSync} toast_={toast_} customSections={customSections} addCustomSection={addCustomSection}/>}
         {screen==='history'&&<HistoryScreen history={history} personnel={personnel} onPreview={(e,setL)=>loadDayAndPreview(e.date,setL)} onDelete={deleteHistory} overrideUnlocked={overrideUnlocked} setOverrideUnlocked={setOverrideUnlocked} toast_={toast_} onEdit={dateStr=>{setDate(dateStr);setScreen('attendance');}}/>}
       </div>
@@ -1486,7 +1488,7 @@ function PersonRow({person,record,setRec,setPersonLeave,tod,locked,currentDate})
 }
 
 // ─── GENERATE SCREEN ────────────────────────────────────────────
-function GenerateScreen({msg,total,totalOverride,setTotalOverride,autoTotal,extra,setExtra,toast_,date}){
+function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal,extra,setExtra,toast_,date}){
   const[copied,setCopied]=useState(false);
   function copy(){
     const go=text=>{
@@ -1509,17 +1511,17 @@ function GenerateScreen({msg,total,totalOverride,setTotalOverride,autoTotal,extr
             <span style={{fontSize:'11px',color:'#94a3b8'}}>Auto: {autoTotal} pax</span>
           </div>
           <div style={{display:'flex',gap:'8px',alignItems:'center'}}>
-            <input type="number" value={totalOverride!==null?totalOverride:autoTotal} min={0}
-              onChange={e=>setTotalOverride(Number(e.target.value))}
+            <input type="number" value={total} min={0}
+              onChange={e=>{setTotal(Number(e.target.value));setTotalManual(true);}}
               style={{flex:1}}/>
-            {totalOverride!==null&&(
-              <button onClick={()=>setTotalOverride(null)}
+            {totalManual&&(
+              <button onClick={()=>{setTotal(autoTotal);setTotalManual(false);}}
                 style={{padding:'8px 12px',background:'#f1f5f9',border:'1.5px solid #e2e8f0',borderRadius:'8px',fontSize:'12px',fontWeight:700,color:'#64748b',cursor:'pointer',flexShrink:0,whiteSpace:'nowrap'}}>
                 Reset to auto
               </button>
             )}
           </div>
-          {totalOverride!==null&&<div style={{fontSize:'11px',color:'#f59e0b',fontWeight:600,marginTop:'4px'}}>⚠ Manual override active</div>}
+          {totalManual&&<div style={{fontSize:'11px',color:'#f59e0b',fontWeight:600,marginTop:'4px'}}>⚠ Manual override active</div>}
         </div>
         <div className="label">Additional notes (appended at end)</div>
         <textarea value={extra} onChange={e=>setExtra(e.target.value)} rows={3} placeholder="e.g. extra remarks..." style={{resize:'vertical'}}/>
