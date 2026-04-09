@@ -603,7 +603,8 @@ function sisoCell(p){
 // ─── PDF PAGE COMPONENT ─────────────────────────────────────────
 function ParadeStatePDFPage({plt,personnel,allTodRecs,date,total,allTodMarkedBy}){
   const pltPpl=personnel.filter(p=>p.active&&p.plt===plt);
-  const sections=P_SECTIONS[plt]||[];
+  const customSecsFromPpl=[...new Set(pltPpl.map(p=>p.sec).filter(Boolean))];
+  const sections=[...new Set([...(P_SECTIONS[plt]||[]),...customSecsFromPpl])];
   const NON_CMDR=new Set(['REC','PTE','LCP','CPL','CFC']);
   const commanders=personnel.filter(p=>!NON_CMDR.has(p.rank));
   // Look up who signed off a given TOD for this platoon
@@ -1264,7 +1265,7 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setA
         const isLocked=(submitted[p]||false)||(isPastDate&&!overrideUnlocked);
         return(
         <div key={p} style={isLocked?{opacity:.65,pointerEvents:'none',filter:'grayscale(40%)'}:{}}>
-          {(P_SECTIONS[p]||[]).filter(s=>tree[p][s]&&tree[p][s].length>0).map(s=>{
+          {[...new Set([...(P_SECTIONS[p]||[]),...Object.keys(tree[p]||{})])].filter(s=>tree[p]&&tree[p][s]&&tree[p][s].length>0).map(s=>{
             const secPpl=tree[p][s];
             const filled=secPpl.filter(person=>records[person.id]?.s).length;
             const total=secPpl.length;
@@ -1664,7 +1665,7 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
         <div className="card-hdr">Active Roster</div>
         {PLATOONS.filter(p=>tree[p]).map(p=>(
           <div key={p}>
-            {(P_SECTIONS[p]||[]).filter(s=>tree[p][s]&&tree[p][s].length>0).map(s=>(
+            {[...new Set([...(P_SECTIONS[p]||[]),...Object.keys(tree[p]||{})])].filter(s=>tree[p]&&tree[p][s]&&tree[p][s].length>0).map(s=>(
               <div key={s}>
                 <div className="sec-sep" style={{background:pltColors[p]}}>{P_LABEL[p]} — {s} ({tree[p][s].length})</div>
                 {tree[p][s].map(person=>(
