@@ -868,14 +868,21 @@ function HistoryScreen({history,personnel,onPreview,onDelete,overrideUnlocked,se
 // ─── LOGIN ──────────────────────────────────────────────────────
 const USERS=[{user:'comd',pass:'comd123',label:'Commander'}];
 function LoginScreen({onLogin}){
-  const[user,setUser]=useState('');
-  const[pass,setPass]=useState('');
+  const[user,setUser]=useState(()=>{try{return localStorage.getItem('jrn_saved_user')||''}catch{return ''}});
+  const[pass,setPass]=useState(()=>{try{return localStorage.getItem('jrn_saved_pass')||''}catch{return ''}});
   const[err,setErr]=useState('');
   const[showPass,setShowPass]=useState(false);
+  const[remember,setRemember]=useState(()=>{try{return localStorage.getItem('jrn_remember')==='1'}catch{return false}});
   function attempt(){
     const found=USERS.find(u=>u.user===user.trim()&&u.pass===pass);
-    if(found){onLogin(found);}
-    else{setErr('Incorrect username or password.');setPass('');}
+    if(found){
+      if(remember){
+        try{localStorage.setItem('jrn_saved_user',user.trim());localStorage.setItem('jrn_saved_pass',pass);localStorage.setItem('jrn_remember','1');}catch{}
+      } else {
+        try{localStorage.removeItem('jrn_saved_user');localStorage.removeItem('jrn_saved_pass');localStorage.setItem('jrn_remember','0');}catch{}
+      }
+      onLogin(found);
+    } else {setErr('Incorrect username or password.');setPass('');}
   }
   return(
     <div className="login-wrap">
@@ -899,6 +906,11 @@ function LoginScreen({onLogin}){
             <button onClick={()=>setShowPass(v=>!v)} style={{position:'absolute',right:'12px',top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'#94a3b8',fontSize:'18px',padding:'0'}}>{showPass?'🙈':'👁'}</button>
           </div>
         </div>
+        <label style={{display:'flex',alignItems:'center',gap:'8px',cursor:'pointer',fontSize:'13px',color:'#64748b',userSelect:'none',marginBottom:'4px'}}>
+          <input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)}
+            style={{width:'16px',height:'16px',accentColor:'#0d9488',cursor:'pointer'}}/>
+          Remember me on this device
+        </label>
         <button className="login-btn" onClick={attempt}>Sign In</button>
       </div>
       <div className="login-footer">Authorised Personnel Only</div>
@@ -947,7 +959,7 @@ function LandingScreen({onPick,onLogout}){
 
 // ─── ROOT (auth gate) ───────────────────────────────────────────
 function Root(){
-  const[loggedIn,setLoggedIn]=useState(()=>{try{return sessionStorage.getItem('jrn_auth')==='1'}catch{return false}});
+  const[loggedIn,setLoggedIn]=useState(()=>{try{return sessionStorage.getItem('jrn_auth')==='1'||localStorage.getItem('jrn_remember')==='1'}catch{return false}});
   const[picked,setPicked]=useState(null); // {date, tod}
   function handleLogin(u){setLoggedIn(true);try{sessionStorage.setItem('jrn_auth','1');}catch{}}
   function handleLogout(){setLoggedIn(false);setPicked(null);try{sessionStorage.removeItem('jrn_auth');}catch{}}
