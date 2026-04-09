@@ -1,0 +1,1707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f2235">
+<title>JRN Parade State</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#e8f0f5;color:#1e293b;min-height:100vh}
+.app{max-width:600px;margin:0 auto;min-height:100vh;position:relative}
+.hdr{background:linear-gradient(135deg,#0f2235 0%,#1a3a4a 100%);color:#fff;padding:14px 16px;position:sticky;top:0;z-index:50;box-shadow:0 3px 12px rgba(0,0,0,.35)}
+.hdr-title{font-size:19px;font-weight:800;letter-spacing:.5px;text-shadow:0 1px 3px rgba(0,0,0,.3)}
+.hdr-sub{font-size:11px;opacity:.8;margin-top:2px;letter-spacing:.2px}
+.datebar{background:#fff;padding:10px 16px 0;border-bottom:2px solid #ccf2ee;position:sticky;top:54px;z-index:49;box-shadow:0 2px 6px rgba(13,148,136,.08)}
+.datebar-top{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.datebar input[type=date]{flex:1;padding:8px 10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;outline:none;color:#1e293b}
+.tod-btns{display:flex;gap:6px;padding-bottom:10px}
+.tbtn{flex:1;padding:10px 4px;border-radius:10px;border:1.5px solid #cbd5e1;font-size:13px;font-weight:700;background:#fff;cursor:pointer;color:#64748b;transition:all .15s;text-align:center;white-space:nowrap}
+.tbtn.on{background:#0d9488;color:#fff;border-color:#0d9488;box-shadow:0 2px 6px rgba(13,148,136,.35)}
+.main{padding:12px 16px 90px}
+.card{background:#fff;border-radius:14px;margin-bottom:12px;overflow:hidden;box-shadow:0 2px 8px rgba(15,34,53,.1)}
+.card-hdr{padding:10px 14px;background:#f0f9f8;border-bottom:2px solid #ccf2ee;font-size:11px;font-weight:800;color:#0f4e49;text-transform:uppercase;letter-spacing:.7px}
+.card-body{padding:6px 10px 10px}
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.stat-box{background:#fff;border-radius:12px;padding:14px 6px;text-align:center;box-shadow:0 2px 8px rgba(15,34,53,.1);border-top:3px solid #0d9488}
+.stat-n{font-size:28px;font-weight:800;color:#0d9488;line-height:1}
+.stat-l{font-size:10px;color:#64748b;margin-top:3px;font-weight:600}
+select,input[type=text],input[type=number],input[type=tel],textarea{padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;background:#fff;width:100%;outline:none;-webkit-appearance:none;appearance:none;color:#1e293b;transition:border-color .15s}
+select:focus,input:focus,textarea:focus{border-color:#14b8a6}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+.label{font-size:12px;font-weight:600;color:#64748b;margin-bottom:4px}
+.search-inp{width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:20px;font-size:14px;outline:none;margin-bottom:10px;background:#f8fafc}
+.search-inp:focus{border-color:#14b8a6;background:#fff}
+.ftabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none}
+.ftabs::-webkit-scrollbar{display:none}
+.ftab{padding:6px 14px;border-radius:20px;border:1.5px solid #cbd5e1;font-size:12px;white-space:nowrap;cursor:pointer;background:#fff;color:#475569;font-weight:700;transition:all .15s}
+.ftab.on{background:#0d9488;color:#fff;border-color:#0d9488;box-shadow:0 2px 6px rgba(13,148,136,.3)}
+.unset-tag{font-size:11px;color:#f59e0b;font-weight:700}
+.sc-present{background:#f0fdf4}.sc-duty{background:#ecfdf5}
+.sc-late{background:#fffbeb}.sc-mc,.sc-hl,.sc-hospitalised{background:#fff1f2}
+.sc-off,.sc-ol,.sc-ll,.sc-ul,.sc-fcl,.sc-ddr{background:#eef2ff}
+.sc-so,.sc-so_till{background:#fef9c3}
+.sc-arf,.sc-rsi,.sc-rso{background:#fff7ed}
+.sc-detail,.sc-ma,.sc-safer_upcat,.sc-cse,.sc-6ton_fam{background:#f0f9ff}
+.sc-attached_out,.sc-ao_local,.sc-ao_overseas{background:#f0f9ff}
+.sc-awol,.sc-sol,.sc-suspended,.sc-db_prison{background:#fff1f2}
+.msg-box{font-family:'Courier New',monospace;font-size:12px;line-height:1.55;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:14px;white-space:pre;overflow-x:auto;-webkit-overflow-scrolling:touch;max-height:60vh}
+.copy-btn{width:100%;padding:14px;background:#0d9488;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;margin-top:12px}
+.copy-btn:active{background:#0f766e}
+.mrow{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid #f1f5f9;gap:10px}
+.mrow:last-child{border-bottom:none}
+.mrow-info{flex:1;min-width:0}
+.mrow-name{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mrow-sub{font-size:11px;color:#94a3b8}
+.dbtn{padding:6px 11px;background:#fee2e2;color:#991b1b;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer}
+.rbtn{padding:6px 11px;background:#dcfce7;color:#166534;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer}
+.ebtn{padding:6px 11px;background:#e0f2fe;color:#0369a1;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer}
+.sbtn{width:100%;padding:12px;background:#0d9488;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:12px}
+.sbtn:active{background:#0f766e}
+.add-form{padding:14px;display:flex;flex-direction:column;gap:9px}
+.add-2col{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.conf-yes{padding:5px 10px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:700}
+.conf-no{padding:5px 10px;background:#e2e8f0;color:#475569;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:700}
+.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:600px;background:linear-gradient(135deg,#0f2235 0%,#1a3a4a 100%);border-top:none;display:flex;z-index:50;padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -3px 12px rgba(0,0,0,.35)}
+.ntab{flex:1;padding:8px 4px 10px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;border:none;background:none;font-size:10px;color:#64748b;font-weight:700;position:relative;transition:color .2s}
+.ntab.on{color:#14b8a6}
+.ntab-icon{font-size:22px;line-height:1;transition:transform .2s}
+.ntab.on .ntab-icon{transform:scale(1.15)}
+.nbadge{position:absolute;top:5px;right:calc(50% - 20px);background:#ef4444;color:#fff;font-size:9px;font-weight:800;border-radius:8px;padding:1px 5px;min-width:16px;text-align:center}
+.toast{position:fixed;bottom:82px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,.93);color:#fff;padding:10px 18px;border-radius:16px;font-size:13px;z-index:200;white-space:normal;max-width:320px;width:calc(100% - 40px);text-align:center;pointer-events:none;animation:toastIn 3s ease forwards;line-height:1.4}
+@keyframes toastIn{0%{opacity:0;transform:translateX(-50%) translateY(8px)}10%{opacity:1;transform:translateX(-50%) translateY(0)}80%{opacity:1}100%{opacity:0}}
+.edit-form{padding:10px 14px;background:#fffbeb;border-bottom:1px solid #fef9c3;display:flex;flex-direction:column;gap:7px}
+.btn-row{display:flex;gap:6px}
+.btn-save{flex:1;padding:8px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer}
+.btn-cancel{flex:1;padding:8px;background:#e2e8f0;color:#475569;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer}
+.sec-sep{padding:5px 14px;font-size:10px;font-weight:800;color:#94a3b8;background:#f8fafc;border-bottom:1px solid #f1f5f9;text-transform:uppercase;letter-spacing:.5px}
+.plt-badge{display:inline-block;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:800;margin-right:6px}
+.plt-footer{padding:12px 14px;background:#f8fafc;border-top:1.5px solid #e2e8f0;display:flex;flex-direction:column;gap:8px;margin-top:4px;border-radius:0 0 12px 12px}
+.submit-btn{width:100%;padding:12px;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer}
+.submit-btn-active{background:#0d9488;color:#fff}
+.submit-btn-active:active{background:#0f766e}
+.submit-btn-done{background:#dcfce7;color:#166534;cursor:default}
+.submit-btn-disabled{background:#e2e8f0;color:#94a3b8;cursor:not-allowed}
+.autosave-dot{display:inline-block;width:6px;height:6px;background:#4ade80;border-radius:50%;margin-right:4px;vertical-align:middle}
+/* ── Login Screen ── */
+.login-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(160deg,#0f2235 0%,#0d4a45 60%,#064e3b 100%);padding:24px}
+.login-logo{width:72px;height:72px;background:rgba(255,255,255,.12);border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:36px;margin-bottom:20px;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.login-title{color:#fff;font-size:26px;font-weight:800;letter-spacing:.5px;margin-bottom:4px;text-shadow:0 2px 8px rgba(0,0,0,.3)}
+.login-sub{color:rgba(255,255,255,.6);font-size:13px;margin-bottom:36px;letter-spacing:.2px}
+.login-card{background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.login-field{margin-bottom:16px}
+.login-lbl{font-size:12px;font-weight:700;color:#64748b;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.login-inp{width:100%;padding:13px 14px;border:2px solid #e2e8f0;border-radius:12px;font-size:15px;outline:none;color:#1e293b;transition:border-color .2s;background:#f8fafc}
+.login-inp:focus{border-color:#0d9488;background:#fff}
+.login-btn{width:100%;padding:14px;background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;margin-top:8px;box-shadow:0 4px 14px rgba(13,148,136,.4);transition:opacity .2s}
+.login-btn:active{opacity:.85}
+.login-err{background:#fff1f2;border:1.5px solid #fca5a5;border-radius:10px;padding:10px 14px;color:#dc2626;font-size:13px;font-weight:600;margin-bottom:14px;text-align:center}
+.login-footer{color:rgba(255,255,255,.35);font-size:11px;margin-top:28px;text-align:center}
+/* ── Landing / TOD Picker ── */
+.land-wrap{min-height:100vh;display:flex;flex-direction:column;background:linear-gradient(160deg,#0f2235 0%,#0d4a45 60%,#064e3b 100%);padding:0 0 env(safe-area-inset-bottom,0px)}
+.land-hdr{padding:20px 20px 0;display:flex;align-items:center;justify-content:space-between}
+.land-hdr-title{color:#fff;font-size:20px;font-weight:800;letter-spacing:.4px}
+.land-hdr-sub{color:rgba(255,255,255,.55);font-size:12px;margin-top:2px}
+.land-signout{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.8);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer}
+.land-date-box{margin:28px 20px 8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:18px 20px;display:flex;align-items:center;gap:14px}
+.land-date-icon{font-size:28px;flex-shrink:0}
+.land-date-lbl{color:rgba(255,255,255,.6);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px}
+.land-date-val{color:#fff;font-size:22px;font-weight:800;letter-spacing:.3px}
+.land-pick-lbl{color:rgba(255,255,255,.5);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;padding:0 20px;margin-bottom:12px}
+.land-slots{display:flex;flex-direction:column;gap:10px;padding:0 20px 28px}
+.land-slot{background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.12);border-radius:16px;padding:18px 20px;display:flex;align-items:center;gap:16px;cursor:pointer;transition:all .18s;-webkit-tap-highlight-color:transparent}
+.land-slot:active{background:rgba(255,255,255,.15);transform:scale(.98)}
+.land-slot-tag{background:#0d9488;color:#fff;border-radius:10px;padding:6px 14px;font-size:16px;font-weight:800;min-width:80px;text-align:center;letter-spacing:.3px;flex-shrink:0}
+.land-slot-tag.night{background:#7c3aed}
+.land-slot-info{flex:1}
+.land-slot-name{color:#fff;font-size:15px;font-weight:700}
+.land-slot-time{color:rgba(255,255,255,.45);font-size:12px;margin-top:2px}
+.land-slot-arrow{color:rgba(255,255,255,.3);font-size:20px}
+/* ── Person Row v2 ── */
+.prow{border-radius:10px;padding:10px 10px 8px;margin-bottom:5px;display:flex;flex-direction:column;gap:5px;border:1.5px solid transparent;transition:border-color .2s}
+.prow:not(.sc-present):not([class*="sc-"]){border-color:#fcd34d}
+.prow.has-status{border-color:transparent}
+.prow-top{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.prow-name{font-size:14px;font-weight:800;flex:1;line-height:1.3;min-width:0}
+.prow-meta{display:flex;gap:5px;align-items:center}
+.prow-bd{font-size:10px;color:#94a3b8;padding:1px 6px;background:#f1f5f9;border-radius:8px;font-weight:600;white-space:nowrap}
+.prow-plt{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;white-space:nowrap}
+.plt-p1{background:#dbeafe;color:#1e40af}.plt-p2{background:#d1fae5;color:#065f46}.plt-hq{background:#fef3c7;color:#92400e}
+.prow-cur{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.prow-cur-lbl{font-size:11px;color:#64748b;font-weight:600}
+.prow-cur-chip{padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;background:#ccfbf1;color:#0f766e;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prow-clear-btn{padding:3px 9px;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0}
+.prow-clear-btn:active{background:#e2e8f0}
+/* ── Date picker ── */
+.dpick-wrap{background:#f0f9f8;border:1.5px solid #99f6e4;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.dpick-row{display:flex;gap:8px;align-items:center}
+.dpick-lbl{font-size:11px;font-weight:700;color:#0f766e;min-width:36px}
+.dpick-inp{flex:1;padding:8px 10px;border:1.5px solid #ccf2ee;border-radius:8px;font-size:14px;color:#1e293b;background:#fff;outline:none}
+.dpick-inp:focus{border-color:#0d9488}
+.dpick-range-display{font-size:12px;font-weight:700;color:#0f766e;padding:4px 0 0;text-align:center}
+.dpick-autocarry{font-size:11px;color:#0d9488;background:#ccfbf1;border-radius:8px;padding:4px 10px;text-align:center;font-weight:600}
+.prow-unassigned{font-size:11px;color:#d97706;font-weight:700;padding:2px 0}
+.prow-quick{display:flex;gap:5px}
+.pq{flex:1;padding:8px 6px;border-radius:9px;border:1.5px solid #e2e8f0;font-size:12px;font-weight:700;cursor:pointer;background:#f8fafc;color:#475569;transition:all .15s;text-align:center}
+.pq:active{transform:scale(.96)}
+.pq-on-g{background:#16a34a!important;color:#fff!important;border-color:#16a34a!important;box-shadow:0 2px 5px rgba(22,163,74,.3)}
+.pq-on-y{background:#d97706!important;color:#fff!important;border-color:#d97706!important;box-shadow:0 2px 5px rgba(217,119,6,.3)}
+.pq-on-b{background:#0d9488!important;color:#fff!important;border-color:#0d9488!important}
+/* section progress bar */
+.sec-prog{height:3px;background:#e2e8f0;border-radius:2px;margin:4px 14px 0;overflow:hidden}
+.sec-prog-fill{height:100%;background:#0d9488;border-radius:2px;transition:width .4s}
+.sec-prog-fill.complete{background:#16a34a}
+.card-hdr-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f0f9f8;border-bottom:2px solid #ccf2ee}
+.card-hdr-txt{font-size:11px;font-weight:800;color:#0f4e49;text-transform:uppercase;letter-spacing:.7px}
+.card-hdr-cnt{font-size:11px;font-weight:700;color:#0d9488}
+.card-hdr-cnt.all-done{color:#16a34a}
+/* quick-btn row */
+.qrow{display:flex;gap:7px;margin-bottom:10px}
+.qbtn{flex:1;padding:10px 10px;border-radius:10px;border:none;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s}
+.qbtn-g{background:#dcfce7;color:#166534}
+.qbtn-g:active{background:#bbf7d0}
+.qbtn-r{background:#fee2e2;color:#991b1b;flex:none;padding:10px 16px}
+.qbtn-r:active{background:#fecaca}
+.siso-si{background:#dbeafe;color:#0d9488;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:800;white-space:nowrap}
+.siso-so{background:#fee2e2;color:#991b1b;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:800;white-space:nowrap}
+.siso-sotill{background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:800;white-space:nowrap}
+.siso-expired{background:#ef4444;color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:800;white-space:nowrap;animation:siso-pulse 1.2s infinite}
+.siso-row-alert{border-left:3px solid #ef4444;background:#fff5f5!important}
+.alert-banner{background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;padding:10px 14px;margin-bottom:10px}
+.alert-banner-title{font-size:13px;font-weight:800;margin-bottom:4px;color:#dc2626}
+.alert-banner-item{font-size:12px;color:#991b1b;padding:1px 0}
+@keyframes siso-pulse{0%,100%{opacity:1}50%{opacity:.6}}
+/* ── PDF Modal ── */
+.pdf-overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:300;display:flex;flex-direction:column;overflow:hidden}
+.pdf-modal-bar{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#0f172a;color:#fff;flex-shrink:0;flex-wrap:wrap}
+.pdf-modal-title{font-size:14px;font-weight:800;flex:1}
+.pdf-modal-body{flex:1;overflow:auto;padding:12px 8px;display:flex;flex-direction:column;align-items:flex-start;gap:14px;-webkit-overflow-scrolling:touch}
+.pdf-dl-btn{padding:9px 16px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.pdf-dl-btn:disabled{opacity:.6;cursor:not-allowed}
+.pdf-close-btn{padding:9px 14px;background:#475569;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer}
+/* ── PDF Page (captured) ── */
+.pdf-pg{width:800px;padding:16px 18px;font-family:Arial,sans-serif;font-size:10px;background:#fff;color:#000;box-sizing:border-box}
+.pdf-pg-title{text-align:center;font-size:13px;font-weight:bold;margin-bottom:2px;letter-spacing:.5px;text-transform:uppercase}
+.pdf-pg-sub{text-align:center;font-size:9px;margin-bottom:8px;color:#334155}
+.pdf-tbl{width:100%;border-collapse:collapse;font-size:8.5px}
+.pdf-tbl th{background:#1e293b;color:#fff;padding:4px 3px;text-align:center;border:1px solid #1e293b;font-size:8px;line-height:1.2}
+.pdf-tbl td{border:1px solid #94a3b8;padding:3px 3px;line-height:1.3}
+.pdf-th-sn{width:24px}.pdf-th-bd{width:38px}.pdf-th-rk{width:42px}
+.pdf-th-nm{width:134px!important;text-align:left!important}
+.pdf-th-io{width:46px}.pdf-th-td{width:36px}.pdf-th-rm{text-align:left!important}
+.pdf-c-ctr{text-align:center}.pdf-c-lft{text-align:left}
+.pdf-sec-hdr td{background:#334155;color:#fff;font-weight:bold;font-size:8.5px;padding:4px 6px;text-align:left;border:none}
+.pdf-pg-footer{display:flex;justify-content:space-between;align-items:flex-start;margin-top:10px;padding-top:8px;border-top:2px solid #1e293b;font-size:9px;gap:8px}
+.pdf-ft-lbl{font-weight:bold;font-size:8px;text-transform:uppercase;margin-bottom:2px}
+.pdf-ft-line{display:block;border-bottom:1px solid #000;width:120px;height:18px}
+/* ── History Screen ── */
+.hist-hdr{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.hist-hdr h2{font-size:18px;font-weight:800}
+.hist-count{font-size:12px;background:#e0f2fe;color:#0369a1;padding:2px 8px;border-radius:20px;font-weight:700}
+.hist-year-grp{margin-bottom:10px}
+.hist-y-hdr{display:flex;align-items:center;gap:8px;padding:10px 14px;background:linear-gradient(135deg,#0f2235,#1a3a4a);color:#fff;border-radius:10px;cursor:pointer;font-weight:800;font-size:14px;margin-bottom:4px}
+.hist-y-body{margin-left:8px;margin-bottom:4px}
+.hist-m-hdr{display:flex;align-items:center;gap:8px;padding:8px 14px;background:#ccf2ee;border-radius:8px;cursor:pointer;font-weight:700;color:#0f766e;font-size:13px;margin-bottom:4px}
+.hist-m-body{margin-left:8px;display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.hist-card{background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.08);padding:12px 14px;display:flex;align-items:center;gap:10px}
+.hist-card-info{flex:1}
+.hist-card-date{font-size:15px;font-weight:800}
+.hist-card-sub{font-size:11px;color:#64748b;margin-top:2px}
+.hist-card-btns{display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
+.hist-prev-btn{padding:7px 11px;background:#e0f2fe;color:#0369a1;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer}
+.hist-del-btn{padding:7px 11px;background:#fee2e2;color:#991b1b;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer}
+.hist-empty{text-align:center;padding:60px 20px;color:#94a3b8;font-size:15px;line-height:1.7}
+.export-pdf-btn{width:100%;padding:13px;background:#7c3aed;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-top:12px}
+.export-pdf-btn:disabled{opacity:.6;cursor:not-allowed}
+.export-pdf-btn:active{background:#6d28d9}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-database-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey:"AIzaSyDvlNNE7-r9NQP4yO2PXXkHE4APO7WlY-4",
+  authDomain:"jrn-parade-state.firebaseapp.com",
+  databaseURL:"https://jrn-parade-state-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"jrn-parade-state",
+  storageBucket:"jrn-parade-state.firebasestorage.app",
+  messagingSenderId:"1009079802431",
+  appId:"1:1009079802431:web:5c8da8c7d633dba5ea768a"
+});
+const DB = firebase.database();
+</script>
+<script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.23.3/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script type="text/babel">
+const {useState, useEffect, useMemo, useRef} = React;
+
+// ─── RANKS ──────────────────────────────────────────────────────
+const RANKS = ['REC','PTE','LCP','CPL','CFC','3SG','2SG','1SG','SSG','MSG','ME1','ME2','ME3','ME4','ME5','3WO','2WO','1WO','MWO','SWO','CWO','2LT','LTA','CPT','MAJ','LTC','COL','DX12','BG'];
+
+// ─── PLATOONS & SECTIONS ────────────────────────────────────────
+const PLATOONS = ['P1','P2','HQ'];
+const P_LABEL = {P1:'Platoon 1', P2:'Platoon 2', HQ:'HQ'};
+const P_SECTIONS = {
+  P1: ['COMMANDERS','BASE','CS/CSS','APPRENTICE'],
+  P2: ['COMMANDERS','COMBAT','BASE','CS/CSS','APPRENTICE'],
+  HQ: ['NODE CMD','HQ CMD','OPS CLERK','NODE CLERK','MAINT CLERK','AMB'],
+};
+// All unique sections for the Add form
+const ALL_SECTIONS = [...new Set([...P_SECTIONS.P1,...P_SECTIONS.P2,...P_SECTIONS.HQ])];
+
+// ─── TIME SLOTS ─────────────────────────────────────────────────
+const TODS = ['HLS','0745','1300','1730','2030/2230'];
+const TOD_LABEL = {'HLS':'HLS','0745':'FP','1300':'MP','1730':'LP','2030/2230':'NIGHT STR'};
+const TOD_FULL  = {'HLS':'Healthy Lifestyle','0745':'First Parade','1300':'Middle Parade','1730':'Last Parade','2030/2230':'Night Strength'};
+
+// ─── STATUS LIST ────────────────────────────────────────────────
+const SL = [
+  {k:'present',      l:'Present',                  d:false},
+  {k:'duty',         l:'Duty',                     d:false},
+  {k:'dto',          l:'DTO',                      d:false},
+  {k:'adtl',         l:'ADTL',                     d:false},
+  {k:'dto_r',        l:'DTO/R',                    d:false},
+  {k:'adtl_r',       l:'ADTL/R',                   d:false},
+  {k:'doo',          l:'DOO',                      d:false},
+  {k:'so',           l:'Stay Out (S/O)',             d:false},
+  {k:'so_till',      l:'Stay Out Till (S/O Till)',   d:true, datePick:true, dateRange:true, names:true, pre:'TILL '},
+  {k:'late',         l:'Late',                      d:false, names:true},
+  {k:'detail',       l:'Detail',                    d:true,  dp:'Detail info e.g. Guard Duty', names:true},
+  {k:'arf',          l:'ARF',                       d:false, names:true},
+  {k:'ddr',          l:'Duty/Detail Rest',          d:false, names:true},
+  {k:'ma',           l:'MA (Medical Appt)',          d:false, names:true},
+  {k:'mc',           l:'MC (Medical Certificate)',   d:true,  datePick:true, dateRange:true, names:true, pre:'TILL '},
+  {k:'hl',           l:'Hospitalisation Leave',      d:true,  datePick:true, dateRange:true, names:true, pre:'TILL '},
+  {k:'hospitalised', l:'Hospitalised',               d:false},
+  {k:'rso',          l:'RSO',                        d:false},
+  {k:'rsi',          l:'RSI',                        d:false, names:true},
+  {k:'off',          l:'OFF',                        d:false, names:true},
+  {k:'ol',           l:'Overseas Leave',             d:true,  datePick:true, dateRange:true, names:true, pre:'TILL '},
+  {k:'ll',           l:'Local Leave',                d:true,  datePick:true, dateRange:true, names:true, pre:'TILL '},
+  {k:'ao_local',     l:'A/O Local (Attached Out Locally)',   d:true, datePick:true, dateRange:true, names:true},
+  {k:'ao_overseas',  l:'A/O Overseas (Attached Out Overseas)', d:true, datePick:true, dateRange:true, names:true},
+  {k:'safer_upcat',  l:'SAFER/UPCAT',                d:false, names:true},
+  {k:'ul',           l:'Urgent Leave',               d:false},
+  {k:'fcl',          l:'Family Care Leave',          d:false},
+  {k:'cl',           l:'CL',                         d:false},
+  {k:'ccl',          l:'CCL',                        d:false},
+  {k:'court',        l:'Court',                      d:false},
+  {k:'ca',           l:'CA',                         d:false},
+  {k:'civil',        l:'Civil',                      d:false},
+  {k:'db_prison',    l:'DB / Prison',                d:false},
+  {k:'do_gcm',       l:'DO(GCM)',                    d:false},
+  {k:'awol',         l:'AWOL',                       d:false},
+  {k:'sol',          l:'SOL',                        d:false},
+  {k:'suspended',    l:'Suspended',                  d:false},
+  {k:'cse',          l:'CSE',                        d:true,  datePick:true, dateRange:true, names:true},
+  {k:'lashing',      l:'LASHING',                    d:false},
+  {k:'dcp',          l:'DCP',                        d:false},
+  {k:'jc1',          l:'JC1',                        d:false},
+  {k:'hq',           l:'HQ',                         d:false},
+  {k:'db_visits',    l:'DB visits',                  d:false},
+  {k:'meeting',      l:'Meeting',                    d:false},
+  {k:'rib',          l:'Rest In Bunk',               d:false},
+  {k:'6ton_fam',     l:'6TON FAM (COE)',             d:false, names:true},
+  {k:'gp_fam',       l:'GP FAM',                     d:false},
+  {k:'driving',      l:'Driving Course',             d:false},
+  {k:'others',       l:'Others (specify)',            d:true,  dp:'Specify e.g. IPPT, DTO', names:true},
+];
+const SM = Object.fromEntries(SL.map(s=>[s.k,s]));
+// Statuses counted as "Duty Personnel" in the telegram message (no names shown)
+const DUTY_STATUSES = new Set(['duty','dto','adtl','dto_r','adtl_r','doo']);
+
+// ─── ALL PERSONNEL (P1 + P2 + HQ) ──────────────────────────────
+const IP = [
+  // ══ PLATOON 1 COMMANDERS ══
+  {id:'o01',plt:'P1',rank:'2LT', name:'JOVAN LOO',                           dn:'JOVAN',      sec:'COMMANDERS',bd:'B1',active:true},
+  {id:'o02',plt:'P1',rank:'3WO', name:'MOHAMMAD FIRDAUS BIN MASZEMAN',       dn:'FIRDAUS M',  sec:'COMMANDERS',bd:'B1',active:true},
+  {id:'o03',plt:'P1',rank:'3SG', name:'RAY WONG',                            dn:'RAY',        sec:'COMMANDERS',bd:'B2',active:true},
+  {id:'o04',plt:'P1',rank:'3SG', name:'SHANMUGA SUNDARAM SAI VISHWA JETH',   dn:'VISHWA',     sec:'COMMANDERS',bd:'B2',active:true},
+  {id:'o05',plt:'P1',rank:'3SG', name:'ZHAO MINGQIANG',                      dn:'MINGQIANG',  sec:'COMMANDERS',bd:'B2',active:true},
+  // ══ PLATOON 1 BASE ══
+  {id:'q01',plt:'P1',rank:'LCP', name:'CHONG JUN WEN COVIN',                 dn:'COVIN',      sec:'BASE',bd:'B4',active:true},
+  {id:'q02',plt:'P1',rank:'LCP', name:'HILMI AMRUL BIN DAN TAUFIQ',          dn:'HILMI',      sec:'BASE',bd:'B4',active:true},
+  {id:'q03',plt:'P1',rank:'LCP', name:'LOW YIN ZHE ISSAC',                   dn:'ISSAC',      sec:'BASE',bd:'B4',active:true},
+  {id:'q04',plt:'P1',rank:'PTE', name:'BRAXTON TEO YI CHENG',                dn:'BRAXTON',    sec:'BASE',bd:'B5',active:true},
+  {id:'q05',plt:'P1',rank:'CPL', name:'CHUA YONG QI',                        dn:'YONG QI',    sec:'BASE',bd:'B5',active:true},
+  {id:'q06',plt:'P1',rank:'LCP', name:'NG ZHEN FENG',                        dn:'ZHEN FENG',  sec:'BASE',bd:'B6',active:true},
+  {id:'q07',plt:'P1',rank:'LCP', name:'YE MIN KHANT',                        dn:'MIN KHANT',  sec:'BASE',bd:'B6',active:true},
+  {id:'q08',plt:'P1',rank:'LCP', name:'MUHAMMAD AMIR BIN ZAINUDIN',          dn:'AMIR',       sec:'BASE',bd:'B7',active:true},
+  {id:'q09',plt:'P1',rank:'LCP', name:'CHIAM CHENG XUN MAX',                 dn:'MAX',        sec:'BASE',bd:'B7',active:true},
+  {id:'q10',plt:'P1',rank:'LCP', name:'TRINH DINH GIA BAO',                  dn:'GIA BAO',    sec:'BASE',bd:'B8',active:true},
+  {id:'q11',plt:'P1',rank:'LCP', name:'CHONG LEONG CHOON PHILIP',            dn:'PHILIP',     sec:'BASE',bd:'B8',active:true},
+  {id:'q12',plt:'P1',rank:'PTE', name:'RYAN WONG DAO REN',                   dn:'RYAN W',     sec:'BASE',bd:'B9',active:true},
+  {id:'q13',plt:'P1',rank:'PTE', name:'KOVSHIK RAM PANNIRCHELVEN',           dn:'KOVSHIK',    sec:'BASE',bd:'B9',active:true},
+  {id:'q14',plt:'P1',rank:'PTE', name:'MUHAMMAD AIMAN BIN JANI',             dn:'AIMAN',      sec:'BASE',bd:'B9',active:true},
+  {id:'q15',plt:'P1',rank:'PTE', name:'ANES ANGELO KENNETH BALLADARES',      dn:'ANGELO',     sec:'BASE',bd:'B10',active:true},
+  {id:'q16',plt:'P1',rank:'PTE', name:'AIDAN BOEY JING RONG',                dn:'AIDAN',      sec:'BASE',bd:'B10',active:true},
+  {id:'q17',plt:'P1',rank:'PTE', name:'MOHAMED NIHAL BIN MOHAMED NASAR',     dn:'NIHAL',      sec:'BASE',bd:'B11',active:true},
+  {id:'q18',plt:'P1',rank:'PTE', name:'LEONG WEI LE',                        dn:'WEI LE',     sec:'BASE',bd:'B12',active:true},
+  {id:'q19',plt:'P1',rank:'PTE', name:'JOVIS KOH',                           dn:'JOVIS',      sec:'BASE',bd:'B12',active:true},
+  {id:'q20',plt:'P1',rank:'PTE', name:'PRAVEER S',                           dn:'PRAVEER',    sec:'BASE',bd:'B13',active:true},
+  {id:'q21',plt:'P1',rank:'CPL', name:'MARCUS GOH JUN SING',                 dn:'MARCUS',     sec:'BASE',bd:'B13',active:true},
+  {id:'q22',plt:'P1',rank:'PTE', name:'SONG RYAN',                           dn:'SONG RYAN',  sec:'BASE',bd:'B14',active:true},
+  {id:'q23',plt:'P1',rank:'PTE', name:'TAN JUN QIN',                         dn:'JUN QIN',    sec:'BASE',bd:'B14',active:true},
+  {id:'q24',plt:'P1',rank:'PTE', name:'NG YU FENG JOSH',                     dn:'JOSH',       sec:'BASE',bd:'B15',active:true},
+  {id:'q25',plt:'P1',rank:'PTE', name:'LIU YIMING',                          dn:'YIMING',     sec:'BASE',bd:'B15',active:true},
+  // ══ PLATOON 1 CS/CSS ══
+  {id:'r01',plt:'P1',rank:'LCP', name:'KALIYAPERUMAL DIWAKARAN',             dn:'DIWAKARAN',  sec:'CS/CSS',bd:'B16',active:true},
+  {id:'r02',plt:'P1',rank:'LCP', name:'ADAM BIN SULAIMAN',                   dn:'ADAM',       sec:'CS/CSS',bd:'B16',active:true},
+  {id:'r03',plt:'P1',rank:'LCP', name:'ZHANG YUANFENG',                      dn:'YUANFENG',   sec:'CS/CSS',bd:'B17',active:true},
+  {id:'r04',plt:'P1',rank:'CPL', name:'LIM SHI BO',                          dn:'SHI BO',     sec:'CS/CSS',bd:'B17',active:true},
+  {id:'r05',plt:'P1',rank:'CPL', name:'CHARLES ONG CHAO JIN',                dn:'CHARLES',    sec:'CS/CSS',bd:'B18',active:true},
+  {id:'r06',plt:'P1',rank:'LCP', name:'NOAH CHONG XUAN YI',                  dn:'NOAH',       sec:'CS/CSS',bd:'B18',active:true},
+  {id:'r07',plt:'P1',rank:'LCP', name:'LAM KAI XUEN',                        dn:'KAI XUEN',   sec:'CS/CSS',bd:'B19',active:true},
+  {id:'r08',plt:'P1',rank:'CPL', name:'WANG QIXUAN',                         dn:'QIXUAN',     sec:'CS/CSS',bd:'B19',active:true},
+  {id:'r09',plt:'P1',rank:'PTE', name:'KHEN JIA YEE',                        dn:'JIA YEE',    sec:'CS/CSS',bd:'B20',active:true},
+  {id:'r10',plt:'P1',rank:'LCP', name:'CHEW RUI CONG OWEN',                  dn:'OWEN',       sec:'CS/CSS',bd:'B20',active:true},
+  {id:'r11',plt:'P1',rank:'PTE', name:'PENA RAUL GABRIEL BARZAGA',           dn:'GABRIEL',    sec:'CS/CSS',bd:'B21',active:true},
+  {id:'r12',plt:'P1',rank:'LCP', name:'KNICK AN KIAT TYLER',                 dn:'TYLER',      sec:'CS/CSS',bd:'B21',active:true},
+  {id:'r13',plt:'P1',rank:'PTE', name:'CHOOI CHUN WEI',                      dn:'CHUN WEI',   sec:'CS/CSS',bd:'B21',active:true},
+  {id:'r14',plt:'P1',rank:'PTE', name:'PRANAV ANIL SHAHRI',                  dn:'PRANAV',     sec:'CS/CSS',bd:'B21',active:true},
+  // ══ PLATOON 1 APPRENTICE ══
+  {id:'s01',plt:'P1',rank:'REC', name:'TAN LEONG HONG',                      dn:'LEONG HONG', sec:'APPRENTICE',bd:'B23',active:true},
+  {id:'s02',plt:'P1',rank:'PTE', name:'MUHAMMAD FIRDAUS BIN JAMAL',          dn:'FIRDAUS J',  sec:'APPRENTICE',bd:'B23',active:true},
+  {id:'s03',plt:'P1',rank:'PTE', name:'MURSYID SHAH PUTRA BIN BADRUL HISHAM',dn:'MURSYID',   sec:'APPRENTICE',bd:'B23',active:true},
+  {id:'s04',plt:'P1',rank:'PTE', name:'ASYRAF BIN AZMI',                     dn:'ASYRAF',     sec:'APPRENTICE',bd:'B24',active:true},
+  {id:'s05',plt:'P1',rank:'PTE', name:'LUKE HO YEUNG JUSTIN',                dn:'LUKE',       sec:'APPRENTICE',bd:'B24',active:true},
+  {id:'s06',plt:'P1',rank:'PTE', name:'ALDERIC UM YONG JUN',                 dn:'ALDERIC',    sec:'APPRENTICE',bd:'B25',active:true},
+  {id:'s07',plt:'P1',rank:'REC', name:'KU JUIN HERNG',                       dn:'JUIN HERNG', sec:'APPRENTICE',bd:'B25',active:true},
+  {id:'s08',plt:'P1',rank:'REC', name:'YUVARAJ S/O SIVARAJAN',               dn:'YUVARAJ',    sec:'APPRENTICE',bd:'B26',active:true},
+  {id:'s09',plt:'P1',rank:'REC', name:'CAYDEN TAN JING LONG',                dn:'CAYDEN',     sec:'APPRENTICE',bd:'B26',active:true},
+  {id:'s10',plt:'P1',rank:'REC', name:'MUHAMMAD DANI FITRI BIN RAZLAN',      dn:'DANI',       sec:'APPRENTICE',bd:'B26',active:true},
+  {id:'s11',plt:'P1',rank:'REC', name:'TAN JUNYU',                           dn:'JUNYU',      sec:'APPRENTICE',bd:'B27',active:true},
+  {id:'s12',plt:'P1',rank:'REC', name:'DANIAL MIKZAL BIN MOHD AZMI',         dn:'DANIAL M',   sec:'APPRENTICE',bd:'B27',active:true},
+  // ══ PLATOON 2 COMMANDERS ══
+  {id:'p01',plt:'P2',rank:'2LT', name:'NG KAI LEK',                          dn:'KAI LEK',    sec:'COMMANDERS',bd:'B1',active:true},
+  {id:'p02',plt:'P2',rank:'MSG', name:'TAN AIK MING',                        dn:'AIK MING',   sec:'COMMANDERS',bd:'B1',active:true},
+  {id:'p03',plt:'P2',rank:'3SG', name:'RAMU SANTHOSH',                       dn:'SANTHOSH',   sec:'COMMANDERS',bd:'B2',active:true},
+  {id:'p04',plt:'P2',rank:'3SG', name:'KHOR YU YANG',                        dn:'YU YANG',    sec:'COMMANDERS',bd:'B2',active:true},
+  {id:'p05',plt:'P2',rank:'3SG', name:'MUHAMMAD SYAZHAZIQ BIN ZAILANI',      dn:'ZAILANI',    sec:'COMMANDERS',bd:'B2',active:true},
+  // ══ PLATOON 2 COMBAT ══
+  {id:'p06',plt:'P2',rank:'LCP', name:'NGUYEN ANH HIEU',                     dn:'ANH HIEU',   sec:'COMBAT',bd:'B3',active:true},
+  {id:'p07',plt:'P2',rank:'CPL', name:'MUHAMMAD MUSTAQEEM BIN KHALEED',      dn:'MUSTAQEEM',  sec:'COMBAT',bd:'B3',active:true},
+  {id:'p08',plt:'P2',rank:'CPL', name:'GLEN TAN WEN ZHONG',                  dn:'WEN ZHONG',  sec:'COMBAT',bd:'B4',active:true},
+  {id:'p09',plt:'P2',rank:'LCP', name:'LUTFI BIN SAIFUL BHARI',              dn:'LUTFI',      sec:'COMBAT',bd:'B4',active:true},
+  {id:'p10',plt:'P2',rank:'LCP', name:'CHANG MING FENG',                     dn:'MING FENG',  sec:'COMBAT',bd:'B5',active:true},
+  {id:'p11',plt:'P2',rank:'LCP', name:'CHAN ZI QUAN',                        dn:'ZI QUAN',    sec:'COMBAT',bd:'B5',active:true},
+  {id:'p12',plt:'P2',rank:'LCP', name:'SHAAKIR ADYAN BIN SABARRUDIN',        dn:'SHAAKIR',    sec:'COMBAT',bd:'B6',active:true},
+  {id:'p13',plt:'P2',rank:'REC', name:'TAN BIN QIAN',                        dn:'BIN QIAN',   sec:'COMBAT',bd:'B6',active:true},
+  {id:'p14',plt:'P2',rank:'LCP', name:'MUHAMAD IZZAD BIN ISMAIL',            dn:'IZZAD',      sec:'COMBAT',bd:'B7',active:true},
+  {id:'p15',plt:'P2',rank:'LCP', name:'MIKAIL HAMID AHMAD SAADULLAH',        dn:'MIKAIL',     sec:'COMBAT',bd:'B7',active:true},
+  {id:'p16',plt:'P2',rank:'CPL', name:'SOO YONG TIAN TOMMIE',                dn:'TOMMIE',     sec:'COMBAT',bd:'B8',active:true},
+  {id:'p17',plt:'P2',rank:'LCP', name:'MUHD FARIS BIN RAMLE',                dn:'FARIS',      sec:'COMBAT',bd:'B8',active:true},
+  {id:'p18',plt:'P2',rank:'PTE', name:'IRWAN BIN IRMAN',                     dn:'IRWAN',      sec:'COMBAT',bd:'B9',active:true},
+  {id:'p19',plt:'P2',rank:'CPL', name:'ETHAN TAN YU XUN',                    dn:'YU XUN',     sec:'COMBAT',bd:'B9',active:true},
+  // ══ PLATOON 2 BASE ══
+  {id:'p20',plt:'P2',rank:'CPL', name:'MUHAMMAD UMAR AL-HAZIQ BIN NOR SAM',  dn:'UMAR',       sec:'BASE',bd:'B10',active:true},
+  {id:'p21',plt:'P2',rank:'LCP', name:'TENCHI BUGARIN CHEW JYE',             dn:'TENCHI',     sec:'BASE',bd:'B10',active:true},
+  {id:'p22',plt:'P2',rank:'LCP', name:'HADIF LUQMAN BIN IMBRAN',             dn:'HADIF',      sec:'BASE',bd:'B11',active:true},
+  {id:'p23',plt:'P2',rank:'PTE', name:'SANTUSHT NARULA',                     dn:'SANTUSHT',   sec:'BASE',bd:'B11',active:true},
+  {id:'p24',plt:'P2',rank:'LCP', name:'MOHAMMAD RAYYAAN MOHAMAD RAFI PUTERA',dn:'RAYYAAN',   sec:'BASE',bd:'B12',active:true},
+  {id:'p25',plt:'P2',rank:'PTE', name:'TAN WEI SING TIM',                    dn:'TIM',        sec:'BASE',bd:'B12',active:true},
+  {id:'p26',plt:'P2',rank:'LCP', name:'MIAO YIFAN',                          dn:'YI FAN',     sec:'BASE',bd:'B13',active:true},
+  {id:'p27',plt:'P2',rank:'LCP', name:'SHEARHAN BIN SHEAFRILDIN',            dn:'SHEARHAN',   sec:'BASE',bd:'B13',active:true},
+  {id:'p28',plt:'P2',rank:'LCP', name:'ALLURI DEVESH CHOWDARY',              dn:'DEVESH',     sec:'BASE',bd:'B14',active:true},
+  {id:'p29',plt:'P2',rank:'LCP', name:'SOO KENG YANG BRAYDEN',               dn:'BRAYDEN',    sec:'BASE',bd:'B14',active:true},
+  {id:'p30',plt:'P2',rank:'PTE', name:'KIM CHANYEOP',                        dn:'CHANYEOP',   sec:'BASE',bd:'B15',active:true},
+  {id:'p31',plt:'P2',rank:'PTE', name:'NG ZHI HENG',                         dn:'ZHI HENG',   sec:'BASE',bd:'B15',active:true},
+  {id:'p32',plt:'P2',rank:'PTE', name:'CHUA YU AN',                          dn:'YU AN',      sec:'BASE',bd:'B15',active:true},
+  // ══ PLATOON 2 CS/CSS ══
+  {id:'p33',plt:'P2',rank:'CPL', name:'TEH ZHI JIE',                         dn:'ZHI JIE',    sec:'CS/CSS',bd:'B16',active:true},
+  {id:'p34',plt:'P2',rank:'LCP', name:'LEE HAO LI',                          dn:'HAO LI',     sec:'CS/CSS',bd:'B16',active:true},
+  {id:'p35',plt:'P2',rank:'CFC', name:'CHONG YI HANG',                       dn:'YI HANG',    sec:'CS/CSS',bd:'B17',active:true},
+  {id:'p36',plt:'P2',rank:'LCP', name:'WONG ZHENG HAN',                      dn:'ZHENG HAN',  sec:'CS/CSS',bd:'B17',active:true},
+  {id:'p37',plt:'P2',rank:'LCP', name:'SAMUEL CHAREONSRI (ZHANG ZHU-EN)',    dn:'SAMUEL',     sec:'CS/CSS',bd:'B17',active:true},
+  {id:'p38',plt:'P2',rank:'LCP', name:'KEE ZHAN XIANG',                      dn:'ZHAN XIANG', sec:'CS/CSS',bd:'B18',active:true},
+  {id:'p39',plt:'P2',rank:'LCP', name:'JAKIN PASCUAL MAGUNDAYAO',            dn:'JAKIN',      sec:'CS/CSS',bd:'B18',active:true},
+  {id:'p40',plt:'P2',rank:'LCP', name:'MOHAMAD ARSYAD BIN SAMARDI',          dn:'ARSYAD',     sec:'CS/CSS',bd:'B18',active:true},
+  {id:'p41',plt:'P2',rank:'LCP', name:'ONG CHEE HOW DARRYL',                 dn:'DARRYL',     sec:'CS/CSS',bd:'B19',active:true},
+  {id:'p42',plt:'P2',rank:'LCP', name:'TEO TECK WOON',                       dn:'TECK WOON',  sec:'CS/CSS',bd:'B19',active:true},
+  {id:'p43',plt:'P2',rank:'LCP', name:'MUHAMMAD DANIAL HALIFI BIN HISHAM',   dn:'DANIAL',     sec:'CS/CSS',bd:'B20',active:true},
+  {id:'p44',plt:'P2',rank:'LCP', name:'LAWRENCE LIM WEI QI',                 dn:'WEI QI',     sec:'CS/CSS',bd:'B20',active:true},
+  {id:'p45',plt:'P2',rank:'PTE', name:'GUO ZHIXUAN',                         dn:'ZHI XUAN',   sec:'CS/CSS',bd:'B21',active:true},
+  {id:'p46',plt:'P2',rank:'PTE', name:'LI XU KANG',                          dn:'XU KANG',    sec:'CS/CSS',bd:'B21',active:true},
+  // ══ PLATOON 2 APPRENTICE ══
+  {id:'p47',plt:'P2',rank:'PTE', name:'GORDON KWA JUN WEI',                  dn:'GORDON',     sec:'APPRENTICE',bd:'B22',active:true},
+  {id:'p48',plt:'P2',rank:'PTE', name:'MUHAMMAD EZREEN BIN SUHAIDIL',        dn:'EZREEN',     sec:'APPRENTICE',bd:'B22',active:true},
+  {id:'p49',plt:'P2',rank:'PTE', name:'BHONE MYAT MIN',                      dn:'BHONE',      sec:'APPRENTICE',bd:'B23',active:true},
+  {id:'p50',plt:'P2',rank:'PTE', name:'MUHAMMAD ALFIAN BIN NADI',            dn:'ALFIAN',     sec:'APPRENTICE',bd:'B23',active:true},
+  {id:'p51',plt:'P2',rank:'PTE', name:'SARTHAK BASAK',                       dn:'SARTHAK',    sec:'APPRENTICE',bd:'B24',active:true},
+  {id:'p52',plt:'P2',rank:'PTE', name:'WENG JINGJIE',                        dn:'JINGJIE',    sec:'APPRENTICE',bd:'B24',active:true},
+  {id:'p53',plt:'P2',rank:'PTE', name:'YEOW KAI YE CONRAD',                  dn:'CONRAD',     sec:'APPRENTICE',bd:'B25',active:true},
+  {id:'p54',plt:'P2',rank:'PTE', name:'EUGENE HO ZHI JIAN',                  dn:'EUGENE',     sec:'APPRENTICE',bd:'B25',active:true},
+  {id:'p55',plt:'P2',rank:'PTE', name:'TAUFIQ-AL-HAKIM BIN TASRIP',          dn:'TAUFIQ',     sec:'APPRENTICE',bd:'B26',active:true},
+  {id:'p56',plt:'P2',rank:'PTE', name:'SARREAL ALEC JANNE SEMBRANO',         dn:'SARREAL',    sec:'APPRENTICE',bd:'B26',active:true},
+  // ══ HQ NODE COMMANDER ══
+  {id:'h01',plt:'HQ',rank:'DX12',name:'PANDIAN S/O SIVASAMY',               dn:'PANDIAN',    sec:'NODE CMD',bd:'B1',active:true},
+  // ══ HQ COMMANDERS ══
+  {id:'h02',plt:'HQ',rank:'3WO', name:'ANG WEI LIANG RONALD',               dn:'RONALD',     sec:'HQ CMD',bd:'B1',active:true},
+  {id:'h03',plt:'HQ',rank:'ME3', name:'KHAIRYLL FADILAH BIN MOHAMED SURAID',dn:'KHAIRYLL',   sec:'HQ CMD',bd:'B2',active:true},
+  {id:'h04',plt:'HQ',rank:'MSG', name:'MUHAMMAD AFIQ BIN JURAIME',          dn:'AFIQ',       sec:'HQ CMD',bd:'B2',active:true},
+  {id:'h05',plt:'HQ',rank:'3SG', name:'TAN HONG YU MOSES',                  dn:'MOSES',      sec:'HQ CMD',bd:'B3',active:true},
+  {id:'h06',plt:'HQ',rank:'3SG', name:'MUHAMMAD HAZIQ BIN PUNGOT',          dn:'HAZIQ',      sec:'HQ CMD',bd:'B3',active:true},
+  // ══ HQ OPS CLERK ══
+  {id:'h07',plt:'HQ',rank:'LCP', name:'GREGORY GAN CHIU ZER',               dn:'GREGORY',    sec:'OPS CLERK',bd:'B4',active:true},
+  {id:'h08',plt:'HQ',rank:'LCP', name:'RIZWAN YUSUF BIN MALICK',            dn:'RIZWAN',     sec:'OPS CLERK',bd:'B4',active:true},
+  // ══ HQ NODE CLERK ══
+  {id:'h09',plt:'HQ',rank:'CPL', name:'VINITH KUMAR SABAH SELVAM',          dn:'VINITH',     sec:'NODE CLERK',bd:'B5',active:true},
+  {id:'h10',plt:'HQ',rank:'PTE', name:'TEE YONG HSING JENSON',              dn:'JENSON',     sec:'NODE CLERK',bd:'B5',active:true},
+  // ══ HQ MAINTENANCE CLERK ══
+  {id:'h11',plt:'HQ',rank:'CPL', name:'LEO EDWIN JULIAN BRITTO',            dn:'LEO',        sec:'MAINT CLERK',bd:'B5',active:true},
+  {id:'h12',plt:'HQ',rank:'PTE', name:'TAM YIN FAI LUCAS',                  dn:'LUCAS',      sec:'MAINT CLERK',bd:'B5',active:true},
+  // ══ HQ AMB ══
+  {id:'h13',plt:'HQ',rank:'LCP', name:'JAYAVENKATESH JEIPRATHAP',           dn:'JAYA',       sec:'AMB',bd:'B6',active:true},
+  {id:'h14',plt:'HQ',rank:'CFC', name:'CHUA BING XUAN',                     dn:'BING XUAN',  sec:'AMB',bd:'B6',active:true},
+  {id:'h15',plt:'HQ',rank:'CPL', name:'WONG LUKE NAM',                      dn:'LUKE N',     sec:'AMB',bd:'B6',active:true},
+];
+
+// ─── STORAGE ────────────────────────────────────────────────────
+function load(k,def){try{const s=localStorage.getItem(k);return s?JSON.parse(s):def}catch{return def}}
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
+
+// ─── UTILS ──────────────────────────────────────────────────────
+function todayStr(){return new Date().toISOString().split('T')[0]}
+function fmtDate(s){const[y,m,d]=s.split('-');return`${d}/${m}/${y.slice(2)}`}
+function currentTod(){const h=new Date().getHours();if(h<8)return'HLS';if(h<13)return'0745';if(h<17)return'1300';if(h<20)return'1730';return'2030/2230'}
+function todKey(tod){return tod.replace(/\//g,'_')}
+function fbAttPath(date,tod){return`jrn/att/${date}/${todKey(tod)}`}
+function dispName(p){return`${p.rank} ${p.dn||p.name.split(' ')[0]}`}
+function fmtDetDate(det){if(!det)return'';if(/^\d{4}-\d{2}-\d{2}$/.test(det))return fmtDate(det);return det;}
+function getSiso(p){return p.siso||{type:'si'}}
+function sisoExpired(p){const s=getSiso(p);return s.type==='so_till'&&!!s.date&&s.date<=todayStr()}
+function sisoLabel(p){const s=getSiso(p);if(s.type==='so')return'S/O';if(s.type==='so_till')return`S/O TILL ${s.date?fmtDate(s.date):'?'}`;return'S/I'}
+function sisoBadgeClass(p){if(sisoExpired(p))return'siso-expired';const s=getSiso(p);if(s.type==='so')return'siso-so';if(s.type==='so_till')return'siso-sotill';return'siso-si'}
+
+// ─── MESSAGE GENERATION ─────────────────────────────────────────
+function genMsg(date,tod,total,records,personnel,extra){
+  const active=personnel.filter(p=>p.active);
+  const grp={};
+  SL.forEach(s=>{grp[s.k]=[]});
+  active.forEach(p=>{
+    const r=records[p.id];
+    if(r&&r.s){grp[r.s]=grp[r.s]||[];grp[r.s].push({p,det:r.det||'',from:r.from||''});}
+  });
+  const cnt=k=>(grp[k]||[]).length;
+  const lst=(k,pre)=>{
+    const items=grp[k]||[];
+    if(!items.length)return'';
+    return'\n'+items.map((x,i)=>{
+      let line=`${i+1}. ${dispName(x.p)}`;
+      if(x.det){const d=fmtDetDate(x.det)||x.det;line+=pre?` ${pre}${d}`:` (${d})`;}
+      if(x.from&&x.from!==x.det){line+=` (From ${fmtDetDate(x.from)||x.from})`;}
+      return line;
+    }).join('\n');
+  };
+  // Auto-count all duty-type statuses (no names shown)
+  const dutyCount=[...DUTY_STATUSES].reduce((s,k)=>s+cnt(k),0);
+  const L=[];
+  L.push(`JRN PARADE STATE  ${fmtDate(date)} ${TOD_LABEL[tod]||tod} (${tod})`);
+  L.push(`Total strength: ${total}`);L.push('');
+  L.push(`Duty Personnel: ${dutyCount}`);L.push('');
+  L.push(`Present: ${cnt('present')}`);L.push('');
+  if(cnt('so')||cnt('so_till')){
+    L.push(`Stay Out: ${cnt('so')}`);
+    L.push(`Stay Out Till: ${cnt('so_till')}${lst('so_till','TILL ')}`);L.push('');
+  }
+  L.push(`Late: ${cnt('late')}${lst('late')}`);L.push('');
+  L.push(`Detail: ${cnt('detail')}${lst('detail')}`);L.push('');
+  L.push(`ARF: ${cnt('arf')}${lst('arf')}`);L.push('');
+  L.push(`Duty/Detail Rest: ${cnt('ddr')}${lst('ddr')}`);L.push('');
+  L.push(`MA: ${cnt('ma')}${lst('ma')}`);L.push('');
+  L.push(`Medical Certificate: ${cnt('mc')}${lst('mc','TILL ')}`);L.push('');
+  L.push(`Hospitalisation Leave: ${cnt('hl')}${lst('hl','TILL ')}`);L.push('');
+  L.push(`Hospitalised: ${cnt('hospitalised')}`);L.push('');
+  L.push(`RSO: ${cnt('rso')}`);L.push('');
+  L.push(`RSI: ${cnt('rsi')}${lst('rsi')}`);L.push('');
+  L.push(`OFF: ${cnt('off')}${lst('off')}`);L.push('');
+  L.push(`OVERSEAS LEAVE: ${cnt('ol')}${lst('ol','TILL ')}`);L.push('');
+  L.push(`LOCAL LEAVE: ${cnt('ll')}${lst('ll','TILL ')}`);L.push('');
+  L.push(`ATTACHED OUT LOCAL: ${cnt('ao_local')}${lst('ao_local')}`);L.push('');
+  L.push(`ATTACHED OUT OVERSEAS: ${cnt('ao_overseas')}${lst('ao_overseas')}`);L.push('');
+  L.push(`SAFER/UPCAT: ${cnt('safer_upcat')}${lst('safer_upcat')}`);L.push('');
+  L.push(`URGENT LEAVE: ${cnt('ul')}`);
+  L.push(`FAMILY CARE LEAVE: ${cnt('fcl')}`);
+  L.push(`CL: ${cnt('cl')}`);
+  L.push(`CCL: ${cnt('ccl')}`);
+  L.push(`Court: ${cnt('court')}`);
+  L.push(`CA: ${cnt('ca')}`);
+  L.push(`Civil: ${cnt('civil')}`);
+  L.push(`DB / Prison: ${cnt('db_prison')}`);
+  L.push(`DO(GCM): ${cnt('do_gcm')}`);
+  L.push(`AWOL: ${cnt('awol')}`);
+  L.push(`SOL: ${cnt('sol')}`);
+  L.push(`Suspended: ${cnt('suspended')}`);
+  L.push('');L.push('- OTHERS -');L.push('');
+  L.push(`CSE: ${cnt('cse')}${lst('cse')}`);L.push('');
+  L.push(`LASHING: ${cnt('lashing')}`);
+  L.push(`DCP: ${cnt('dcp')}`);
+  L.push(`JC1: ${cnt('jc1')}`);
+  L.push(`HQ: ${cnt('hq')}`);
+  L.push(`DB visits: ${cnt('db_visits')}`);
+  L.push(`Meeting: ${cnt('meeting')}`);
+  L.push(`Rest In Bunk: ${cnt('rib')}`);
+  L.push('');
+  L.push(`6TON FAM (COE): ${cnt('6ton_fam')}${lst('6ton_fam')}`);L.push('');
+  L.push(`GP FAM: ${cnt('gp_fam')}`);
+  L.push(`Driving Course: ${cnt('driving')}`);
+  if(cnt('others')){L.push('');L.push(`Others: ${cnt('others')}${lst('others')}`);L.push('');}
+  if(extra&&extra.trim()){L.push('');L.push(extra.trim());}
+  return L.join('\n');
+}
+
+// ─── PDF HELPERS ────────────────────────────────────────────────
+function getStatusCell(rec){
+  if(!rec||!rec.s)return'';
+  const k=rec.s;
+  if(k==='present')return'P';
+  if(k==='so'||k==='so_till')return'S/O';
+  if(k==='duty')return'D';
+  if(k==='mc')return'MC';
+  if(k==='hl')return'HL';
+  if(k==='hospitalised')return'HOSP';
+  if(k==='off')return'OFF';
+  if(k==='ol')return'OL';
+  if(k==='ll')return'LL';
+  if(k==='ul')return'UL';
+  if(k==='fcl')return'FCL';
+  if(k==='late')return'LATE';
+  if(k==='ma')return'MA';
+  if(k==='arf')return'ARF';
+  if(k==='ddr')return'DDR';
+  if(k==='rso')return'RSO';
+  if(k==='rsi')return'RSI';
+  if(k==='attached_out')return'ATT';
+  if(k==='awol')return'AWOL';
+  if(k==='sol')return'SOL';
+  if(k==='db_prison')return'DB';
+  if(k==='suspended')return'SUSP';
+  return k.substring(0,4).toUpperCase();
+}
+function getRemarkText(allTodRecs,pid){
+  for(const tod of TODS){
+    const rec=(allTodRecs[tod]||{})[pid];
+    if(rec&&rec.det)return rec.det;
+  }
+  return'';
+}
+function sisoCell(p){
+  const s=getSiso(p);
+  if(s.type==='so')return'S/O';
+  if(s.type==='so_till')return s.date?`S/O ${fmtDate(s.date)}`:'S/O';
+  return'S/I';
+}
+
+// ─── PDF PAGE COMPONENT ─────────────────────────────────────────
+function ParadeStatePDFPage({plt,personnel,allTodRecs,date,total,allTodMarkedBy}){
+  const pltPpl=personnel.filter(p=>p.active&&p.plt===plt);
+  const sections=P_SECTIONS[plt]||[];
+  const NON_CMDR=new Set(['REC','PTE','LCP','CPL','CFC']);
+  const commanders=personnel.filter(p=>!NON_CMDR.has(p.rank));
+  // Look up who signed off a given TOD for this platoon
+  function markerLabel(tod){
+    const mb=(allTodMarkedBy[tod]||{})[plt];
+    if(!mb)return<span className="pdf-ft-line"/>;
+    const c=commanders.find(x=>x.id===mb);
+    return c?`${c.rank} ${c.dn||c.name.split(' ')[0]}`:<span className="pdf-ft-line"/>;
+  }
+  let sn=0;
+  return(
+    <div className="pdf-pg">
+      <div className="pdf-pg-title">Jurong Node — Parade State</div>
+      <div className="pdf-pg-sub">Date: {fmtDate(date)} &nbsp;|&nbsp; {plt==='HQ'?'HQ':P_LABEL[plt]} &nbsp;|&nbsp; Platoon Strength: {pltPpl.length} &nbsp;|&nbsp; Node Strength: {total}</div>
+      <table className="pdf-tbl">
+        <thead>
+          <tr>
+            <th className="pdf-th-sn">S/N</th>
+            <th className="pdf-th-rk">RANK</th>
+            <th className="pdf-th-nm">NAME</th>
+            <th className="pdf-th-io">IN/OUT</th>
+            <th className="pdf-th-td">HLS</th>
+            <th className="pdf-th-td">0745</th>
+            <th className="pdf-th-td">1300</th>
+            <th className="pdf-th-td">1730</th>
+            <th className="pdf-th-td">2030/2230</th>
+            <th className="pdf-th-rm">REMARK</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sections.map(sec=>{
+            const ppl=pltPpl.filter(p=>p.sec===sec);
+            if(!ppl.length)return null;
+            const lbl=plt==='HQ'
+              ?(sec==='NODE CMD'?'NODE COMMANDER':sec==='HQ CMD'?'HQ COMMANDERS':sec)
+              :`${P_LABEL[plt].toUpperCase()} TO (${sec})`;
+            return(
+              <React.Fragment key={sec}>
+                <tr className="pdf-sec-hdr"><td colSpan={10}>{lbl}</td></tr>
+                {ppl.map(p=>{
+                  sn++;
+                  const isSO=getSiso(p).type!=='si';
+                  return(
+                    <tr key={p.id} style={isSO?{background:'#fef9c3'}:{}}>
+                      <td className="pdf-c-ctr">{sn}</td>
+                      <td className="pdf-c-ctr">{p.rank}</td>
+                      <td className="pdf-c-lft">{p.name}</td>
+                      <td className="pdf-c-ctr">{sisoCell(p)}</td>
+                      {TODS.map(tod=>(
+                        <td key={tod} className="pdf-c-ctr">{getStatusCell((allTodRecs[tod]||{})[p.id])}</td>
+                      ))}
+                      <td className="pdf-c-lft">{getRemarkText(allTodRecs,p.id)}</td>
+                    </tr>
+                  );
+                })}
+              </React.Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+      <div className="pdf-pg-footer">
+        <div><div className="pdf-ft-lbl">HLS Marked By</div><div>{markerLabel('HLS')}</div></div>
+        <div><div className="pdf-ft-lbl">FP Marked By</div><div>{markerLabel('0745')}</div></div>
+        <div><div className="pdf-ft-lbl">MP Marked By</div><div>{markerLabel('1300')}</div></div>
+        <div><div className="pdf-ft-lbl">LP Marked By</div><div>{markerLabel('1730')}</div></div>
+        <div style={{textAlign:'right'}}>
+          <div className="pdf-ft-lbl">Total Node Strength</div>
+          <div style={{fontWeight:'bold',fontSize:'14px'}}>{total}</div>
+          <div className="pdf-ft-lbl" style={{marginTop:'4px'}}>Total Plt Strength</div>
+          <div style={{fontWeight:'bold',fontSize:'14px'}}>{pltPpl.length}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── PDF PREVIEW MODAL ──────────────────────────────────────────
+function PDFPreviewModal({date,personnel,allTodRecs,total,allTodMarkedBy,onClose,onDownloaded}){
+  const[downloading,setDownloading]=useState(false);
+  const pageRefs=useRef([null,null,null]);
+  const PAGES=['HQ','P1','P2'];
+  async function handleDownload(){
+    setDownloading(true);
+    try{
+      const{jsPDF}=window.jspdf;
+      const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+      const pgW=210,pgH=297;
+      for(let i=0;i<PAGES.length;i++){
+        if(i>0)pdf.addPage();
+        const el=pageRefs.current[i];
+        const canvas=await html2canvas(el,{scale:2,useCORS:true,logging:false,backgroundColor:'#ffffff',windowWidth:800});
+        const imgData=canvas.toDataURL('image/jpeg',0.92);
+        const imgW=pgW;
+        let imgH=(canvas.height*imgW)/canvas.width;
+        if(imgH>pgH){
+          const scaledW=(canvas.width*pgH)/canvas.height;
+          pdf.addImage(imgData,'JPEG',(pgW-scaledW)/2,0,scaledW,pgH);
+        }else{
+          pdf.addImage(imgData,'JPEG',0,0,imgW,imgH);
+        }
+      }
+      const filename=`ParadeState_JRN_${date}.pdf`;
+      const blob=pdf.output('blob');
+      if(onDownloaded)onDownloaded();
+      if(navigator.canShare&&navigator.canShare({files:[new File([blob],filename,{type:'application/pdf'})]})){
+        await navigator.share({files:[new File([blob],filename,{type:'application/pdf'})],title:filename});
+      }else{
+        pdf.save(filename);
+      }
+    }catch(err){
+      if(err.name!=='AbortError'){console.error(err);alert('Failed to generate PDF. Please try again.');}
+    }finally{setDownloading(false);}
+  }
+  return(
+    <div className="pdf-overlay">
+      <div className="pdf-modal-bar">
+        <span className="pdf-modal-title">📄 Parade State — {fmtDate(date)}</span>
+        <button className="pdf-dl-btn" onClick={handleDownload} disabled={downloading}>
+          {downloading?'Generating…':'⬇ Download PDF'}
+        </button>
+        <button className="pdf-close-btn" onClick={onClose}>✕</button>
+      </div>
+      <div className="pdf-modal-body">
+        {PAGES.map((plt,i)=>(
+          <div key={plt} ref={el=>pageRefs.current[i]=el} style={{boxShadow:'0 2px 16px rgba(0,0,0,.4)'}}>
+            <ParadeStatePDFPage plt={plt} personnel={personnel} allTodRecs={allTodRecs} date={date} total={total} allTodMarkedBy={allTodMarkedBy}/>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── HISTORY SCREEN ─────────────────────────────────────────────
+function HistoryScreen({history,personnel,onPreview,onDelete,overrideUnlocked,setOverrideUnlocked,toast_,onEdit}){
+  const[openY,setOpenY]=useState(new Set());
+  const[openM,setOpenM]=useState(new Set());
+  const[loading,setLoading]=useState(null);
+  const[editingId,setEditingId]=useState(null);  // date string of card showing password prompt
+  const[passInput,setPassInput]=useState('');
+  const[showPass,setShowPass]=useState(false);
+  const[passErr,setPassErr]=useState('');
+  const grouped=useMemo(()=>{
+    const g={};
+    history.forEach(e=>{
+      const d=new Date(e.date+'T00:00:00');
+      const y=d.getFullYear();
+      const mk=`${y}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      const mn=d.toLocaleDateString('en-MY',{month:'long'});
+      if(!g[y])g[y]={};
+      if(!g[y][mk])g[y][mk]={name:mn,entries:[]};
+      g[y][mk].entries.push(e);
+    });
+    return g;
+  },[history]);
+  const years=Object.keys(grouped).sort((a,b)=>b-a);
+  function toggleY(y){setOpenY(prev=>{const n=new Set(prev);n.has(y)?n.delete(y):n.add(y);return n;})}
+  function toggleM(m){setOpenM(prev=>{const n=new Set(prev);n.has(m)?n.delete(m):n.add(m);return n;})}
+  function openEditPrompt(date){setEditingId(date);setPassInput('');setPassErr('');setShowPass(false);}
+  function cancelEdit(){setEditingId(null);setPassInput('');setPassErr('');}
+  function attemptOverride(dateStr){
+    if(passInput===OVERRIDE_PASS){
+      setOverrideUnlocked(true);setEditingId(null);setPassInput('');setPassErr('');
+      onEdit(dateStr);
+    } else {
+      setPassErr('Incorrect password.');setPassInput('');
+    }
+  }
+
+  function renderCard(e){
+    const isPast=e.date<todayStr();
+    const needsAuth=isPast&&!overrideUnlocked;
+    const isEditing=editingId===e.date;
+    return(
+      <div key={e.date} className="hist-card" style={{flexDirection:'column',alignItems:'stretch',gap:'10px'}}>
+        <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+          <div className="hist-card-info" style={{flex:1}}>
+            <div className="hist-card-date">📋 {fmtDate(e.date)}</div>
+            <div className="hist-card-sub">Saved {new Date(e.savedAt).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+          </div>
+          <div className="hist-card-btns">
+            <button className="hist-prev-btn" disabled={loading===e.date} onClick={()=>onPreview(e,setLoading)}>
+              {loading===e.date?'Loading…':'Preview'}
+            </button>
+            {needsAuth?(
+              isEditing?(
+                <button onClick={cancelEdit} style={{padding:'7px 14px',background:'#e2e8f0',color:'#475569',border:'none',borderRadius:'8px',fontSize:'13px',fontWeight:700,cursor:'pointer'}}>Cancel</button>
+              ):(
+                <button onClick={()=>openEditPrompt(e.date)} style={{padding:'7px 14px',background:'#7c3aed',color:'#fff',border:'none',borderRadius:'8px',fontSize:'13px',fontWeight:700,cursor:'pointer'}}>Edit</button>
+              )
+            ):(
+              <button onClick={()=>onEdit(e.date)} style={{padding:'7px 14px',background:'#0d9488',color:'#fff',border:'none',borderRadius:'8px',fontSize:'13px',fontWeight:700,cursor:'pointer'}}>Edit</button>
+            )}
+          </div>
+        </div>
+        {isEditing&&needsAuth&&(
+          <div style={{background:'#f8fafc',border:'1.5px solid #e2e8f0',borderRadius:'10px',padding:'12px 14px'}}>
+            <div style={{fontSize:'12px',fontWeight:700,color:'#475569',marginBottom:'8px'}}>Enter admin password to edit this record</div>
+            {passErr&&<div style={{fontSize:'12px',color:'#dc2626',fontWeight:600,marginBottom:'8px'}}>⚠ {passErr}</div>}
+            <div style={{display:'flex',gap:'8px'}}>
+              <div style={{position:'relative',flex:1}}>
+                <input type={showPass?'text':'password'} placeholder="Admin password" value={passInput}
+                  onChange={e=>{setPassInput(e.target.value);setPassErr('');}}
+                  onKeyDown={ev=>ev.key==='Enter'&&attemptOverride(e.date)}
+                  autoFocus
+                  style={{width:'100%',padding:'8px 36px 8px 10px',border:'1.5px solid #cbd5e1',borderRadius:'8px',fontSize:'13px',outline:'none',color:'#1e293b',boxSizing:'border-box'}}/>
+                <button onClick={()=>setShowPass(v=>!v)} style={{position:'absolute',right:'8px',top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'#94a3b8',fontSize:'15px',padding:0}}>{showPass?'🙈':'👁'}</button>
+              </div>
+              <button onClick={()=>attemptOverride(e.date)} style={{padding:'8px 14px',background:'#7c3aed',color:'#fff',border:'none',borderRadius:'8px',fontSize:'13px',fontWeight:700,cursor:'pointer',flexShrink:0}}>Unlock & Edit</button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if(history.length===0)return(
+    <div className="hist-empty">
+      <div style={{fontSize:'40px',marginBottom:'12px'}}>🗂️</div>
+      No history yet.<br/>
+      <span style={{fontSize:'12px',opacity:.7}}>Records appear here automatically when attendance is submitted.</span>
+    </div>
+  );
+  return(
+    <div>
+      <div className="hist-hdr">
+        <h2>History</h2>
+        <span className="hist-count">{history.length} records</span>
+      </div>
+      {years.map(y=>(
+        <div key={y} className="hist-year-grp">
+          <div className="hist-y-hdr" onClick={()=>toggleY(y)}>
+            <span>{openY.has(y)?'📂':'📁'}</span>
+            <span style={{flex:1}}>{y}</span>
+            <span style={{fontSize:'12px',opacity:.8}}>{Object.values(grouped[y]).reduce((s,m)=>s+m.entries.length,0)} records</span>
+            <span>{openY.has(y)?'▲':'▼'}</span>
+          </div>
+          {openY.has(y)&&(
+            <div className="hist-y-body">
+              {Object.entries(grouped[y]).sort(([a],[b])=>b.localeCompare(a)).map(([mk,{name,entries}])=>(
+                <div key={mk}>
+                  <div className="hist-m-hdr" onClick={()=>toggleM(mk)}>
+                    <span>{openM.has(mk)?'📂':'📁'}</span>
+                    <span style={{flex:1}}>{name} {y}</span>
+                    <span style={{fontSize:'12px'}}>{entries.length} records</span>
+                    <span>{openM.has(mk)?'▲':'▼'}</span>
+                  </div>
+                  {openM.has(mk)&&(
+                    <div className="hist-m-body">
+                      {[...entries].sort((a,b)=>b.date.localeCompare(a.date)).map(e=>renderCard(e))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── LOGIN ──────────────────────────────────────────────────────
+const USERS=[{user:'comd',pass:'comd123',label:'Commander'}];
+function LoginScreen({onLogin}){
+  const[user,setUser]=useState('');
+  const[pass,setPass]=useState('');
+  const[err,setErr]=useState('');
+  const[showPass,setShowPass]=useState(false);
+  function attempt(){
+    const found=USERS.find(u=>u.user===user.trim()&&u.pass===pass);
+    if(found){onLogin(found);}
+    else{setErr('Incorrect username or password.');setPass('');}
+  }
+  return(
+    <div className="login-wrap">
+      <div className="login-logo">🪖</div>
+      <div className="login-title">JRN Parade State</div>
+      <div className="login-sub">Jurong Node — Commander Access</div>
+      <div className="login-card">
+        {err&&<div className="login-err">⚠ {err}</div>}
+        <div className="login-field">
+          <div className="login-lbl">Username</div>
+          <input className="login-inp" type="text" placeholder="Enter username" autoCapitalize="none" autoCorrect="off"
+            value={user} onChange={e=>{setUser(e.target.value);setErr('');}}
+            onKeyDown={e=>e.key==='Enter'&&attempt()}/>
+        </div>
+        <div className="login-field">
+          <div className="login-lbl">Password</div>
+          <div style={{position:'relative'}}>
+            <input className="login-inp" type={showPass?'text':'password'} placeholder="Enter password" style={{paddingRight:'50px'}}
+              value={pass} onChange={e=>{setPass(e.target.value);setErr('');}}
+              onKeyDown={e=>e.key==='Enter'&&attempt()}/>
+            <button onClick={()=>setShowPass(v=>!v)} style={{position:'absolute',right:'12px',top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'#94a3b8',fontSize:'18px',padding:'0'}}>{showPass?'🙈':'👁'}</button>
+          </div>
+        </div>
+        <button className="login-btn" onClick={attempt}>Sign In</button>
+      </div>
+      <div className="login-footer">Authorised Personnel Only</div>
+    </div>
+  );
+}
+
+// ─── LANDING SCREEN ─────────────────────────────────────────────
+const TOD_TIME = {'HLS':'Before 0745','0745':'0745 hrs','1300':'1300 hrs','1730':'1730 hrs','2030/2230':'2030 / 2230 hrs'};
+function LandingScreen({onPick,onLogout}){
+  const today=todayStr();
+  const d=new Date(today+'T00:00:00');
+  const dayStr=d.toLocaleDateString('en-MY',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  return(
+    <div className="land-wrap">
+      <div className="land-hdr">
+        <div>
+          <div className="land-hdr-title">🪖 JRN Parade State</div>
+          <div className="land-hdr-sub">Jurong Node — Select a Parade Time</div>
+        </div>
+        <button className="land-signout" onClick={onLogout}>Sign Out</button>
+      </div>
+      <div className="land-date-box">
+        <div className="land-date-icon">📅</div>
+        <div>
+          <div className="land-date-lbl">Today's Date</div>
+          <div className="land-date-val">{dayStr}</div>
+        </div>
+      </div>
+      <div className="land-pick-lbl" style={{marginTop:'24px'}}>Select Parade Time</div>
+      <div className="land-slots">
+        {TODS.map(t=>(
+          <div key={t} className="land-slot" onClick={()=>onPick(today,t)}>
+            <div className={`land-slot-tag${t==='2030/2230'?' night':''}`}>{TOD_LABEL[t]}</div>
+            <div className="land-slot-info">
+              <div className="land-slot-name">{TOD_FULL[t]}</div>
+              <div className="land-slot-time">{TOD_TIME[t]}</div>
+            </div>
+            <div className="land-slot-arrow">›</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── ROOT (auth gate) ───────────────────────────────────────────
+function Root(){
+  const[loggedIn,setLoggedIn]=useState(()=>{try{return sessionStorage.getItem('jrn_auth')==='1'}catch{return false}});
+  const[picked,setPicked]=useState(null); // {date, tod}
+  function handleLogin(u){setLoggedIn(true);try{sessionStorage.setItem('jrn_auth','1');}catch{}}
+  function handleLogout(){setLoggedIn(false);setPicked(null);try{sessionStorage.removeItem('jrn_auth');}catch{}}
+  if(!loggedIn)return <LoginScreen onLogin={handleLogin}/>;
+  if(!picked)return <LandingScreen onPick={(date,tod)=>setPicked({date,tod})} onLogout={handleLogout}/>;
+  return <App initDate={picked.date} initTod={picked.tod} onHome={()=>setPicked(null)} onLogout={handleLogout}/>;
+}
+
+// ─── APP ────────────────────────────────────────────────────────
+function App({onLogout,onHome,initDate,initTod}){
+  const[screen,setScreen]=useState('attendance');
+  const[date,setDate]=useState(()=>initDate||todayStr());
+  const[tod,setTod]=useState(()=>initTod||currentTod());
+  const[total,setTotal]=useState(127);
+  const[duty,setDuty]=useState(0);
+  const[extra,setExtra]=useState('');
+  const[submitted,setSubmitted]=useState({P1:false,P2:false,HQ:false});
+  const[markedBy,setMarkedBy]=useState({P1:'',P2:'',HQ:''});
+  const[toast,setToast]=useState(null);
+  const[toastKey,setToastKey]=useState(0);
+  const[online,setOnline]=useState(true);
+  const[personnel,setPersonnel]=useState(IP);
+  const[records,setRecords]=useState({});
+  const[history,setHistory]=useState([]);
+  const[pdfPreview,setPdfPreview]=useState(null);
+  const[pdfLoading,setPdfLoading]=useState(false);
+  const[overrideUnlocked,setOverrideUnlocked]=useState(false);
+  const skipRef=useRef(false);
+  const personnelRef=useRef(IP);
+  useEffect(()=>{personnelRef.current=personnel;},[personnel]);
+  // Online indicator
+  useEffect(()=>{
+    const ref=DB.ref('.info/connected');
+    ref.on('value',snap=>setOnline(snap.val()===true));
+    return()=>ref.off();
+  },[]);
+  // Personnel listener
+  useEffect(()=>{
+    const ref=DB.ref('jrn/personnel');
+    ref.on('value',snap=>{
+      const d=snap.val();
+      if(d){
+        skipRef.current=true;
+        setPersonnel(Object.values(d).sort((a,b)=>a.id>b.id?1:-1));
+        setTimeout(()=>{skipRef.current=false;},400);
+      } else {
+        const obj={};IP.forEach(p=>{obj[p.id]=p;});ref.set(obj);
+      }
+    });
+    return()=>ref.off();
+  },[]);
+  // Attendance listener per date+tod
+  useEffect(()=>{
+    const ref=DB.ref(fbAttPath(date,tod));
+    ref.on('value',snap=>{
+      const d=snap.val();
+      skipRef.current=true;
+      if(d){
+        setRecords(d.records||{});setTotal(d.total??127);setDuty(d.duty??0);
+        setExtra(d.extra||'');setSubmitted(d.submitted||{P1:false,P2:false,HQ:false});
+        setMarkedBy(d.markedBy||{P1:'',P2:'',HQ:''});
+      } else {
+        const nr={};
+        personnelRef.current.filter(p=>p.active).forEach(p=>{
+          // Auto-carry active date-range leaves (OL, LL, MC, HL)
+          const al=p.activeLeave;
+          if(al&&al.det&&al.from&&date>=al.from&&date<=al.det){
+            nr[p.id]={s:al.s,det:al.det,from:al.from};return;
+          }
+          // Auto-mark S/O for 2030/2230
+          if(tod==='2030/2230'){
+            const si=getSiso(p);
+            if(si.type==='so')nr[p.id]={s:'so',det:'',from:''};
+            else if(si.type==='so_till')nr[p.id]={s:'so_till',det:si.date||'',from:''};
+          }
+        });
+        setRecords(nr);setSubmitted({P1:false,P2:false,HQ:false});setMarkedBy({P1:'',P2:'',HQ:''});
+      }
+      setTimeout(()=>{skipRef.current=false;},400);
+    });
+    return()=>ref.off();
+  },[date,tod]);
+  // Write attendance to Firebase
+  useEffect(()=>{
+    if(skipRef.current)return;
+    DB.ref(fbAttPath(date,tod)).set({records,total,duty,extra,submitted,markedBy});
+  },[records,total,duty,extra,date,tod,submitted,markedBy]);
+  // History listener
+  useEffect(()=>{
+    const ref=DB.ref('jrn/history');
+    ref.on('value',snap=>{
+      const d=snap.val();
+      setHistory(d?Object.values(d).sort((a,b)=>b.date.localeCompare(a.date)):[]);
+    });
+    return()=>ref.off();
+  },[]);
+  // Auto-create a blank history record for the current date if none exists
+  useEffect(()=>{
+    const ref=DB.ref(`jrn/history/${date}`);
+    ref.once('value',snap=>{
+      if(!snap.exists()){
+        ref.set({date,savedAt:Date.now(),total});
+      }
+    });
+  },[date]);
+  // Update history record when a platoon submits
+  function saveToHistory(){
+    DB.ref(`jrn/history/${date}`).update({savedAt:Date.now(),total});
+  }
+  // Load all TODs for a date and show PDF preview
+  async function loadDayAndPreview(dateStr,setLoadingFn){
+    if(setLoadingFn)setLoadingFn(dateStr); else setPdfLoading(true);
+    try{
+      const allTodRecs={};
+      const allTodMarkedBy={};  // {tod: {P1, P2, HQ}}
+      let pTotal=total;
+      await Promise.all(TODS.map(async tod=>{
+        const snap=await DB.ref(fbAttPath(dateStr,tod)).once('value');
+        const d=snap.val();
+        allTodRecs[tod]=d?(d.records||{}):{};
+        if(d){
+          if(d.total)pTotal=d.total;
+          if(d.markedBy)allTodMarkedBy[tod]=d.markedBy;
+        }
+      }));
+      setPdfPreview({date:dateStr,allTodRecs,total:pTotal,allTodMarkedBy});
+    }catch(e){alert('Failed to load data.');}
+    finally{if(setLoadingFn)setLoadingFn(null); else setPdfLoading(false);}
+  }
+  function onPdfDownloaded(){
+    DB.ref(`jrn/history/${pdfPreview.date}`).set({date:pdfPreview.date,savedAt:Date.now(),total:pdfPreview.total});
+    toast_('✓ Saved to History');
+  }
+  function deleteHistory(dateStr){DB.ref(`jrn/history/${dateStr}`).remove();}
+  // Personnel write wrapper (called from ManageScreen)
+  function setPersonnelAndSync(updater){
+    setPersonnel(prev=>{
+      const next=typeof updater==='function'?updater(prev):updater;
+      const obj={};next.forEach(p=>{obj[p.id]=p;});
+      DB.ref('jrn/personnel').set(obj);
+      return next;
+    });
+  }
+  function setRec(id,s,det,from){setRecords(p=>({...p,[id]:{s,det:det||'',from:from||''}}))}
+  function setPersonLeave(id,s,from,till){
+    // update personnel activeLeave for auto-carry
+    setPersonnelAndSync(prev=>prev.map(p=>p.id===id?{...p,activeLeave:till?{s,from:from||todayStr(),det:till}:null}:p));
+  }
+  function toast_(msg,dur=3000){setToast(msg);setToastKey(k=>k+1);setTimeout(()=>setToast(null),dur)}
+  function setAllPresent(){
+    const nr={};
+    personnel.filter(p=>p.active).forEach(p=>{nr[p.id]={s:'present',det:''}});
+    setRecords(nr);toast_('✓ All set to Present');
+  }
+  function clearAll(plt,submittedState){
+    const pltPpl=personnel.filter(p=>p.active&&p.plt===plt);
+    if(submittedState[plt]){return;}
+    setRecords(prev=>{
+      const next={...prev};
+      pltPpl.forEach(p=>{delete next[p.id];});
+      return next;
+    });
+    toast_(`Cleared ${P_LABEL[plt]} statuses`);
+  }
+  const unassigned=useMemo(()=>personnel.filter(p=>p.active&&(!records[p.id]||!records[p.id].s)).length,[personnel,records]);
+  const sisoExpiredCnt=useMemo(()=>personnel.filter(p=>p.active&&sisoExpired(p)).length,[personnel]);
+  const msg=useMemo(()=>genMsg(date,tod,total,records,personnel,extra),[date,tod,total,records,personnel,extra]);
+  return(
+    <div className="app">
+      <div className="hdr">
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <div>
+            <div className="hdr-title">JRN Parade State</div>
+            <div className="hdr-sub">Jurong Node &nbsp;·&nbsp; <span style={{color:online?'#4ade80':'#f87171',fontWeight:800}}>{online?'● Live':'● Offline'}</span></div>
+          </div>
+          <button onClick={onLogout} style={{background:'rgba(255,255,255,.12)',border:'1px solid rgba(255,255,255,.2)',color:'#fff',borderRadius:'8px',padding:'6px 12px',fontSize:'12px',fontWeight:700,cursor:'pointer',flexShrink:0}}>
+            Sign Out
+          </button>
+        </div>
+      </div>
+      <div className="datebar" style={{padding:'10px 14px 10px',display:'flex',alignItems:'center',gap:'10px'}}>
+        <button onClick={onHome} style={{background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:'8px',padding:'6px 10px',fontSize:'12px',fontWeight:700,color:'#475569',cursor:'pointer',flexShrink:0}}>‹ Change</button>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:'11px',color:'#64748b',fontWeight:600}}>{new Date(date+'T00:00:00').toLocaleDateString('en-MY',{weekday:'short',day:'numeric',month:'short',year:'numeric'})}</div>
+          <div style={{fontSize:'15px',fontWeight:800,color:'#0d9488',marginTop:'1px'}}>{TOD_LABEL[tod]} — {TOD_FULL[tod]}</div>
+        </div>
+      </div>
+      <div className="main">
+        {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setAllPresent={setAllPresent} clearAll={clearAll} submitted={submitted} setSubmitted={setSubmitted} markedBy={markedBy} setMarkedBy={setMarkedBy} toast_={toast_} overrideUnlocked={overrideUnlocked} onPlatoonSubmit={saveToHistory}/>}
+        {screen==='telegram'&&<GenerateScreen msg={msg} total={total} setTotal={setTotal} extra={extra} setExtra={setExtra} toast_={toast_} date={date}/>}
+        {screen==='manage'&&<ManageScreen personnel={personnel} setPersonnel={setPersonnelAndSync} toast_={toast_}/>}
+        {screen==='history'&&<HistoryScreen history={history} personnel={personnel} onPreview={(e,setL)=>loadDayAndPreview(e.date,setL)} onDelete={deleteHistory} overrideUnlocked={overrideUnlocked} setOverrideUnlocked={setOverrideUnlocked} toast_={toast_} onEdit={dateStr=>{setDate(dateStr);setScreen('attendance');}}/>}
+      </div>
+      <nav className="bnav">
+        {[
+          {k:'attendance',icon:'📋',lbl:'Attendance',badge:unassigned>0?unassigned:null},
+          {k:'telegram',icon:'📤',lbl:'Telegram'},
+          {k:'history',icon:'🗂️',lbl:'History',badge:history.length>0?null:null},
+          {k:'manage',icon:'👥',lbl:'Personnel',badge:sisoExpiredCnt>0?sisoExpiredCnt:null},
+        ].map(t=>(
+          <button key={t.k} className={`ntab${screen===t.k?' on':''}`} onClick={()=>setScreen(t.k)}>
+            {t.badge&&<span className="nbadge">{t.badge}</span>}
+            <span className="ntab-icon">{t.icon}</span>
+            <span>{t.lbl}</span>
+          </button>
+        ))}
+      </nav>
+      {toast&&<div key={toastKey} className="toast">{toast}</div>}
+      {pdfPreview&&<PDFPreviewModal date={pdfPreview.date} personnel={personnel} allTodRecs={pdfPreview.allTodRecs} total={pdfPreview.total} allTodMarkedBy={pdfPreview.allTodMarkedBy||{}} onClose={()=>setPdfPreview(null)} onDownloaded={onPdfDownloaded}/>}
+    </div>
+  );
+}
+
+// ─── ATTENDANCE SCREEN ──────────────────────────────────────────
+function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setAllPresent,clearAll,submitted,setSubmitted,markedBy,setMarkedBy,toast_,overrideUnlocked,onPlatoonSubmit}){
+  const[search,setSearch]=useState('');
+  const[plt,setPlt]=useState('P1');
+  const active=personnel.filter(p=>p.active);
+  const expiredSiso=active.filter(p=>sisoExpired(p));
+  const filtered=active.filter(p=>{
+    const q=search.toLowerCase();
+    if(q)return p.name.toLowerCase().includes(q)||p.rank.toLowerCase().includes(q)||(p.dn&&p.dn.toLowerCase().includes(q));
+    return p.plt===plt;
+  });
+  // Group: plt → sec → people
+  const tree={};
+  filtered.forEach(p=>{
+    if(!tree[p.plt])tree[p.plt]={};
+    if(!tree[p.plt][p.sec])tree[p.plt][p.sec]=[];
+    tree[p.plt][p.sec].push(p);
+  });
+  const presentCnt=active.filter(p=>records[p.id]&&records[p.id].s==='present').length;
+  const assignedCnt=active.filter(p=>records[p.id]&&records[p.id].s).length;
+  const unCnt=active.length-assignedCnt;
+  const pltColors={P1:'#dbeafe',P2:'#d1fae5',HQ:'#fef3c7'};
+  return(
+    <div>
+      {expiredSiso.length>0&&(
+        <div className="alert-banner">
+          <div className="alert-banner-title">⚠ {expiredSiso.length} S/O Till Date Reached — Update Required</div>
+          {expiredSiso.map(p=><div key={p.id} className="alert-banner-item">• {dispName(p)} — {sisoLabel(p)}</div>)}
+        </div>
+      )}
+      <div className="stats-grid">
+        <div className="stat-box"><div className="stat-n">{active.length}</div><div className="stat-l">Total</div></div>
+        <div className="stat-box"><div className="stat-n" style={{color:'#16a34a'}}>{presentCnt}</div><div className="stat-l">Present</div></div>
+        <div className="stat-box"><div className="stat-n" style={{color:unCnt>0?'#f59e0b':'#16a34a'}}>{unCnt}</div><div className="stat-l">Unassigned</div></div>
+      </div>
+      {(()=>{const isPastDate=date<todayStr();const isLocked=(submitted[plt]||false)||(isPastDate&&!overrideUnlocked);return(
+        <button className="qbtn qbtn-r" style={{width:'100%',marginBottom:'10px',opacity:isLocked?.4:1,cursor:isLocked?'not-allowed':'pointer'}}
+          onClick={()=>!isLocked&&clearAll(plt,submitted)}>
+          ✕ Clear {P_LABEL[plt]||plt} Statuses{isLocked?' (Locked)':''}
+        </button>
+      );})()}
+      <input className="search-inp" placeholder="🔍  Search name or rank..." value={search} onChange={e=>setSearch(e.target.value)}/>
+      <div className="ftabs" style={{paddingBottom:0,marginBottom:'12px'}}>
+        {['P1','P2','HQ'].map(p=>(
+          <button key={p} className={`ftab${plt===p?' on':''}`} style={{flex:1,textAlign:'center'}} onClick={()=>setPlt(p)}>
+            {p==='HQ'?'HQ':P_LABEL[p]}
+          </button>
+        ))}
+      </div>
+      {PLATOONS.filter(p=>tree[p]).map(p=>{
+        const isPastDate=date<todayStr();
+        const isLocked=(submitted[p]||false)||(isPastDate&&!overrideUnlocked);
+        return(
+        <div key={p} style={isLocked?{opacity:.65,pointerEvents:'none',filter:'grayscale(40%)'}:{}}>
+          {(P_SECTIONS[p]||[]).filter(s=>tree[p][s]&&tree[p][s].length>0).map(s=>{
+            const secPpl=tree[p][s];
+            const filled=secPpl.filter(person=>records[person.id]?.s).length;
+            const total=secPpl.length;
+            const pct=Math.round((filled/total)*100);
+            const done=filled===total;
+            return(
+              <div key={s} className="card">
+                <div className="card-hdr-row" style={{borderLeft:`4px solid ${p==='P1'?'#0d9488':p==='P2'?'#16a34a':'#d97706'}`}}>
+                  <span className="card-hdr-txt">{P_LABEL[p]} — {s}</span>
+                  <span className={`card-hdr-cnt${done?' all-done':''}`}>{done?`✓ ${total}/${total}`:`${filled}/${total}`}</span>
+                </div>
+                <div className="sec-prog"><div className={`sec-prog-fill${done?' complete':''}`} style={{width:`${pct}%`}}/></div>
+                <div className="card-body">
+                  {secPpl.map(person=>(
+                    <PersonRow key={person.id} person={person} record={records[person.id]||{}} setRec={setRec} setPersonLeave={setPersonLeave} tod={tod} locked={isLocked} currentDate={date}/>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+          {!search&&(
+            <div style={{pointerEvents:'auto',opacity:1,filter:'none'}}>
+              <PlatoonFooter plt={p} allPersonnel={active} records={records} pltColors={pltColors}
+                submitted={submitted} setSubmitted={setSubmitted} markedBy={markedBy} setMarkedBy={setMarkedBy} toast_={toast_}
+                date={date} overrideUnlocked={overrideUnlocked} onSubmit={onPlatoonSubmit}/>
+            </div>
+          )}
+        </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── PLATOON FOOTER ─────────────────────────────────────────────
+const OVERRIDE_PASS='Transport1409$';
+function PlatoonFooter({plt,allPersonnel,records,pltColors,submitted,setSubmitted,markedBy,setMarkedBy,toast_,date,overrideUnlocked,onSubmit}){
+  const pltPersonnel=allPersonnel.filter(p=>p.plt===plt);
+  const unassignedList=pltPersonnel.filter(p=>!records[p.id]||!records[p.id].s);
+  const NON_CMDR=new Set(['REC','PTE','LCP','CPL','CFC']);
+  const commanders=allPersonnel.filter(p=>!NON_CMDR.has(p.rank));
+  const marker=markedBy[plt]||'';
+  const isSubmitted=submitted[plt]||false;
+  const markerPerson=commanders.find(c=>c.id===marker);
+  const accentColor=plt==='P1'?'#0d9488':plt==='P2'?'#16a34a':'#d97706';
+  const isPastDate=date<todayStr();
+  const canEdit=!isPastDate||overrideUnlocked;
+
+  function handleSubmit(){
+    if(!marker){toast_('⚠ Please select your name before submitting');return;}
+    if(unassignedList.length>0){
+      const names=unassignedList.slice(0,3).map(p=>`${p.rank} ${p.dn||p.name.split(' ')[0]}`).join(', ');
+      const more=unassignedList.length>3?` +${unassignedList.length-3} more`:'';
+      toast_(`⚠ ${unassignedList.length} not marked: ${names}${more}`);return;
+    }
+    setSubmitted(s=>({...s,[plt]:true}));
+    toast_(`✓ ${P_LABEL[plt]} submitted`);
+    if(onSubmit)onSubmit();
+  }
+  function handleEdit(){
+    if(!canEdit){
+      toast_('🔒 Past records locked. Enter override password in the History tab.',4000);return;
+    }
+    setSubmitted(s=>({...s,[plt]:false}));
+  }
+
+  return(
+    <div className="card" style={{marginBottom:'16px',border:`2px solid ${isSubmitted?'#bbf7d0':'#e2e8f0'}`}}>
+      <div style={{padding:'10px 14px',background:isSubmitted?'#f0fdf4':'#f8fafc',borderBottom:`2px solid ${isSubmitted?'#bbf7d0':'#e2e8f0'}`,display:'flex',alignItems:'center',gap:'8px'}}>
+        <div style={{width:'8px',height:'8px',borderRadius:'50%',background:isSubmitted?'#16a34a':unassignedList.length===0?'#f59e0b':'#e2e8f0',flexShrink:0}}/>
+        <span style={{fontSize:'11px',fontWeight:800,color:'#475569',textTransform:'uppercase',letterSpacing:'.6px',flex:1}}>{P_LABEL[plt]} — Sign-off</span>
+        {isPastDate&&overrideUnlocked&&<span style={{fontSize:'10px',fontWeight:700,color:'#7c3aed',background:'#f3e8ff',padding:'2px 7px',borderRadius:'8px'}}>🔓 Override</span>}
+        {isPastDate&&!overrideUnlocked&&<span style={{fontSize:'10px',color:'#94a3b8'}}>🔒 Past date</span>}
+        {!isPastDate&&unassignedList.length>0&&!isSubmitted&&<span style={{fontSize:'11px',fontWeight:700,color:'#ef4444'}}>{unassignedList.length} unmarked</span>}
+        {!isPastDate&&unassignedList.length===0&&!isSubmitted&&<span style={{fontSize:'11px',fontWeight:700,color:'#16a34a'}}>All marked ✓</span>}
+      </div>
+      <div className="plt-footer">
+        <div>
+          <div className="label">Signed off by</div>
+          <select value={marker} onChange={e=>setMarkedBy(m=>({...m,[plt]:e.target.value}))} disabled={isSubmitted}
+            style={{borderColor:!marker&&!isSubmitted?'#fcd34d':'',background:!marker&&!isSubmitted?'#fffbeb':''}}>
+            <option value="">— Select your name —</option>
+            {commanders.map(c=><option key={c.id} value={c.id}>{c.rank} {c.name.split(' ').slice(0,2).join(' ')}</option>)}
+          </select>
+        </div>
+        {isSubmitted?(
+          <div style={{display:'flex',gap:'8px',alignItems:'center'}}>
+            <div className="submit-btn submit-btn-done" style={{flex:1,textAlign:'center',padding:'12px'}}>
+              ✓ Signed off — {markerPerson?`${markerPerson.rank} ${markerPerson.dn||markerPerson.name.split(' ')[0]}`:''}
+            </div>
+            <button className="btn-cancel" style={{padding:'12px 14px',borderRadius:'10px',opacity:canEdit?1:.5}} onClick={handleEdit}>✏ Edit</button>
+          </div>
+        ):(
+          <button className="submit-btn submit-btn-active" onClick={handleSubmit} style={{background:accentColor}}>
+            Save &amp; Submit {P_LABEL[plt]} Attendance
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── PERSON ROW ─────────────────────────────────────────────────
+function PersonRow({person,record,setRec,setPersonLeave,tod,locked,currentDate}){
+  const[showMore,setShowMore]=useState(false);
+  const si=record.s?SM[record.s]:null;
+  const colorClass=record.s?`sc-${record.s}`:'';
+  const pltClass={P1:'plt-p1',P2:'plt-p2',HQ:'plt-hq'}[person.plt]||'';
+  const expired=sisoExpired(person);
+  const isPresent=record.s==='present';
+  const isSO=record.s==='so'||record.s==='so_till';
+  const showSO=tod==='2030/2230';
+
+  function quickSet(s){
+    if(locked)return;
+    setRec(person.id,s,'','');
+    // clear activeLeave if switching away from a date-range status
+    if(SM[s]&&!SM[s].datePick&&person.activeLeave)setPersonLeave(person.id,null,null,null);
+    setShowMore(false);
+  }
+  function handleStatusChange(newS){
+    if(locked)return;
+    setRec(person.id,newS,'','');
+    if(SM[newS]&&!SM[newS].datePick&&person.activeLeave)setPersonLeave(person.id,null,null,null);
+    if(newS)setShowMore(false);
+  }
+  function handleTillDate(till){
+    setRec(person.id,record.s,till,record.from||currentDate);
+    setPersonLeave(person.id,record.s,record.from||currentDate,till);
+  }
+  function handleFromDate(from){
+    setRec(person.id,record.s,record.det||'',from);
+    if(record.det)setPersonLeave(person.id,record.s,from,record.det);
+  }
+
+  // Display summary for locked date-pick statuses
+  function dateSummary(){
+    if(!si?.datePick)return null;
+    const from=record.from;
+    const till=record.det;
+    if(!till)return null;
+    if(si.dateRange&&from&&from!==till)return `${fmtDetDate(from)} → ${fmtDetDate(till)}`;
+    return `Till ${fmtDetDate(till)}`;
+  }
+
+  return(
+    <div className={`prow ${colorClass}${expired?' siso-row-alert':''}${record.s?' has-status':''}`}>
+      <div className="prow-top">
+        <div className="prow-name">{person.rank} {person.name}</div>
+        <div style={{display:'flex',alignItems:'center',gap:'6px',flexShrink:0}}>
+          {person.phone&&(
+            <a href={`tel:${person.phone}`} style={{fontSize:'12px',color:'#0d9488',fontWeight:700,textDecoration:'none',background:'#f0fdfa',border:'1px solid #99f6e4',borderRadius:'6px',padding:'2px 7px',whiteSpace:'nowrap'}}
+              onClick={e=>e.stopPropagation()}>
+              📞 {person.phone}
+            </a>
+          )}
+          <span className={sisoBadgeClass(person)}>{sisoLabel(person)}</span>
+        </div>
+      </div>
+      <div className="prow-meta">
+        <span className={`prow-plt ${pltClass}`}>{person.plt}</span>
+      </div>
+
+      {record.s?(
+        <div className="prow-cur">
+          <div style={{display:'flex',flexDirection:'column',flex:1,gap:'2px'}}>
+            <span className="prow-cur-chip">{si?.l||record.s}</span>
+            {dateSummary()&&<span style={{fontSize:'11px',color:'#0f766e',fontWeight:600,paddingLeft:'2px'}}>{dateSummary()}</span>}
+          </div>
+          {!locked&&<button className="prow-clear-btn" onClick={()=>quickSet('')}>✕</button>}
+        </div>
+      ):(
+        <div className="prow-unassigned">⚠ Not assigned yet</div>
+      )}
+
+      {!locked&&(
+        <>
+          <div className="prow-quick">
+            <button className={`pq${isPresent?' pq-on-g':''}`} onClick={()=>quickSet('present')}>✓ Present</button>
+            {showSO&&<button className={`pq${isSO?' pq-on-y':''}`} onClick={()=>quickSet('so')}>S/O</button>}
+            <button className={`pq${showMore?' pq-on-b':''}`} onClick={()=>setShowMore(v=>!v)}>
+              {showMore?'▲ Less':'▾ More'}
+            </button>
+          </div>
+          {showMore&&(
+            <select value={record.s||''} onChange={e=>handleStatusChange(e.target.value)}>
+              <option value="">— Select a status —</option>
+              {SL.map(s=><option key={s.k} value={s.k}>{s.l}</option>)}
+            </select>
+          )}
+
+          {/* Date picker for date-based statuses */}
+          {si&&si.datePick&&(
+            <div className="dpick-wrap">
+              {si.dateRange&&(
+                <div className="dpick-row">
+                  <span className="dpick-lbl">From</span>
+                  <input type="date" className="dpick-inp" value={record.from||currentDate||''}
+                    min={currentDate} onChange={e=>handleFromDate(e.target.value)}/>
+                </div>
+              )}
+              <div className="dpick-row">
+                <span className="dpick-lbl">Till</span>
+                <input type="date" className="dpick-inp" value={record.det||''}
+                  min={record.from||currentDate} onChange={e=>handleTillDate(e.target.value)}/>
+              </div>
+              {record.det&&(
+                <div className="dpick-autocarry">
+                  ↻ Auto-carries daily until {fmtDetDate(record.det)}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Text input for non-date detail statuses */}
+          {si&&si.d&&!si.datePick&&(
+            <input type="text" placeholder={si.dp||'Enter details...'} value={record.det||''} onChange={e=>setRec(person.id,record.s,e.target.value,record.from||'')}/>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── GENERATE SCREEN ────────────────────────────────────────────
+function GenerateScreen({msg,total,setTotal,extra,setExtra,toast_,date}){
+  const[copied,setCopied]=useState(false);
+  function copy(){
+    const go=text=>{
+      if(navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(()=>{toast_('✓ Copied! Paste in Telegram');setCopied(true);setTimeout(()=>setCopied(false),2000)});
+      } else {
+        const ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;opacity:0';
+        document.body.appendChild(ta);ta.focus();ta.select();document.execCommand('copy');document.body.removeChild(ta);
+        toast_('✓ Copied!');setCopied(true);setTimeout(()=>setCopied(false),2000);
+      }
+    };
+    go(msg);
+  }
+  return(
+    <div>
+      <div className="card" style={{padding:'14px'}}>
+        <div style={{marginBottom:'10px'}}>
+          <div className="label">Total Node Strength</div>
+          <input type="number" value={total} min={0} onChange={e=>setTotal(Number(e.target.value))}/>
+        </div>
+        <div className="label">Additional notes (appended at end)</div>
+        <textarea value={extra} onChange={e=>setExtra(e.target.value)} rows={3} placeholder="e.g. extra remarks..." style={{resize:'vertical'}}/>
+      </div>
+      <div className="card" style={{padding:'14px'}}>
+        <div className="label" style={{marginBottom:'8px'}}>Message Preview</div>
+        <div className="msg-box">{msg}</div>
+        <button className="copy-btn" onClick={copy} style={{background:copied?'#16a34a':undefined}}>
+          {copied?'✓ Copied!':'📋 Copy Message for Telegram'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── MANAGE SCREEN ──────────────────────────────────────────────
+function ManageScreen({personnel,setPersonnel,toast_}){
+  const[showAdd,setShowAdd]=useState(false);
+  const[confirm,setConfirm]=useState(null);
+  const[editId,setEditId]=useState(null);
+  const[editData,setEditData]=useState({});
+  const[filterPlt,setFilterPlt]=useState('ALL');
+  const[np,setNp]=useState({rank:'PTE',name:'',dn:'',plt:'P1',sec:'BASE',siso:{type:'si'}});
+  const[newSecInput,setNewSecInput]=useState('');
+  const[addingNewSec,setAddingNewSec]=useState(false);
+  const[editSecInput,setEditSecInput]=useState('');
+  const[addingNewSecEdit,setAddingNewSecEdit]=useState(false);
+  // All known sections = hardcoded defaults + any already used in personnel data
+  function sectionsFor(plt){
+    const base=P_SECTIONS[plt]||[];
+    const fromPpl=[...new Set(personnel.filter(p=>p.plt===plt).map(p=>p.sec))];
+    return [...new Set([...base,...fromPpl])];
+  }
+  function confirmNewSec(val){
+    if(!val.trim())return;
+    setNp(prev=>({...prev,sec:val.trim()}));
+    setNewSecInput('');setAddingNewSec(false);
+  }
+  function confirmNewSecEdit(val){
+    if(!val.trim())return;
+    setEditData(prev=>({...prev,sec:val.trim()}));
+    setEditSecInput('');setAddingNewSecEdit(false);
+  }
+  const active=personnel.filter(p=>p.active&&(filterPlt==='ALL'||p.plt===filterPlt));
+  const inactive=personnel.filter(p=>!p.active);
+  function add(){
+    if(!np.name.trim()){toast_('Enter a name');return}
+    if(!np.sec||np.sec==='__new__'){toast_('Enter a section name');return}
+    const p={id:`p${Date.now()}`,rank:np.rank,name:np.name.toUpperCase().trim(),dn:np.dn.toUpperCase().trim()||np.name.toUpperCase().trim().split(' ')[0],plt:np.plt,sec:np.sec,siso:np.siso||{type:'si'},active:true};
+    setPersonnel(prev=>[...prev,p]);setNp({rank:'PTE',name:'',dn:'',plt:'P1',sec:'BASE',siso:{type:'si'}});setNewSecInput('');setAddingNewSec(false);setShowAdd(false);toast_('✓ Personnel added');
+  }
+  function deactivate(id){setPersonnel(prev=>prev.map(p=>p.id===id?{...p,active:false}:p));setConfirm(null);toast_('Removed from roster')}
+  function restore(id){setPersonnel(prev=>prev.map(p=>p.id===id?{...p,active:true}:p));toast_('✓ Restored')}
+  function startEdit(p){setEditId(p.id);setEditData({rank:p.rank,name:p.name,dn:p.dn||'',plt:p.plt,sec:p.sec,siso:p.siso||{type:'si'},phone:p.phone||''});setAddingNewSecEdit(false);setEditSecInput('');}
+  function saveEdit(id){
+    setPersonnel(prev=>prev.map(p=>p.id===id?{...p,...editData,name:editData.name.toUpperCase().trim(),dn:editData.dn.toUpperCase().trim()||editData.name.toUpperCase().trim().split(' ')[0]}:p));
+    setEditId(null);setEditSecInput('');setAddingNewSecEdit(false);toast_('✓ Updated');
+  }
+  // Group active by plt → sec
+  const tree={};
+  active.forEach(p=>{if(!tree[p.plt])tree[p.plt]={};if(!tree[p.plt][p.sec])tree[p.plt][p.sec]=[];tree[p.plt][p.sec].push(p)});
+  const pltColors={P1:'#dbeafe',P2:'#d1fae5',HQ:'#fef3c7'};
+  return(
+    <div>
+      <button className="sbtn" onClick={()=>setShowAdd(v=>!v)}>{showAdd?'✕ Cancel':'+ Add New Personnel'}</button>
+      {showAdd&&(
+        <div className="card" style={{marginBottom:'12px'}}>
+          <div className="card-hdr">New Personnel</div>
+          <div className="add-form">
+            <div className="add-2col">
+              <div><div className="label">Rank</div>
+                <select value={np.rank} onChange={e=>setNp({...np,rank:e.target.value})}>
+                  {RANKS.map(r=><option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+              <div><div className="label">Platoon</div>
+                <select value={np.plt} onChange={e=>{const secs=sectionsFor(e.target.value);setNp({...np,plt:e.target.value,sec:secs[0]||''});setNewSecInput('');setAddingNewSec(false);}}>
+                  {PLATOONS.map(p=><option key={p} value={p}>{P_LABEL[p]}</option>)}
+                </select>
+              </div>
+            </div>
+            <div><div className="label">Section</div>
+              {addingNewSec?(
+                <div>
+                  <input type="text" placeholder="New section name (e.g. SIGNALS)" value={newSecInput}
+                    onChange={e=>setNewSecInput(e.target.value.toUpperCase())}
+                    onKeyDown={e=>{if(e.key==='Enter')confirmNewSec(newSecInput);if(e.key==='Escape'){setAddingNewSec(false);setNewSecInput('');}}}
+                    autoFocus style={{marginBottom:'6px'}}/>
+                  <div style={{display:'flex',gap:'6px'}}>
+                    <button className="btn-save" style={{flex:1}} onClick={()=>confirmNewSec(newSecInput)}>✓ Create "{newSecInput||'…'}"</button>
+                    <button className="btn-cancel" onClick={()=>{setAddingNewSec(false);setNewSecInput('');}}>✕</button>
+                  </div>
+                </div>
+              ):(
+                <>
+                  <select value={np.sec} onChange={e=>{if(e.target.value==='__other__'){setAddingNewSec(true);setNewSecInput('');}else setNp({...np,sec:e.target.value});}}>
+                    {sectionsFor(np.plt).map(s=><option key={s} value={s}>{s}</option>)}
+                    <option value="__other__">Other (create new)…</option>
+                  </select>
+                  {np.sec&&!sectionsFor(np.plt).includes(np.sec)&&<div style={{fontSize:'11px',color:'#0d9488',marginTop:'3px'}}>Custom section: {np.sec}</div>}
+                </>
+              )}
+            </div>
+            <div><div className="label">Full Name</div>
+              <input type="text" placeholder="e.g. TAN AH KOW" value={np.name} onChange={e=>setNp({...np,name:e.target.value})}/>
+            </div>
+            <div><div className="label">Short name for Telegram</div>
+              <input type="text" placeholder="e.g. AH KOW" value={np.dn} onChange={e=>setNp({...np,dn:e.target.value})}/>
+            </div>
+            <div className="add-2col">
+              <div><div className="label">Strength Status</div>
+                <select value={np.siso.type} onChange={e=>setNp({...np,siso:e.target.value==='so_till'?{type:'so_till',date:''}:{type:e.target.value}})}>
+                  <option value="si">S/I (Stay In)</option>
+                  <option value="so">S/O (Stay Out)</option>
+                  <option value="so_till">S/O Till Date</option>
+                </select>
+                {np.siso.type==='so_till'&&<input type="date" value={np.siso.date||''} onChange={e=>setNp({...np,siso:{type:'so_till',date:e.target.value}})} style={{marginTop:'6px'}}/>}
+              </div>
+              <div><div className="label">Phone Number</div>
+                <input type="tel" placeholder="e.g. 91234567" value={np.phone||''} onChange={e=>setNp({...np,phone:e.target.value.trim()})}/>
+              </div>
+            </div>
+            <button className="sbtn" style={{margin:0}} onClick={add}>Add Personnel</button>
+          </div>
+        </div>
+      )}
+      <div className="ftabs" style={{marginBottom:'8px'}}>
+        {['ALL','P1','P2','HQ'].map(p=>(
+          <button key={p} className={`ftab${filterPlt===p?' on':''}`} onClick={()=>setFilterPlt(p)}>
+            {p==='ALL'?`All (${personnel.filter(x=>x.active).length})`:p==='HQ'?`HQ (${personnel.filter(x=>x.active&&x.plt==='HQ').length})`:`${P_LABEL[p]} (${personnel.filter(x=>x.active&&x.plt===p).length})`}
+          </button>
+        ))}
+      </div>
+      <div className="card">
+        <div className="card-hdr">Active Roster</div>
+        {PLATOONS.filter(p=>tree[p]).map(p=>(
+          <div key={p}>
+            {(P_SECTIONS[p]||[]).filter(s=>tree[p][s]&&tree[p][s].length>0).map(s=>(
+              <div key={s}>
+                <div className="sec-sep" style={{background:pltColors[p]}}>{P_LABEL[p]} — {s} ({tree[p][s].length})</div>
+                {tree[p][s].map(person=>(
+                  <div key={person.id}>
+                    {editId===person.id?(
+                      <div className="edit-form">
+                        <div className="add-2col">
+                          <div><div className="label">Rank</div>
+                            <select value={editData.rank} onChange={e=>setEditData({...editData,rank:e.target.value})}>
+                              {RANKS.map(r=><option key={r}>{r}</option>)}
+                            </select>
+                          </div>
+                          <div><div className="label">Platoon</div>
+                            <select value={editData.plt} onChange={e=>setEditData({...editData,plt:e.target.value})}>
+                              {PLATOONS.map(p=><option key={p} value={p}>{P_LABEL[p]}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                        <div><div className="label">Section</div>
+                          {addingNewSecEdit?(
+                            <div>
+                              <input type="text" placeholder="New section name" value={editSecInput}
+                                onChange={e=>setEditSecInput(e.target.value.toUpperCase())}
+                                onKeyDown={e=>{if(e.key==='Enter')confirmNewSecEdit(editSecInput);if(e.key==='Escape'){setAddingNewSecEdit(false);setEditSecInput('');}}}
+                                autoFocus style={{marginBottom:'6px'}}/>
+                              <div style={{display:'flex',gap:'6px'}}>
+                                <button className="btn-save" style={{flex:1}} onClick={()=>confirmNewSecEdit(editSecInput)}>✓ Create "{editSecInput||'…'}"</button>
+                                <button className="btn-cancel" onClick={()=>{setAddingNewSecEdit(false);setEditSecInput('');}}>✕</button>
+                              </div>
+                            </div>
+                          ):(
+                            <>
+                              <select value={editData.sec} onChange={e=>{if(e.target.value==='__other__'){setAddingNewSecEdit(true);setEditSecInput('');}else setEditData({...editData,sec:e.target.value});}}>
+                                {sectionsFor(editData.plt).map(s=><option key={s}>{s}</option>)}
+                                <option value="__other__">Other (create new)…</option>
+                              </select>
+                              {editData.sec&&!sectionsFor(editData.plt).includes(editData.sec)&&<div style={{fontSize:'11px',color:'#0d9488',marginTop:'3px'}}>Custom section: {editData.sec}</div>}
+                            </>
+                          )}
+                        </div>
+                        <input type="text" value={editData.name} onChange={e=>setEditData({...editData,name:e.target.value})} placeholder="Full name"/>
+                        <input type="text" value={editData.dn} onChange={e=>setEditData({...editData,dn:e.target.value})} placeholder="Short name"/>
+                        <div className="add-2col">
+                          <div><div className="label">Strength Status</div>
+                            <select value={(editData.siso||{type:'si'}).type} onChange={e=>setEditData({...editData,siso:e.target.value==='so_till'?{type:'so_till',date:(editData.siso||{}).date||''}:{type:e.target.value}})}>
+                              <option value="si">S/I (Stay In)</option>
+                              <option value="so">S/O (Stay Out)</option>
+                              <option value="so_till">S/O Till Date</option>
+                            </select>
+                            {(editData.siso||{}).type==='so_till'&&<input type="date" value={(editData.siso||{}).date||''} onChange={e=>setEditData({...editData,siso:{type:'so_till',date:e.target.value}})} style={{marginTop:'6px'}}/>}
+                          </div>
+                          <div><div className="label">Phone Number</div>
+                            <input type="tel" placeholder="e.g. 91234567" value={editData.phone||''} onChange={e=>setEditData({...editData,phone:e.target.value.trim()})}/>
+                          </div>
+                        </div>
+                        <div className="btn-row">
+                          <button className="btn-save" onClick={()=>saveEdit(person.id)}>Save</button>
+                          <button className="btn-cancel" onClick={()=>setEditId(null)}>Cancel</button>
+                        </div>
+                      </div>
+                    ):(
+                      <div className="mrow">
+                        <div className="mrow-info">
+                          <div className="mrow-name">{person.rank} {person.name} <span className={sisoBadgeClass(person)} style={{marginLeft:'4px'}}>{sisoLabel(person)}</span></div>
+                          <div className="mrow-sub">Msg: {person.dn}</div>
+                        </div>
+                        <div style={{display:'flex',gap:'5px',flexShrink:0}}>
+                          <button className="ebtn" onClick={()=>startEdit(person)}>Edit</button>
+                          {confirm===person.id?(
+                            <><button className="conf-yes" onClick={()=>deactivate(person.id)}>Yes</button>
+                            <button className="conf-no" onClick={()=>setConfirm(null)}>No</button></>
+                          ):(
+                            <button className="dbtn" onClick={()=>setConfirm(person.id)}>Remove</button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+      {inactive.length>0&&(
+        <div className="card">
+          <div className="card-hdr" style={{color:'#94a3b8'}}>Archived ({inactive.length})</div>
+          {inactive.map(p=>(
+            <div key={p.id} className="mrow" style={{opacity:.65}}>
+              <div className="mrow-info">
+                <div className="mrow-name">{p.rank} {p.name}</div>
+                <div className="mrow-sub">{P_LABEL[p.plt]||p.plt} — {p.sec}</div>
+              </div>
+              <button className="rbtn" onClick={()=>restore(p.id)}>Restore</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<Root/>);
+</script>
+</body>
+</html>
