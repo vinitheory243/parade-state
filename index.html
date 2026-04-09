@@ -979,7 +979,7 @@ function App({onLogout,onHome,initDate,initTod}){
   useEffect(()=>{window.scrollTo({top:0,left:0,behavior:'instant'});},[screen,date]);
   const[tod,setTod]=useState(()=>initTod||currentTod());
   const[totalOverride,setTotalOverride]=useState(null); // null = auto from personnel
-  const total=totalOverride!==null?totalOverride:personnel.filter(p=>p.active).length;
+  const total=useMemo(()=>totalOverride!==null?totalOverride:personnel.filter(p=>p.active).length,[totalOverride,personnel]);
   const[duty,setDuty]=useState(0);
   const[extra,setExtra]=useState('');
   const[submitted,setSubmitted]=useState({P1:false,P2:false,HQ:false});
@@ -1063,7 +1063,7 @@ function App({onLogout,onHome,initDate,initTod}){
   useEffect(()=>{
     if(skipRef.current)return;
     DB.ref(fbAttPath(date,tod)).set({records,total,totalOverride,duty,extra,submitted,markedBy});
-  },[records,total,totalOverride,duty,extra,date,tod,submitted,markedBy]);
+  },[records,totalOverride,duty,extra,date,tod,submitted,markedBy]);
   // History listener
   useEffect(()=>{
     const ref=DB.ref('jrn/history');
