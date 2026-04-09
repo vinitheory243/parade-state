@@ -1445,16 +1445,10 @@ function PersonRow({person,record,setRec,setPersonLeave,tod,locked,currentDate})
             </button>
           </div>
           {showMore&&(
-            <div style={{display:'flex',flexWrap:'wrap',gap:'6px',padding:'6px 0 2px'}}>
-              {SL.filter(s=>s.k!=='present').map(s=>(
-                <button key={s.k} onClick={()=>handleStatusChange(s.k)}
-                  style={{padding:'6px 12px',borderRadius:'20px',border:`1.5px solid ${record.s===s.k?'#0d9488':'#e2e8f0'}`,
-                    background:record.s===s.k?'#ccfbf1':'#f8fafc',color:record.s===s.k?'#0f766e':'#475569',
-                    fontSize:'12px',fontWeight:700,cursor:'pointer',whiteSpace:'nowrap',transition:'all .15s'}}>
-                  {s.l}
-                </button>
-              ))}
-            </div>
+            <select value={record.s||''} onChange={e=>handleStatusChange(e.target.value)}>
+              <option value="">— Select a status —</option>
+              {SL.map(s=><option key={s.k} value={s.k}>{s.l}</option>)}
+            </select>
           )}
 
           {/* Date picker for date-based statuses */}
