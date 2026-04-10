@@ -752,34 +752,30 @@ async function renderPDFFromData(dateStr,allTodRecs,pAll,total,allTodMarkedBy){
   const{jsPDF}=window.jspdf;
   const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
   const pgW=210,pgH=297;
-  // Container that won't clip height (not fixed)
-  const host=document.createElement('div');
-  host.style.cssText='position:absolute;left:-9999px;top:0;visibility:hidden;';
-  document.body.appendChild(host);
-  try{
-    for(let i=0;i<['HQ','P1','P2'].length;i++){
-      const plt=['HQ','P1','P2'][i];
-      if(i>0)pdf.addPage();
-      const wrap=document.createElement('div');
-      wrap.style.cssText='width:800px;background:#fff;display:inline-block;';
-      host.appendChild(wrap);
-      const root=ReactDOM.createRoot(wrap);
-      root.render(React.createElement(ParadeStatePDFPage,{plt,personnel:pAll,allTodRecs,date:dateStr,total,allTodMarkedBy:allTodMarkedBy||{}}));
-      // Wait for React to fully render
-      await new Promise(r=>setTimeout(r,400));
-      const h=wrap.scrollHeight||wrap.offsetHeight;
-      const canvas=await html2canvas(wrap,{
-        scale:2,useCORS:true,logging:false,backgroundColor:'#ffffff',
-        width:800,height:h,windowWidth:800,windowHeight:h
-      });
-      root.unmount();host.removeChild(wrap);
-      const imgData=canvas.toDataURL('image/jpeg',0.92);
-      const imgW=pgW;
-      let imgH=(canvas.height*imgW)/canvas.width;
-      if(imgH>pgH){const scaledW=(canvas.width*pgH)/canvas.height;pdf.addImage(imgData,'JPEG',(pgW-scaledW)/2,0,scaledW,pgH);}
-      else{pdf.addImage(imgData,'JPEG',0,0,imgW,imgH);}
-    }
-  }finally{document.body.removeChild(host);}
+  for(let i=0;i<['HQ','P1','P2'].length;i++){
+    const plt=['HQ','P1','P2'][i];
+    if(i>0)pdf.addPage();
+    // Off-screen but visible so html2canvas can render it
+    const wrap=document.createElement('div');
+    wrap.style.cssText='position:absolute;top:0;left:-9999px;width:800px;background:#fff;z-index:-999;overflow:visible;';
+    document.body.appendChild(wrap);
+    const root=ReactDOM.createRoot(wrap);
+    root.render(React.createElement(ParadeStatePDFPage,{plt,personnel:pAll,allTodRecs,date:dateStr,total,allTodMarkedBy:allTodMarkedBy||{}}));
+    await new Promise(r=>setTimeout(r,500));
+    const h=Math.max(wrap.scrollHeight,wrap.offsetHeight,100);
+    const canvas=await html2canvas(wrap,{
+      scale:2,useCORS:true,logging:false,backgroundColor:'#ffffff',
+      width:800,height:h,scrollX:0,scrollY:0,
+      windowWidth:800,windowHeight:h,
+      x:0,y:0
+    });
+    root.unmount();document.body.removeChild(wrap);
+    const imgData=canvas.toDataURL('image/jpeg',0.92);
+    const imgW=pgW;
+    let imgH=(canvas.height*imgW)/canvas.width;
+    if(imgH>pgH){const scaledW=(canvas.width*pgH)/canvas.height;pdf.addImage(imgData,'JPEG',(pgW-scaledW)/2,0,scaledW,pgH);}
+    else{pdf.addImage(imgData,'JPEG',0,0,imgW,imgH);}
+  }
   return pdf;
 }
 
