@@ -744,53 +744,93 @@ function ParadeStatePDFPage({plt,personnel,allTodRecs,date,total,allTodMarkedBy}
 }
 
 // ─── FAST BULK PDF BUILDER (portrait A4, pure jsPDF) ─────────────
-function buildPDFForDate(dateStr,allTodRecs,pAll,total){
+function buildPDFForDate(dateStr,allTodRecs,pAll,total,allTodMarkedBy){
   const{jsPDF}=window.jspdf;
   const doc=new jsPDF({orientation:'portrait',unit:'pt',format:'a4'});
   const PW=595.28,PH=841.89,MG=18;
   const TW=PW-MG*2;
-  // Cols: S/N, RANK, NAME, IN/OUT, HLS, 0745, 1300, 1730, 2030/2230, REMARK
-  const TCOLS=[20,36,128,36,28,28,28,28,42,0];
+  const TCOLS=[20,38,148,38,28,28,28,28,44,0];
   TCOLS[9]=TW-TCOLS.slice(0,9).reduce((a,b)=>a+b,0);
   const THEAD=['S/N','RANK','NAME','IN/OUT','HLS','0745','1300','1730','2030/2230','REMARK'];
-  const ROW=12,HDR=14,SEC=12,FS=6.5;
+  const NON_CMDR=new Set(['REC','PTE','LCP','CPL','CFC']);
+  const commanders=pAll.filter(p=>!NON_CMDR.has(p.rank));
+  const FOOTER_H=52;
+  const ROW=13,HDR=15,SEC=13,FS=7;
+
+  function secLabel(plt,sec){
+    if(plt==='HQ'){
+      if(sec==='NODE CMD')return'NODE COMMANDER';
+      if(sec==='HQ CMD')return'HQ COMMANDERS';
+      return sec;
+    }
+    return`${P_LABEL[plt].toUpperCase()} TO (${sec})`;
+  }
+  function markerStr(plt,tod){
+    const mb=((allTodMarkedBy||{})[tod]||{})[plt];
+    if(!mb)return'';
+    const c=commanders.find(x=>x.id===mb);
+    return c?`${c.rank} ${c.dn||c.name.split(' ')[0]}`:'';
+  }
+
   function drawPage(plt){
     const pltPpl=pAll.filter(p=>p.active&&p.plt===plt);
+    const customSecs=[...new Set(pltPpl.map(p=>p.sec).filter(Boolean))];
+    const sections=[...new Set([...(P_SECTIONS[plt]||[]),...customSecs])];
     let y=MG+14;
-    doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(0,0,0);
-    doc.text('JURONG NODE — PARADE STATE',PW/2,y,{align:'center'});
-    y+=12;
-    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(51,65,85);
-    doc.text(`Date: ${fmtDate(dateStr)}  |  ${plt==='HQ'?'HQ':P_LABEL[plt]}  |  Platoon Strength: ${pltPpl.length}  |  Node Strength: ${total}`,PW/2,y,{align:'center'});
-    y+=9;
+    // Title
+    doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(0,0,0);
+    doc.text('JURONG NODE — PARADE STATE',PW/2,y,{align:'center'});y+=13;
+    doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(51,65,85);
+    doc.text(`Date: ${fmtDate(dateStr)}  |  ${plt==='HQ'?'HQ':P_LABEL[plt]}  |  Platoon Strength: ${pltPpl.length}  |  Node Strength: ${total}`,PW/2,y,{align:'center'});y+=10;
     // Column header
     doc.setFillColor(30,41,59);doc.rect(MG,y,TW,HDR,'F');
     doc.setFont('helvetica','bold');doc.setFontSize(FS);doc.setTextColor(255,255,255);
     let x=MG;THEAD.forEach((h,i)=>{doc.text(h,x+2,y+HDR-4,{maxWidth:TCOLS[i]-3});x+=TCOLS[i];});
     y+=HDR;
-    const secs=[...new Set(pltPpl.map(p=>p.sec))];
-    let sn=0,ri=0;
-    secs.forEach(sec=>{
-      if(y+SEC>PH-MG-20){doc.addPage();y=MG;}
+    let sn=0;
+    sections.forEach(sec=>{
+      const secPpl=pltPpl.filter(p=>p.sec===sec);
+      if(!secPpl.length)return;
+      if(y+SEC>PH-MG-FOOTER_H-ROW){doc.addPage();y=MG;}
       doc.setFillColor(51,65,85);doc.rect(MG,y,TW,SEC,'F');
       doc.setFont('helvetica','bold');doc.setFontSize(FS);doc.setTextColor(255,255,255);
-      doc.text(`${plt==='HQ'?'HQ TO':P_LABEL[plt]+' TO'} (${sec.toUpperCase()})`,MG+3,y+SEC-4);
-      y+=SEC;
-      pltPpl.filter(p=>p.sec===sec).forEach(p=>{
-        if(y+ROW>PH-MG-20){doc.addPage();y=MG;}
-        sn++;ri++;
-        doc.setFillColor(ri%2===0?245:255,ri%2===0?247:255,ri%2===0?250:255);
+      doc.text(secLabel(plt,sec),MG+3,y+SEC-4);y+=SEC;
+      secPpl.forEach((p,ri)=>{
+        if(y+ROW>PH-MG-FOOTER_H-ROW){doc.addPage();y=MG;}
+        sn++;
+        doc.setFillColor(ri%2===0?248:255,ri%2===0?250:255,ri%2===0?252:255);
         doc.rect(MG,y,TW,ROW,'F');
-        doc.setDrawColor(200,200,200);doc.rect(MG,y,TW,ROW,'S');
+        doc.setDrawColor(180,180,180);doc.rect(MG,y,TW,ROW,'S');
         doc.setFont('helvetica','normal');doc.setFontSize(FS);doc.setTextColor(15,23,42);
         const cells=[sn,p.rank,p.name,sisoCell(p),...TODS.map(t=>getStatusCell((allTodRecs[t]||{})[p.id])||''),getRemarkText(allTodRecs,p.id)];
         let cx=MG;cells.forEach((cell,i)=>{doc.text(String(cell||''),cx+2,y+ROW-4,{maxWidth:TCOLS[i]-3});cx+=TCOLS[i];});
         y+=ROW;
       });
     });
-    y+=8;
-    doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(15,23,42);
-    doc.text(`Total Node Strength: ${total}`,PW-MG,y,{align:'right'});
+    // Footer
+    const fy=PH-MG-FOOTER_H+4;
+    doc.setDrawColor(30,41,59);doc.setLineWidth(1.5);
+    doc.line(MG,fy,PW-MG,fy);doc.setLineWidth(0.5);
+    const todLabels=[{k:'HLS',l:'HLS Marked By'},{k:'0745',l:'FP Marked By'},{k:'1300',l:'MP Marked By'},{k:'1730',l:'LP Marked By'}];
+    const colW=(TW-80)/4;
+    todLabels.forEach((tl,i)=>{
+      const fx=MG+i*colW;
+      doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.setTextColor(71,85,105);
+      doc.text(tl.l.toUpperCase(),fx,fy+10);
+      const name=markerStr(plt,tl.k);
+      doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(15,23,42);
+      doc.text(name||'',fx,fy+22);
+      doc.setDrawColor(0,0,0);doc.line(fx,fy+32,fx+colW-6,fy+32);
+    });
+    const rx=PW-MG-80;
+    doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.setTextColor(71,85,105);
+    doc.text('TOTAL NODE STRENGTH',rx,fy+10,{align:'right'});
+    doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(15,23,42);
+    doc.text(String(total),PW-MG,fy+22,{align:'right'});
+    doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.setTextColor(71,85,105);
+    doc.text('TOTAL PLT STRENGTH',rx,fy+34,{align:'right'});
+    doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(15,23,42);
+    doc.text(String(pltPpl.length),PW-MG,fy+46,{align:'right'});
   }
   ['HQ','P1','P2'].forEach((plt,i)=>{if(i>0)doc.addPage();drawPage(plt);});
   return doc;
@@ -1442,23 +1482,24 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
       // Fetch ALL dates in parallel
       const fetched=await Promise.all(history.map(async entry=>{
         const ds=entry.date;
-        const allTodRecs={};let pTotal=defaultTotal;
+        const allTodRecs={};const allTodMarkedBy={};let pTotal=defaultTotal;
         await Promise.all(TODS.map(async t=>{
           const snap=await DB.ref(fbAttPath(ds,t)).once('value');
           const td=snap.val();
           allTodRecs[t]=td?(td.records||{}):{};
           if(td&&td.totalManual&&td.total)pTotal=td.total;
+          if(td&&td.markedBy)allTodMarkedBy[t]=td.markedBy;
         }));
-        return{ds,allTodRecs,pTotal};
+        return{ds,allTodRecs,allTodMarkedBy,pTotal};
       }));
       // Generate files synchronously
-      for(const{ds,allTodRecs,pTotal} of fetched){
+      for(const{ds,allTodRecs,allTodMarkedBy,pTotal} of fetched){
         const d=new Date(ds+'T00:00:00');
         const yr=String(d.getFullYear());
         const mon=d.toLocaleDateString('en-MY',{month:'long'});
         const folder=zip.folder(yr).folder(`${mon} ${yr}`);
         if(type==='pdf'){
-          const pdf=buildPDFForDate(ds,allTodRecs,ppl,pTotal);
+          const pdf=buildPDFForDate(ds,allTodRecs,ppl,pTotal,allTodMarkedBy);
           folder.file(`ParadeState_JRN_${ds}.pdf`,pdf.output('blob'));
         } else {
           const wb=XLSX.utils.book_new();
