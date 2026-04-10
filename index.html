@@ -1442,25 +1442,33 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
     try{
       const zip=new window.JSZip();
       const XLSX=window.XLSX;
-      for(const entry of history){
+      const ppl=personnelRef.current;
+      const defaultTotal=ppl.filter(p=>p.active).length;
+      // Fetch ALL dates in parallel
+      const fetched=await Promise.all(history.map(async entry=>{
         const ds=entry.date;
+        const allTodRecs={};let pTotal=defaultTotal;
+        await Promise.all(TODS.map(async t=>{
+          const snap=await DB.ref(fbAttPath(ds,t)).once('value');
+          const td=snap.val();
+          allTodRecs[t]=td?(td.records||{}):{};
+          if(td&&td.totalManual&&td.total)pTotal=td.total;
+        }));
+        return{ds,allTodRecs,pTotal};
+      }));
+      // Generate files synchronously
+      for(const{ds,allTodRecs,pTotal} of fetched){
         const d=new Date(ds+'T00:00:00');
         const yr=String(d.getFullYear());
         const mon=d.toLocaleDateString('en-MY',{month:'long'});
         const folder=zip.folder(yr).folder(`${mon} ${yr}`);
-        const allTodRecs={};let pTotal=personnelRef.current.filter(p=>p.active).length;
-        await Promise.all(TODS.map(async t=>{
-          const snap=await DB.ref(fbAttPath(ds,t)).once('value');const td=snap.val();
-          allTodRecs[t]=td?(td.records||{}):{};
-          if(td&&td.totalManual&&td.total)pTotal=td.total;
-        }));
         if(type==='pdf'){
-          const pdf=buildPDFForDate(ds,allTodRecs,personnelRef.current,pTotal);
+          const pdf=buildPDFForDate(ds,allTodRecs,ppl,pTotal);
           folder.file(`ParadeState_JRN_${ds}.pdf`,pdf.output('blob'));
         } else {
           const wb=XLSX.utils.book_new();
           ['HQ','P1','P2'].forEach(plt=>{
-            const pltPpl=personnelRef.current.filter(p=>p.active&&p.plt===plt);
+            const pltPpl=ppl.filter(p=>p.active&&p.plt===plt);
             const rows=[
               ['JURONG NODE — PARADE STATE'],
               [`Date: ${fmtDate(ds)}  |  ${P_LABEL[plt]}  |  Platoon Strength: ${pltPpl.length}  |  Node Strength: ${pTotal}`],
