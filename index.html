@@ -646,16 +646,17 @@ function getRemarkText(allTodRecs,pid){
     if(!rec||!rec.s)continue;
     const si=SM[rec.s];
     if(!si)continue;
-    const shortLabel=getStatusCell(rec); // e.g. "MC", "OL"
+    const fullLabel=(si.l||rec.s).toUpperCase();
     if(si.datePick){
       const from=rec.from?fmtDate(rec.from):'';
       const till=rec.det?fmtDate(rec.det):'';
-      if(si.dateRange&&from&&till&&from!==till)return`${shortLabel} ${from} - ${till}`;
-      if(till)return`${shortLabel} TILL ${till}`;
-      if(from)return`${shortLabel} FM ${from}`;
-      return shortLabel;
+      if(si.dateRange&&from&&till&&from!==till)return`${fullLabel} ${from} - ${till}`;
+      if(till)return`${fullLabel} TILL ${till}`;
+      if(from)return`${fullLabel} FM ${from}`;
+      return fullLabel;
     }
-    if(rec.det&&rec.det.trim())return rec.det.trim();
+    if(rec.det&&rec.det.trim())return`${fullLabel}: ${rec.det.trim()}`;
+    return fullLabel;
   }
   return'';
 }
