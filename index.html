@@ -798,30 +798,7 @@ function PDFPreviewModal({date,personnel,allTodRecs,total,allTodMarkedBy,onClose
   async function handleDownload(){
     setDownloading(true);
     try{
-      const{jsPDF}=window.jspdf;
-      const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-      const pgW=210,pgH=297;
-      for(let i=0;i<PAGES.length;i++){
-        if(i>0)pdf.addPage();
-        const el=pageRefs.current[i];
-        // Reset mobile scaling so html2canvas captures at full size
-        const prevTransform=el.style.transform;
-        const prevMargin=el.style.marginBottom;
-        el.style.transform='scale(1)';
-        el.style.marginBottom='0';
-        const canvas=await html2canvas(el,{scale:2,useCORS:true,logging:false,backgroundColor:'#ffffff',windowWidth:800});
-        el.style.transform=prevTransform;
-        el.style.marginBottom=prevMargin;
-        const imgData=canvas.toDataURL('image/jpeg',0.92);
-        const imgW=pgW;
-        let imgH=(canvas.height*imgW)/canvas.width;
-        if(imgH>pgH){
-          const scaledW=(canvas.width*pgH)/canvas.height;
-          pdf.addImage(imgData,'JPEG',(pgW-scaledW)/2,0,scaledW,pgH);
-        }else{
-          pdf.addImage(imgData,'JPEG',0,0,imgW,imgH);
-        }
-      }
+      const pdf=await renderPDFFromData(date,allTodRecs,personnel,total,allTodMarkedBy);
       const filename=`ParadeState_JRN_${date}.pdf`;
       const blob=pdf.output('blob');
       if(onDownloaded)onDownloaded();
