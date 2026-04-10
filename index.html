@@ -1291,6 +1291,7 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
   const[overrideUnlocked,setOverrideUnlocked]=useState(false);
   const[customSections,setCustomSections]=useState({P1:[],P2:[],HQ:[]});
   const[otherReasons,setOtherReasons]=useState([]);
+  const[showSearch,setShowSearch]=useState(false);
   const skipRef=useRef(false);
   const attInitRef=useRef(false); // blocks write until first Firebase read completes
   const personnelRef=useRef(IP);
@@ -1612,9 +1613,10 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
             <div className="hdr-title">JRN Parade State</div>
             <div className="hdr-sub">Jurong Node &nbsp;·&nbsp; <span style={{color:online?'#4ade80':'#f87171',fontWeight:800}}>{online?'● Live':'● Offline'}</span></div>
           </div>
-          <button onClick={onLogout} style={{background:'rgba(255,255,255,.12)',border:'1px solid rgba(255,255,255,.2)',color:'#fff',borderRadius:'8px',padding:'6px 12px',fontSize:'12px',fontWeight:700,cursor:'pointer',flexShrink:0}}>
-            Sign Out
-          </button>
+          <div style={{display:'flex',gap:'8px',alignItems:'center'}}>
+            <button onClick={()=>setShowSearch(true)} title="Find Personnel" style={{background:'rgba(255,255,255,.12)',border:'1px solid rgba(255,255,255,.2)',color:'#fff',borderRadius:'8px',padding:'6px 10px',fontSize:'16px',cursor:'pointer',flexShrink:0,lineHeight:1}}>🔍</button>
+            <button onClick={onLogout} style={{background:'rgba(255,255,255,.12)',border:'1px solid rgba(255,255,255,.2)',color:'#fff',borderRadius:'8px',padding:'6px 12px',fontSize:'12px',fontWeight:700,cursor:'pointer',flexShrink:0}}>Sign Out</button>
+          </div>
         </div>
       </div>
       <div className="datebar" style={{padding:'10px 14px 10px',display:'flex',alignItems:'center',gap:'10px'}}>
@@ -1646,6 +1648,76 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
       </nav>
       {toast&&<div key={toastKey} className="toast">{toast}</div>}
       {pdfPreview&&<PDFPreviewModal date={pdfPreview.date} personnel={pdfPreview.personnelForDate||personnel} allTodRecs={pdfPreview.allTodRecs} total={pdfPreview.total} allTodMarkedBy={pdfPreview.allTodMarkedBy||{}} onClose={()=>setPdfPreview(null)} onDownloaded={onPdfDownloaded} isAdmin={isAdmin}/>}
+      {showSearch&&<PersonnelSearchModal personnel={personnelOnDate(personnel,date)} records={records} tod={tod} onClose={()=>setShowSearch(false)}/>}
+    </div>
+  );
+}
+
+// ─── PERSONNEL SEARCH MODAL ─────────────────────────────────────
+function PersonnelSearchModal({personnel,records,tod,onClose}){
+  const[q,setQ]=useState('');
+  const inputRef=useRef(null);
+  useEffect(()=>{setTimeout(()=>inputRef.current&&inputRef.current.focus(),80);},[]);
+  const PLT_COLOR={P1:'#0d9488',P2:'#16a34a',HQ:'#d97706'};
+  const results=q.trim().length>0?personnel.filter(p=>{
+    const s=q.toLowerCase();
+    return p.name.toLowerCase().includes(s)||p.rank.toLowerCase().includes(s)||(p.dn&&p.dn.toLowerCase().includes(s));
+  }):[];
+  function statusLabel(pid){
+    const rec=records[pid];
+    if(!rec||!rec.s)return null;
+    const si=SM[rec.s];
+    const label=si?si.l:rec.s;
+    const det=rec.det?fmtDate(rec.det):'';
+    const from=rec.from?fmtDate(rec.from):'';
+    if(si&&si.dateRange&&from&&det&&from!==det)return`${label} (${from} — ${det})`;
+    if(det)return`${label} till ${det}`;
+    if(rec.det)return`${label} (${rec.det})`;
+    return label;
+  }
+  return(
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.55)',zIndex:9000,display:'flex',flexDirection:'column'}} onClick={onClose}>
+      <div style={{background:'#fff',borderRadius:'0 0 18px 18px',padding:'14px 14px 18px',boxShadow:'0 8px 32px rgba(0,0,0,.18)',maxHeight:'85vh',display:'flex',flexDirection:'column'}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'12px'}}>
+          <span style={{fontSize:'18px'}}>🔍</span>
+          <input ref={inputRef} type="text" placeholder="Type name or rank..." value={q} onChange={e=>setQ(e.target.value)}
+            style={{flex:1,padding:'10px 14px',borderRadius:'20px',border:'1.5px solid #cbd5e1',fontSize:'15px',outline:'none',background:'#f8fafc'}}/>
+          <button onClick={onClose} style={{background:'none',border:'none',fontSize:'20px',color:'#94a3b8',cursor:'pointer',padding:'0 4px',lineHeight:1}}>✕</button>
+        </div>
+        <div style={{overflowY:'auto',flex:1}}>
+          {q.trim().length===0&&(
+            <div style={{textAlign:'center',color:'#94a3b8',fontSize:'14px',padding:'24px 0'}}>Start typing to find a person</div>
+          )}
+          {q.trim().length>0&&results.length===0&&(
+            <div style={{textAlign:'center',color:'#94a3b8',fontSize:'14px',padding:'24px 0'}}>No match found</div>
+          )}
+          {results.map(p=>{
+            const rec=records[p.id];
+            const hasStatus=rec&&rec.s;
+            const si=hasStatus?SM[rec.s]:null;
+            const sl=statusLabel(p.id);
+            const pltColor=PLT_COLOR[p.plt]||'#64748b';
+            return(
+              <div key={p.id} style={{border:'1.5px solid #e2e8f0',borderRadius:'12px',padding:'11px 13px',marginBottom:'8px',background:hasStatus?`var(--sc-bg,#f8fafc)`:'#fffbeb'}}>
+                <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'5px'}}>
+                  <span style={{background:pltColor,color:'#fff',fontSize:'10px',fontWeight:800,padding:'2px 8px',borderRadius:'10px',flexShrink:0}}>{p.plt==='HQ'?'HQ':p.plt}</span>
+                  <span style={{fontSize:'11px',color:'#64748b',fontWeight:600,flexShrink:0}}>{p.sec}</span>
+                </div>
+                <div style={{fontWeight:800,fontSize:'15px',color:'#0f172a'}}>{p.rank} {p.name}</div>
+                <div style={{marginTop:'5px'}}>
+                  {hasStatus?(
+                    <span style={{display:'inline-block',fontSize:'13px',fontWeight:700,color:'#0f172a',background:si?undefined:'#f1f5f9',padding:'3px 10px',borderRadius:'8px',border:'1px solid #e2e8f0'}}>
+                      {sl}
+                    </span>
+                  ):(
+                    <span style={{fontSize:'12px',color:'#f59e0b',fontWeight:700}}>⚠ Not assigned yet ({TOD_LABEL[tod]})</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
