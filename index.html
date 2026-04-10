@@ -1078,7 +1078,9 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
   const[pdfLoading,setPdfLoading]=useState(false);
   const[overrideUnlocked,setOverrideUnlocked]=useState(false);
   const[customSections,setCustomSections]=useState({P1:[],P2:[],HQ:[]});
+  const[otherReasons,setOtherReasons]=useState([]);
   const skipRef=useRef(false);
+  const attInitRef=useRef(false); // blocks write until first Firebase read completes
   const personnelRef=useRef(IP);
   const totalManualRef=useRef(false);
   useEffect(()=>{personnelRef.current=personnel;},[personnel]);
@@ -1108,10 +1110,12 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
   },[]);
   // Attendance listener per date+tod
   useEffect(()=>{
+    attInitRef.current=false; // reset — block writes until this listener responds
     const ref=DB.ref(fbAttPath(date,tod));
     ref.on('value',snap=>{
       const d=snap.val();
       skipRef.current=true;
+      attInitRef.current=true; // now safe to write
       if(d){
         setRecords(d.records||{});if(d.totalManual&&d.total){setTotal(d.total);setTotalManual(true);}setDuty(d.duty??0);
         setExtra(d.extra||'');setSubmitted(d.submitted||{P1:false,P2:false,HQ:false});
@@ -1147,9 +1151,9 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
     });
     return()=>ref.off();
   },[date,tod]);
-  // Write attendance to Firebase
+  // Write attendance to Firebase (only after initial read from Firebase)
   useEffect(()=>{
-    if(skipRef.current)return;
+    if(skipRef.current||!attInitRef.current)return;
     DB.ref(fbAttPath(date,tod)).set({records,total,totalManual,duty,extra,submitted,markedBy});
   },[records,total,totalManual,duty,extra,date,tod,submitted,markedBy]);
   // History listener
@@ -1170,6 +1174,20 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
     });
     return()=>ref.off();
   },[]);
+  // Other reasons listener
+  useEffect(()=>{
+    const ref=DB.ref('jrn/otherReasons');
+    ref.on('value',snap=>{
+      const d=snap.val();
+      setOtherReasons(d?Object.values(d):[]);
+    });
+    return()=>ref.off();
+  },[]);
+  function addOtherReason(r){
+    if(!r||!r.trim())return;
+    const key=r.trim().replace(/[.#$\/\[\]]/g,'_');
+    DB.ref(`jrn/otherReasons/${key}`).set(r.trim());
+  }
   function addCustomSection(plt,sec){
     if(!sec||!sec.trim())return;
     const current=(customSections[plt]||[]);
@@ -1290,7 +1308,7 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
         </div>
       </div>
       <div className="main">
-        {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setAllPresent={setAllPresent} clearAll={clearAll} submitted={submitted} setSubmitted={setSubmitted} markedBy={markedBy} setMarkedBy={setMarkedBy} toast_={toast_} overrideUnlocked={isAdmin||overrideUnlocked} onPlatoonSubmit={saveToHistory}/>}
+        {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setAllPresent={setAllPresent} clearAll={clearAll} submitted={submitted} setSubmitted={setSubmitted} markedBy={markedBy} setMarkedBy={setMarkedBy} toast_={toast_} overrideUnlocked={isAdmin||overrideUnlocked} onPlatoonSubmit={saveToHistory} otherReasons={otherReasons} addOtherReason={addOtherReason}/>}
         {screen==='telegram'&&<GenerateScreen msg={msg} total={total} setTotal={setTotal} totalManual={totalManual} setTotalManual={setTotalManual} autoTotal={personnel.filter(p=>p.active).length} extra={extra} setExtra={setExtra} toast_={toast_} date={date}/>}
         {screen==='manage'&&<ManageScreen personnel={personnel} setPersonnel={setPersonnelAndSync} toast_={toast_} customSections={customSections} addCustomSection={addCustomSection}/>}
         {screen==='history'&&<HistoryScreen history={history} personnel={personnel} onPreview={(e,setL)=>loadDayAndPreview(e.date,setL)} onDelete={deleteHistory} overrideUnlocked={isAdmin||overrideUnlocked} setOverrideUnlocked={setOverrideUnlocked} toast_={toast_} onEdit={dateStr=>{setDate(dateStr);setScreen('attendance');}} isAdmin={isAdmin}/>}
@@ -1316,7 +1334,7 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
 }
 
 // ─── ATTENDANCE SCREEN ──────────────────────────────────────────
-function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setAllPresent,clearAll,submitted,setSubmitted,markedBy,setMarkedBy,toast_,overrideUnlocked,onPlatoonSubmit}){
+function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setAllPresent,clearAll,submitted,setSubmitted,markedBy,setMarkedBy,toast_,overrideUnlocked,onPlatoonSubmit,otherReasons,addOtherReason}){
   const[search,setSearch]=useState('');
   const[plt,setPlt]=useState('P1');
   const active=personnel.filter(p=>p.active);
@@ -1384,7 +1402,7 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setA
                 <div className="sec-prog"><div className={`sec-prog-fill${done?' complete':''}`} style={{width:`${pct}%`}}/></div>
                 <div className="card-body">
                   {secPpl.map(person=>(
-                    <PersonRow key={person.id} person={person} record={records[person.id]||{}} setRec={setRec} setPersonLeave={setPersonLeave} tod={tod} locked={isLocked} currentDate={date}/>
+                    <PersonRow key={person.id} person={person} record={records[person.id]||{}} setRec={setRec} setPersonLeave={setPersonLeave} tod={tod} locked={isLocked} currentDate={date} otherReasons={otherReasons} addOtherReason={addOtherReason}/>
                   ))}
                 </div>
               </div>
@@ -1473,7 +1491,7 @@ function PlatoonFooter({plt,allPersonnel,records,pltColors,submitted,setSubmitte
 }
 
 // ─── PERSON ROW ─────────────────────────────────────────────────
-function PersonRow({person,record,setRec,setPersonLeave,tod,locked,currentDate}){
+function PersonRow({person,record,setRec,setPersonLeave,tod,locked,currentDate,otherReasons,addOtherReason}){
   const[showMore,setShowMore]=useState(false);
   const si=record.s?SM[record.s]:null;
   const colorClass=record.s?`sc-${record.s}`:'';
@@ -1557,7 +1575,7 @@ function PersonRow({person,record,setRec,setPersonLeave,tod,locked,currentDate})
           {showMore&&(
             <select value={record.s||''} onChange={e=>handleStatusChange(e.target.value)}>
               <option value="">— Select a status —</option>
-              {SL.map(s=><option key={s.k} value={s.k}>{s.l}</option>)}
+              {SL.filter(s=>s.k!=='so'&&s.k!=='so_till').map(s=><option key={s.k} value={s.k}>{s.l}</option>)}
             </select>
           )}
 
@@ -1586,7 +1604,22 @@ function PersonRow({person,record,setRec,setPersonLeave,tod,locked,currentDate})
 
           {/* Text input for non-date detail statuses */}
           {si&&si.d&&!si.datePick&&(
-            <input type="text" placeholder={si.dp||'Enter details...'} value={record.det||''} onChange={e=>setRec(person.id,record.s,e.target.value,record.from||'')}/>
+            <div style={{display:'flex',gap:'6px',alignItems:'center'}}>
+              <input list={record.s==='others'?`or-${person.id}`:undefined}
+                type="text" placeholder={si.dp||'Enter details...'} value={record.det||''}
+                onChange={e=>setRec(person.id,record.s,e.target.value,record.from||'')}
+                style={{flex:1}}/>
+              {record.s==='others'&&record.det&&record.det.trim()&&(
+                <button onClick={()=>addOtherReason&&addOtherReason(record.det.trim())}
+                  title="Save as quick-pick option"
+                  style={{padding:'6px 10px',background:'#0d9488',color:'#fff',border:'none',borderRadius:'8px',fontSize:'14px',fontWeight:800,cursor:'pointer',flexShrink:0}}>✓</button>
+              )}
+              {record.s==='others'&&otherReasons&&otherReasons.length>0&&(
+                <datalist id={`or-${person.id}`}>
+                  {otherReasons.map(r=><option key={r} value={r}/>)}
+                </datalist>
+              )}
+            </div>
           )}
         </>
       )}
