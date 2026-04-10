@@ -242,6 +242,7 @@ const DB = firebase.database();
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script type="text/babel">
 const {useState, useEffect, useMemo, useRef} = React;
 
@@ -745,6 +746,64 @@ function ParadeStatePDFPage({plt,personnel,allTodRecs,date,total,allTodMarkedBy}
   );
 }
 
+// ─── BULK PDF BUILDER (no DOM/html2canvas needed) ───────────────
+function buildPDFForDate(dateStr,allTodRecs,pAll,total){
+  const{jsPDF}=window.jspdf;
+  const pdf=new jsPDF({orientation:'portrait',unit:'pt',format:'a4'});
+  const pw=595,ph=842,mg=28,tw=539;
+  const cols=[
+    {l:'S/N',w:22},{l:'RANK',w:37},{l:'NAME',w:136},{l:'IN/OUT',w:37},
+    {l:'HLS',w:28},{l:'0745',w:28},{l:'1300',w:28},{l:'1730',w:28},
+    {l:'2030/2230',w:45},{l:'REMARK',w:150}
+  ];
+  ['HQ','P1','P2'].forEach((plt,pi)=>{
+    if(pi>0)pdf.addPage();
+    const pltPpl=pAll.filter(p=>p.active&&p.plt===plt);
+    let y=mg+20;
+    pdf.setFontSize(13);pdf.setFont('helvetica','bold');pdf.setTextColor(0,0,0);
+    pdf.text('JURONG NODE — PARADE STATE',pw/2,y,{align:'center'});
+    y+=16;
+    pdf.setFontSize(8);pdf.setFont('helvetica','normal');
+    pdf.text(`Date: ${fmtDate(dateStr)}  |  ${P_LABEL[plt]}  |  Platoon Strength: ${pltPpl.length}  |  Node Strength: ${total}`,pw/2,y,{align:'center'});
+    y+=14;
+    const ROW_H=14,HDR_H=16;
+    function chk(){if(y>ph-mg-20){pdf.addPage();y=mg+10;}}
+    function hdrRow(){
+      pdf.setFillColor(30,41,59);pdf.rect(mg,y,tw,HDR_H,'F');
+      pdf.setTextColor(255,255,255);pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);
+      let x=mg;cols.forEach(c=>{pdf.text(c.l,x+2,y+HDR_H-4,{maxWidth:c.w-3});x+=c.w;});
+      y+=HDR_H;
+    }
+    function secRow(lbl){
+      chk();pdf.setFillColor(71,85,105);pdf.rect(mg,y,tw,ROW_H,'F');
+      pdf.setTextColor(255,255,255);pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);
+      pdf.text(lbl,mg+3,y+ROW_H-4);
+      pdf.setDrawColor(150,150,150);pdf.rect(mg,y,tw,ROW_H,'S');y+=ROW_H;
+    }
+    function dataRow(cells,ri){
+      chk();
+      pdf.setFillColor(ri%2===0?248:255,ri%2===0?250:255,ri%2===0?252:255);
+      pdf.rect(mg,y,tw,ROW_H,'F');
+      pdf.setTextColor(30,41,59);pdf.setFont('helvetica','normal');pdf.setFontSize(6.5);
+      let x=mg;cells.forEach((cell,i)=>{const c=cols[i];pdf.text(String(cell||''),x+2,y+ROW_H-4,{maxWidth:c.w-3});x+=c.w;});
+      pdf.setDrawColor(220,220,220);pdf.rect(mg,y,tw,ROW_H,'S');y+=ROW_H;
+    }
+    hdrRow();
+    const secs=[...new Set(pltPpl.map(p=>p.sec))];let sn=0;
+    secs.forEach(sec=>{
+      secRow(`${P_LABEL[plt].toUpperCase()} TO (${sec.toUpperCase()})`);
+      pltPpl.filter(p=>p.sec===sec).forEach((p,ri)=>{
+        sn++;
+        dataRow([sn,p.rank,p.name,sisoCell(p),...TODS.map(tod=>getStatusCell((allTodRecs[tod]||{})[p.id])||''),getRemarkText(allTodRecs,p.id)],ri);
+      });
+    });
+    y+=8;chk();
+    pdf.setFontSize(8);pdf.setFont('helvetica','bold');pdf.setTextColor(30,41,59);
+    pdf.text(`Total Node Strength: ${total}`,pw-mg,y,{align:'right'});
+  });
+  return pdf;
+}
+
 // ─── PDF PREVIEW MODAL ──────────────────────────────────────────
 function PDFPreviewModal({date,personnel,allTodRecs,total,allTodMarkedBy,onClose,onDownloaded,isAdmin}){
   const[downloading,setDownloading]=useState(false);
@@ -870,13 +929,14 @@ function PDFPreviewModal({date,personnel,allTodRecs,total,allTodMarkedBy,onClose
 }
 
 // ─── HISTORY SCREEN ─────────────────────────────────────────────
-function HistoryScreen({history,personnel,onPreview,onDelete,overrideUnlocked,setOverrideUnlocked,toast_,onEdit,isAdmin}){
+function HistoryScreen({history,personnel,onPreview,onDelete,overrideUnlocked,setOverrideUnlocked,toast_,onEdit,isAdmin,onBulkDownload}){
   // Auto-expand current year and month so recent records are visible immediately
   const nowY=String(new Date().getFullYear());
   const nowM=`${nowY}-${String(new Date().getMonth()+1).padStart(2,'0')}`;
   const[openY,setOpenY]=useState(()=>new Set([nowY]));
   const[openM,setOpenM]=useState(()=>new Set([nowM]));
   const[loading,setLoading]=useState(null);
+  const[bulkLoading,setBulkLoading]=useState(null);
   const[editingId,setEditingId]=useState(null);  // date string of card showing password prompt
   const[passInput,setPassInput]=useState('');
   const[showPass,setShowPass]=useState(false);
@@ -971,6 +1031,19 @@ function HistoryScreen({history,personnel,onPreview,onDelete,overrideUnlocked,se
         <h2>History</h2>
         <span className="hist-count">{history.length} records</span>
       </div>
+      {isAdmin&&onBulkDownload&&history.length>0&&(
+        <div style={{display:'flex',gap:'8px',marginBottom:'12px',padding:'10px 12px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:'10px'}}>
+          <div style={{fontSize:'12px',fontWeight:700,color:'#64748b',alignSelf:'center',flexShrink:0}}>Download All:</div>
+          <button disabled={!!bulkLoading} onClick={()=>onBulkDownload('pdf',setBulkLoading)}
+            style={{flex:1,padding:'8px',background:bulkLoading==='pdf'?'#94a3b8':'#dc2626',color:'#fff',border:'none',borderRadius:'8px',fontSize:'12px',fontWeight:700,cursor:bulkLoading?'not-allowed':'pointer'}}>
+            {bulkLoading==='pdf'?'Generating…':'⬇ All PDF (ZIP)'}
+          </button>
+          <button disabled={!!bulkLoading} onClick={()=>onBulkDownload('excel',setBulkLoading)}
+            style={{flex:1,padding:'8px',background:bulkLoading==='excel'?'#94a3b8':'#16a34a',color:'#fff',border:'none',borderRadius:'8px',fontSize:'12px',fontWeight:700,cursor:bulkLoading?'not-allowed':'pointer'}}>
+            {bulkLoading==='excel'?'Generating…':'⬇ All Excel (ZIP)'}
+          </button>
+        </div>
+      )}
       {years.map(y=>(
         <div key={y} className="hist-year-grp">
           <div className="hist-y-hdr" onClick={()=>toggleY(y)}>
@@ -1344,6 +1417,58 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
     toast_('✓ Saved to History');
   }
   function deleteHistory(dateStr){DB.ref(`jrn/history/${dateStr}`).remove();}
+  async function handleBulkDownload(type,setBulkLoading){
+    setBulkLoading(type);
+    try{
+      const zip=new window.JSZip();
+      const XLSX=window.XLSX;
+      for(const entry of history){
+        const ds=entry.date;
+        const d=new Date(ds+'T00:00:00');
+        const yr=String(d.getFullYear());
+        const mon=d.toLocaleDateString('en-MY',{month:'long'});
+        const folder=zip.folder(yr).folder(`${mon} ${yr}`);
+        const allTodRecs={};let pTotal=personnelRef.current.filter(p=>p.active).length;
+        await Promise.all(TODS.map(async t=>{
+          const snap=await DB.ref(fbAttPath(ds,t)).once('value');const td=snap.val();
+          allTodRecs[t]=td?(td.records||{}):{};
+          if(td&&td.totalManual&&td.total)pTotal=td.total;
+        }));
+        if(type==='pdf'){
+          const pdf=buildPDFForDate(ds,allTodRecs,personnelRef.current,pTotal);
+          folder.file(`ParadeState_JRN_${ds}.pdf`,pdf.output('blob'));
+        } else {
+          const wb=XLSX.utils.book_new();
+          ['HQ','P1','P2'].forEach(plt=>{
+            const pltPpl=personnelRef.current.filter(p=>p.active&&p.plt===plt);
+            const rows=[
+              ['JURONG NODE — PARADE STATE'],
+              [`Date: ${fmtDate(ds)}  |  ${P_LABEL[plt]}  |  Platoon Strength: ${pltPpl.length}  |  Node Strength: ${pTotal}`],
+              [],
+              ['S/N','RANK','NAME','IN/OUT','HLS','0745','1300','1730','2030/2230','REMARK'],
+            ];
+            const secs=[...new Set(pltPpl.map(p=>p.sec))];let sn=0;
+            secs.forEach(sec=>{
+              rows.push([`${P_LABEL[plt].toUpperCase()} TO (${sec.toUpperCase()})`]);
+              pltPpl.filter(p=>p.sec===sec).forEach(p=>{
+                sn++;
+                rows.push([sn,p.rank,p.name,sisoCell(p),...TODS.map(t=>getStatusCell((allTodRecs[t]||{})[p.id])||''),getRemarkText(allTodRecs,p.id)]);
+              });
+            });
+            rows.push([]);rows.push([`Total Node Strength: ${pTotal}`]);
+            const ws=XLSX.utils.aoa_to_sheet(rows);
+            ws['!cols']=[{wch:5},{wch:8},{wch:28},{wch:8},{wch:8},{wch:8},{wch:8},{wch:8},{wch:12},{wch:30}];
+            XLSX.utils.book_append_sheet(wb,ws,plt);
+          });
+          folder.file(`ParadeState_JRN_${ds}.xlsx`,XLSX.write(wb,{bookType:'xlsx',type:'array'}));
+        }
+      }
+      const blob=await zip.generateAsync({type:'blob'});
+      const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+      a.download=`JRN_ParadeState_All_${type.toUpperCase()}.zip`;a.click();
+    }catch(e){console.error(e);alert('Failed to generate ZIP: '+e.message);}
+    finally{setBulkLoading(null);}
+  }
   // Personnel write wrapper (called from ManageScreen)
   function setPersonnelAndSync(updater){
     setPersonnel(prev=>{
@@ -1401,7 +1526,7 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
         {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setAllPresent={setAllPresent} clearAll={clearAll} submitted={submitted} setSubmitted={setSubmitted} markedBy={markedBy} setMarkedBy={setMarkedBy} toast_={toast_} overrideUnlocked={isAdmin||overrideUnlocked} onPlatoonSubmit={saveToHistory} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={isAdmin?deleteOtherReason:undefined}/>}
         {screen==='telegram'&&<GenerateScreen msg={msg} total={total} setTotal={setTotal} totalManual={totalManual} setTotalManual={setTotalManual} autoTotal={personnel.filter(p=>p.active).length} extra={extra} setExtra={setExtra} toast_={toast_} date={date}/>}
         {screen==='manage'&&<ManageScreen personnel={personnel} setPersonnel={setPersonnelAndSync} toast_={toast_} customSections={customSections} addCustomSection={addCustomSection}/>}
-        {screen==='history'&&<HistoryScreen history={history} personnel={personnel} onPreview={(e,setL)=>loadDayAndPreview(e.date,setL)} onDelete={deleteHistory} overrideUnlocked={isAdmin||overrideUnlocked} setOverrideUnlocked={setOverrideUnlocked} toast_={toast_} onEdit={dateStr=>{setDate(dateStr);setScreen('attendance');}} isAdmin={isAdmin}/>}
+        {screen==='history'&&<HistoryScreen history={history} personnel={personnel} onPreview={(e,setL)=>loadDayAndPreview(e.date,setL)} onDelete={deleteHistory} overrideUnlocked={isAdmin||overrideUnlocked} setOverrideUnlocked={setOverrideUnlocked} toast_={toast_} onEdit={dateStr=>{setDate(dateStr);setScreen('attendance');}} isAdmin={isAdmin} onBulkDownload={isAdmin?handleBulkDownload:undefined}/>}
       </div>
       <nav className="bnav">
         {[
