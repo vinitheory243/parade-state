@@ -1602,7 +1602,7 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setA
         const isPastDate=date<todayStr();
         const isLocked=(submitted[p]||false)||(isPastDate&&!overrideUnlocked);
         return(
-        <div key={p} style={isLocked?{opacity:.65,pointerEvents:'none',filter:'grayscale(40%)'}:{}}>
+        <div key={p} style={isLocked?{opacity:.7}:{}}>
           {[...new Set([...(P_SECTIONS[p]||[]),...Object.keys(tree[p]||{})])].filter(s=>tree[p]&&tree[p][s]&&tree[p][s].length>0).map(s=>{
             const secPpl=tree[p][s];
             const filled=secPpl.filter(person=>records[person.id]?.s).length;
