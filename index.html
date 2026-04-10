@@ -1375,6 +1375,23 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
     if(skipRef.current||!attInitRef.current)return;
     DB.ref(fbAttPath(date,tod)).set({records,total,totalManual,duty,extra,submitted,markedBy});
   },[records,total,totalManual,duty,extra,date,tod,submitted,markedBy]);
+  // Re-apply carry whenever personnel activeLeave changes (catches race where listener fired before personnelRef updated)
+  useEffect(()=>{
+    if(!attInitRef.current)return;
+    setRecords(prev=>{
+      let changed=false;
+      const nr={...prev};
+      personnelOnDate(personnel,date).forEach(p=>{
+        if(nr[p.id]&&nr[p.id].s)return;
+        const al=p.activeLeave;
+        if(al&&al.det&&al.from&&date>=al.from&&date<=al.det){
+          nr[p.id]={s:al.s,det:al.det,from:al.from};
+          changed=true;
+        }
+      });
+      return changed?nr:prev;
+    });
+  },[personnel,date]);
   // History listener
   useEffect(()=>{
     const ref=DB.ref('jrn/history');
@@ -1557,6 +1574,7 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
   function setPersonnelAndSync(updater){
     setPersonnel(prev=>{
       const next=typeof updater==='function'?updater(prev):updater;
+      personnelRef.current=next; // sync immediately so attendance listener always has latest
       const obj={};next.forEach(p=>{obj[p.id]=p;});
       DB.ref('jrn/personnel').set(obj);
       return next;
