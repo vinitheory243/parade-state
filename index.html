@@ -1514,6 +1514,12 @@ function PersonRow({person,record,setRec,setPersonLeave,tod,locked,currentDate,o
   }
   function handleStatusChange(newS){
     if(locked)return;
+    if(newS.startsWith('__or__')){
+      const reason=newS.slice(6);
+      setRec(person.id,'others',reason,'');
+      setShowMore(false);
+      return;
+    }
     setRec(person.id,newS,'','');
     if(SM[newS]&&!SM[newS].datePick&&person.activeLeave)setPersonLeave(person.id,null,null,null);
     if(newS)setShowMore(false);
@@ -1577,9 +1583,11 @@ function PersonRow({person,record,setRec,setPersonLeave,tod,locked,currentDate,o
             </button>
           </div>
           {showMore&&(
-            <select value={record.s||''} onChange={e=>handleStatusChange(e.target.value)}>
+            <select value={record.s==='others'&&record.det&&otherReasons&&otherReasons.includes(record.det)?`__or__${record.det}`:record.s||''} onChange={e=>handleStatusChange(e.target.value)}>
               <option value="">— Select a status —</option>
               {SL.filter(s=>s.k!=='so'&&s.k!=='so_till').map(s=><option key={s.k} value={s.k}>{s.l}</option>)}
+              {otherReasons&&otherReasons.length>0&&<option disabled>──────────────</option>}
+              {otherReasons&&otherReasons.map(r=><option key={`__or__${r}`} value={`__or__${r}`}>{r}</option>)}
             </select>
           )}
 
