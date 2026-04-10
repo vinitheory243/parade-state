@@ -645,17 +645,13 @@ function getRemarkText(allTodRecs,pid){
     const rec=(allTodRecs[tod]||{})[pid];
     if(!rec||!rec.s)continue;
     const si=SM[rec.s];
-    if(!si)continue;
+    if(!si||!si.datePick)continue; // only date-range statuses go in REMARK
     const fullLabel=(si.l||rec.s).toUpperCase();
-    if(si.datePick){
-      const from=rec.from?fmtDate(rec.from):'';
-      const till=rec.det?fmtDate(rec.det):'';
-      if(si.dateRange&&from&&till&&from!==till)return`${fullLabel} ${from} - ${till}`;
-      if(till)return`${fullLabel} TILL ${till}`;
-      if(from)return`${fullLabel} FM ${from}`;
-      return fullLabel;
-    }
-    if(rec.det&&rec.det.trim())return`${fullLabel}: ${rec.det.trim()}`;
+    const from=rec.from?fmtDate(rec.from):'';
+    const till=rec.det?fmtDate(rec.det):'';
+    if(si.dateRange&&from&&till&&from!==till)return`${fullLabel} ${from} - ${till}`;
+    if(till)return`${fullLabel} TILL ${till}`;
+    if(from)return`${fullLabel} FM ${from}`;
     return fullLabel;
   }
   return'';
