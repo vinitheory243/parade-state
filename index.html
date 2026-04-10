@@ -1630,16 +1630,6 @@ function PersonRow({person,record,setRec,setPersonLeave,tod,locked,currentDate,o
                   </button>
                 )}
               </div>
-              {record.s==='others'&&otherReasons&&otherReasons.length>0&&(
-                <div style={{display:'flex',flexWrap:'wrap',gap:'5px',marginTop:'6px'}}>
-                  {otherReasons.map(r=>(
-                    <button key={r} onClick={()=>setRec(person.id,record.s,r,record.from||'')}
-                      style={{padding:'3px 10px',background:record.det===r?'#0d9488':'#f1f5f9',color:record.det===r?'#fff':'#475569',border:`1px solid ${record.det===r?'#0d9488':'#e2e8f0'}`,borderRadius:'20px',fontSize:'12px',fontWeight:600,cursor:'pointer'}}>
-                      {r}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           )}
         </>
