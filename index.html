@@ -473,6 +473,18 @@ function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
 
 // ─── UTILS ──────────────────────────────────────────────────────
 function todayStr(){return new Date().toISOString().split('T')[0]}
+// Returns personnel who were active on a given date
+function personnelOnDate(personnel,date){
+  return personnel.filter(p=>{
+    // If they have a joinDate, they must have joined on or before the date
+    if(p.joinDate&&p.joinDate>date)return false;
+    // If they were deactivated, they must have been deactivated after the date
+    if(!p.active&&p.removedDate&&p.removedDate<=date)return false;
+    // Legacy: no joinDate means they were always there; no removedDate means still active
+    if(!p.active&&!p.removedDate)return false;
+    return true;
+  });
+}
 function fmtDate(s){const[y,m,d]=s.split('-');return`${d}/${m}/${y.slice(2)}`}
 function currentTod(){const h=new Date().getHours();if(h<8)return'HLS';if(h<13)return'0745';if(h<17)return'1300';if(h<20)return'1730';return'2030/2230'}
 function todKey(tod){return tod.replace(/\//g,'_')}
@@ -1300,7 +1312,7 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
         skipRef.current=true;
         const ppl=Object.values(d).sort((a,b)=>a.id>b.id?1:-1);
         setPersonnel(ppl);
-        if(!totalManualRef.current)setTotal(ppl.filter(p=>p.active).length);
+        if(!totalManualRef.current)setTotal(personnelOnDate(ppl,todayStr()).length);
         setTimeout(()=>{skipRef.current=false;},400);
       } else {
         const obj={};IP.forEach(p=>{obj[p.id]=p;});ref.set(obj);
@@ -1341,13 +1353,13 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
         if(d.totalManual&&d.total){setTotal(d.total);setTotalManual(true);}
         setDuty(d.duty??0);setExtra(d.extra||'');
         // Carry active leaves into anyone not yet assigned in this slot
-        personnelRef.current.filter(p=>p.active).forEach(p=>applyCarry(nr,p));
+        personnelOnDate(personnelRef.current,date).forEach(p=>applyCarry(nr,p));
         setRecords(nr);
         setSubmitted(d.submitted||{P1:false,P2:false,HQ:false});
         setMarkedBy(d.markedBy||{P1:'',P2:'',HQ:''});
       } else {
         const nr={};
-        personnelRef.current.filter(p=>p.active).forEach(p=>applyCarry(nr,p));
+        personnelOnDate(personnelRef.current,date).forEach(p=>applyCarry(nr,p));
         // HLS: skip auto-carry if fewer than 10 pax (parade likely didn't happen)
         if(tod==='HLS'&&Object.keys(nr).length<10){
           Object.keys(nr).forEach(k=>delete nr[k]);
@@ -1454,7 +1466,7 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
       const allTodRecs={};
       const allTodMarkedBy={};  // {tod: {P1, P2, HQ}}
       let pTotalManual=false;
-      let pTotal=personnelRef.current.filter(p=>p.active).length;
+      let pTotal=personnelOnDate(personnelRef.current,dateStr).length;
       await Promise.all(TODS.map(async tod=>{
         const snap=await DB.ref(fbAttPath(dateStr,tod)).once('value');
         const d=snap.val();
@@ -1464,7 +1476,8 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
           if(d.markedBy)allTodMarkedBy[tod]=d.markedBy;
         }
       }));
-      setPdfPreview({date:dateStr,allTodRecs,total:pTotal,allTodMarkedBy});
+      const pplForDate=personnelOnDate(personnelRef.current,dateStr);
+      setPdfPreview({date:dateStr,allTodRecs,total:pTotal,allTodMarkedBy,personnelForDate:pplForDate});
     }catch(e){alert('Failed to load data.');}
     finally{if(setLoadingFn)setLoadingFn(null); else setPdfLoading(false);}
   }
@@ -1484,7 +1497,9 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
       // Fetch ALL dates in parallel
       const fetched=await Promise.all(history.map(async entry=>{
         const ds=entry.date;
-        const allTodRecs={};const allTodMarkedBy={};let pTotal=defaultTotal;
+        const allTodRecs={};const allTodMarkedBy={};
+        const pplForDate=personnelOnDate(ppl,ds);
+        let pTotal=pplForDate.length;
         await Promise.all(TODS.map(async t=>{
           const snap=await DB.ref(fbAttPath(ds,t)).once('value');
           const td=snap.val();
@@ -1492,11 +1507,11 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
           if(td&&td.totalManual&&td.total)pTotal=td.total;
           if(td&&td.markedBy)allTodMarkedBy[t]=td.markedBy;
         }));
-        return{ds,allTodRecs,allTodMarkedBy,pTotal};
+        return{ds,allTodRecs,allTodMarkedBy,pTotal,pplForDate};
       }));
       // Generate files one by one with progress
       let done=0;
-      for(const{ds,allTodRecs,allTodMarkedBy,pTotal} of fetched){
+      for(const{ds,allTodRecs,allTodMarkedBy,pTotal,pplForDate} of fetched){
         done++;
         setProgress(`${done} / ${total}`);
         const d=new Date(ds+'T00:00:00');
@@ -1504,12 +1519,12 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
         const mon=d.toLocaleDateString('en-MY',{month:'long'});
         const folder=zip.folder(yr).folder(`${mon} ${yr}`);
         if(type==='pdf'){
-          const pdf=await renderPDFFromData(ds,allTodRecs,ppl,pTotal,allTodMarkedBy);
+          const pdf=await renderPDFFromData(ds,allTodRecs,pplForDate,pTotal,allTodMarkedBy);
           folder.file(`ParadeState_JRN_${ds}.pdf`,pdf.output('blob'));
         } else {
           const wb=XLSX.utils.book_new();
           ['HQ','P1','P2'].forEach(plt=>{
-            const pltPpl=ppl.filter(p=>p.active&&p.plt===plt);
+            const pltPpl=pplForDate.filter(p=>p.plt===plt);
             const rows=[
               ['JURONG NODE — PARADE STATE'],
               [`Date: ${fmtDate(ds)}  |  ${P_LABEL[plt]}  |  Platoon Strength: ${pltPpl.length}  |  Node Strength: ${pTotal}`],
@@ -1559,7 +1574,7 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
     setRecords(nr);toast_('✓ All set to Present');
   }
   function clearAll(plt,submittedState){
-    const pltPpl=personnel.filter(p=>p.active&&p.plt===plt);
+    const pltPpl=personnelOnDate(personnel,date).filter(p=>p.plt===plt);
     if(submittedState[plt]){return;}
     setRecords(prev=>{
       const next={...prev};
@@ -1568,7 +1583,7 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
     });
     toast_(`Cleared ${P_LABEL[plt]} statuses`);
   }
-  const unassigned=useMemo(()=>personnel.filter(p=>p.active&&(!records[p.id]||!records[p.id].s)).length,[personnel,records]);
+  const unassigned=useMemo(()=>personnelOnDate(personnel,date).filter(p=>(!records[p.id]||!records[p.id].s)).length,[personnel,date,records]);
   const sisoExpiredCnt=useMemo(()=>personnel.filter(p=>p.active&&sisoExpired(p)).length,[personnel]);
   const msg=useMemo(()=>genMsg(date,tod,total,records,personnel,extra),[date,tod,total,records,personnel,extra]);
   return(
@@ -1593,7 +1608,7 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
       </div>
       <div className="main">
         {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setAllPresent={setAllPresent} clearAll={clearAll} submitted={submitted} setSubmitted={setSubmitted} markedBy={markedBy} setMarkedBy={setMarkedBy} toast_={toast_} overrideUnlocked={isAdmin||overrideUnlocked} onPlatoonSubmit={saveToHistory} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={isAdmin?deleteOtherReason:undefined}/>}
-        {screen==='telegram'&&<GenerateScreen msg={msg} total={total} setTotal={setTotal} totalManual={totalManual} setTotalManual={setTotalManual} autoTotal={personnel.filter(p=>p.active).length} extra={extra} setExtra={setExtra} toast_={toast_} date={date}/>}
+        {screen==='telegram'&&<GenerateScreen msg={msg} total={total} setTotal={setTotal} totalManual={totalManual} setTotalManual={setTotalManual} autoTotal={personnelOnDate(personnel,date).length} extra={extra} setExtra={setExtra} toast_={toast_} date={date}/>}
         {screen==='manage'&&<ManageScreen personnel={personnel} setPersonnel={setPersonnelAndSync} toast_={toast_} customSections={customSections} addCustomSection={addCustomSection}/>}
         {screen==='history'&&<HistoryScreen history={history} personnel={personnel} onPreview={(e,setL)=>loadDayAndPreview(e.date,setL)} onDelete={deleteHistory} overrideUnlocked={isAdmin||overrideUnlocked} setOverrideUnlocked={setOverrideUnlocked} toast_={toast_} onEdit={dateStr=>{setDate(dateStr);setScreen('attendance');}} isAdmin={isAdmin} onBulkDownload={isAdmin?(type,setL,setP)=>handleBulkDownload(type,setL,setP):undefined}/>}
       </div>
@@ -1612,7 +1627,7 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
         ))}
       </nav>
       {toast&&<div key={toastKey} className="toast">{toast}</div>}
-      {pdfPreview&&<PDFPreviewModal date={pdfPreview.date} personnel={personnel} allTodRecs={pdfPreview.allTodRecs} total={pdfPreview.total} allTodMarkedBy={pdfPreview.allTodMarkedBy||{}} onClose={()=>setPdfPreview(null)} onDownloaded={onPdfDownloaded} isAdmin={isAdmin}/>}
+      {pdfPreview&&<PDFPreviewModal date={pdfPreview.date} personnel={pdfPreview.personnelForDate||personnel} allTodRecs={pdfPreview.allTodRecs} total={pdfPreview.total} allTodMarkedBy={pdfPreview.allTodMarkedBy||{}} onClose={()=>setPdfPreview(null)} onDownloaded={onPdfDownloaded} isAdmin={isAdmin}/>}
     </div>
   );
 }
@@ -1621,7 +1636,7 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
 function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setAllPresent,clearAll,submitted,setSubmitted,markedBy,setMarkedBy,toast_,overrideUnlocked,onPlatoonSubmit,otherReasons,addOtherReason,deleteOtherReason}){
   const[search,setSearch]=useState('');
   const[plt,setPlt]=useState('P1');
-  const active=personnel.filter(p=>p.active);
+  const active=personnelOnDate(personnel,date);
   const expiredSiso=active.filter(p=>sisoExpired(p));
   const filtered=active.filter(p=>{
     const q=search.toLowerCase();
@@ -2018,11 +2033,11 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
   function add(){
     if(!np.name.trim()){toast_('Enter a name');return}
     if(!np.sec||np.sec==='__new__'){toast_('Enter a section name');return}
-    const p={id:`p${Date.now()}`,rank:np.rank,name:np.name.toUpperCase().trim(),dn:np.dn.toUpperCase().trim()||np.name.toUpperCase().trim().split(' ')[0],plt:np.plt,sec:np.sec,siso:np.siso||{type:'si'},active:true};
+    const p={id:`p${Date.now()}`,rank:np.rank,name:np.name.toUpperCase().trim(),dn:np.dn.toUpperCase().trim()||np.name.toUpperCase().trim().split(' ')[0],plt:np.plt,sec:np.sec,siso:np.siso||{type:'si'},active:true,joinDate:todayStr()};
     setPersonnel(prev=>[...prev,p]);setNp({rank:'PTE',name:'',dn:'',plt:'P1',sec:'BASE',siso:{type:'si'}});setNewSecInput('');setAddingNewSec(false);setShowAdd(false);toast_('✓ Personnel added');
   }
-  function deactivate(id){setPersonnel(prev=>prev.map(p=>p.id===id?{...p,active:false}:p));setConfirm(null);toast_('Removed from roster')}
-  function restore(id){setPersonnel(prev=>prev.map(p=>p.id===id?{...p,active:true}:p));toast_('✓ Restored')}
+  function deactivate(id){setPersonnel(prev=>prev.map(p=>p.id===id?{...p,active:false,removedDate:todayStr()}:p));setConfirm(null);toast_('Removed from roster')}
+  function restore(id){setPersonnel(prev=>prev.map(p=>p.id===id?{...p,active:true,removedDate:null}:p));toast_('✓ Restored')}
   function startEdit(p){setEditId(p.id);setEditData({rank:p.rank,name:p.name,dn:p.dn||'',plt:p.plt,sec:p.sec,siso:p.siso||{type:'si'},phone:p.phone||''});setAddingNewSecEdit(false);setEditSecInput('');}
   function saveEdit(id){
     setPersonnel(prev=>prev.map(p=>p.id===id?{...p,...editData,name:editData.name.toUpperCase().trim(),dn:editData.dn.toUpperCase().trim()||editData.name.toUpperCase().trim().split(' ')[0]}:p));
