@@ -1194,6 +1194,12 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
     });
     toast_('✓ "'+normalized+'" saved as quick-pick');
   }
+  function deleteOtherReason(r){
+    const key=r.replace(/[.#$\/\[\]]/g,'_');
+    DB.ref(`jrn/otherReasons/${key}`).remove();
+    setOtherReasons(prev=>prev.filter(x=>x!==r));
+    toast_('Deleted "'+r+'"');
+  }
   function addCustomSection(plt,sec){
     if(!sec||!sec.trim())return;
     const current=(customSections[plt]||[]);
@@ -1314,7 +1320,7 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
         </div>
       </div>
       <div className="main">
-        {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setAllPresent={setAllPresent} clearAll={clearAll} submitted={submitted} setSubmitted={setSubmitted} markedBy={markedBy} setMarkedBy={setMarkedBy} toast_={toast_} overrideUnlocked={isAdmin||overrideUnlocked} onPlatoonSubmit={saveToHistory} otherReasons={otherReasons} addOtherReason={addOtherReason}/>}
+        {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setAllPresent={setAllPresent} clearAll={clearAll} submitted={submitted} setSubmitted={setSubmitted} markedBy={markedBy} setMarkedBy={setMarkedBy} toast_={toast_} overrideUnlocked={isAdmin||overrideUnlocked} onPlatoonSubmit={saveToHistory} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={isAdmin?deleteOtherReason:undefined}/>}
         {screen==='telegram'&&<GenerateScreen msg={msg} total={total} setTotal={setTotal} totalManual={totalManual} setTotalManual={setTotalManual} autoTotal={personnel.filter(p=>p.active).length} extra={extra} setExtra={setExtra} toast_={toast_} date={date}/>}
         {screen==='manage'&&<ManageScreen personnel={personnel} setPersonnel={setPersonnelAndSync} toast_={toast_} customSections={customSections} addCustomSection={addCustomSection}/>}
         {screen==='history'&&<HistoryScreen history={history} personnel={personnel} onPreview={(e,setL)=>loadDayAndPreview(e.date,setL)} onDelete={deleteHistory} overrideUnlocked={isAdmin||overrideUnlocked} setOverrideUnlocked={setOverrideUnlocked} toast_={toast_} onEdit={dateStr=>{setDate(dateStr);setScreen('attendance');}} isAdmin={isAdmin}/>}
@@ -1340,7 +1346,7 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
 }
 
 // ─── ATTENDANCE SCREEN ──────────────────────────────────────────
-function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setAllPresent,clearAll,submitted,setSubmitted,markedBy,setMarkedBy,toast_,overrideUnlocked,onPlatoonSubmit,otherReasons,addOtherReason}){
+function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setAllPresent,clearAll,submitted,setSubmitted,markedBy,setMarkedBy,toast_,overrideUnlocked,onPlatoonSubmit,otherReasons,addOtherReason,deleteOtherReason}){
   const[search,setSearch]=useState('');
   const[plt,setPlt]=useState('P1');
   const active=personnel.filter(p=>p.active);
@@ -1408,7 +1414,7 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setA
                 <div className="sec-prog"><div className={`sec-prog-fill${done?' complete':''}`} style={{width:`${pct}%`}}/></div>
                 <div className="card-body">
                   {secPpl.map(person=>(
-                    <PersonRow key={person.id} person={person} record={records[person.id]||{}} setRec={setRec} setPersonLeave={setPersonLeave} tod={tod} locked={isLocked} currentDate={date} otherReasons={otherReasons} addOtherReason={addOtherReason}/>
+                    <PersonRow key={person.id} person={person} record={records[person.id]||{}} setRec={setRec} setPersonLeave={setPersonLeave} tod={tod} locked={isLocked} currentDate={date} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={deleteOtherReason}/>
                   ))}
                 </div>
               </div>
@@ -1497,7 +1503,7 @@ function PlatoonFooter({plt,allPersonnel,records,pltColors,submitted,setSubmitte
 }
 
 // ─── PERSON ROW ─────────────────────────────────────────────────
-function PersonRow({person,record,setRec,setPersonLeave,tod,locked,currentDate,otherReasons,addOtherReason}){
+function PersonRow({person,record,setRec,setPersonLeave,tod,locked,currentDate,otherReasons,addOtherReason,deleteOtherReason}){
   const[showMore,setShowMore]=useState(false);
   const si=record.s?SM[record.s]:null;
   const colorClass=record.s?`sc-${record.s}`:'';
@@ -1632,6 +1638,20 @@ function PersonRow({person,record,setRec,setPersonLeave,tod,locked,currentDate,o
                   </button>
                 )}
               </div>
+              {deleteOtherReason&&record.s==='others'&&otherReasons&&otherReasons.length>0&&(
+                <div style={{marginTop:'8px',padding:'8px 10px',background:'#fef2f2',border:'1px solid #fecaca',borderRadius:'8px'}}>
+                  <div style={{fontSize:'11px',fontWeight:700,color:'#dc2626',marginBottom:'6px'}}>🗑 Admin — Delete quick-picks</div>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:'5px'}}>
+                    {otherReasons.map(r=>(
+                      <div key={r} style={{display:'flex',alignItems:'center',gap:'4px',background:'#fff',border:'1px solid #fca5a5',borderRadius:'16px',padding:'2px 4px 2px 10px'}}>
+                        <span style={{fontSize:'12px',fontWeight:600,color:'#1e293b'}}>{r}</span>
+                        <button onClick={()=>deleteOtherReason(r)}
+                          style={{background:'#dc2626',color:'#fff',border:'none',borderRadius:'50%',width:'18px',height:'18px',fontSize:'12px',fontWeight:800,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,lineHeight:1}}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </>
