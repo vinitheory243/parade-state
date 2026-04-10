@@ -1183,14 +1183,16 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
   },[]);
   function addOtherReason(r){
     if(!r||!r.trim())return;
-    const trimmed=r.trim();
+    // Normalize: uppercase + collapse multiple spaces
+    const normalized=r.trim().replace(/\s+/g,' ').toUpperCase();
     setOtherReasons(prev=>{
-      if(prev.includes(trimmed))return prev;
-      const key=trimmed.replace(/[.#$\/\[\]]/g,'_');
-      DB.ref(`jrn/otherReasons/${key}`).set(trimmed);
-      return[...prev,trimmed];
+      // Deduplicate: ignore if same after normalization
+      if(prev.some(x=>x.replace(/\s+/g,' ').toUpperCase()===normalized))return prev;
+      const key=normalized.replace(/[.#$\/\[\]]/g,'_');
+      DB.ref(`jrn/otherReasons/${key}`).set(normalized);
+      return[...prev,normalized];
     });
-    toast_('✓ "'+trimmed+'" saved as quick-pick');
+    toast_('✓ "'+normalized+'" saved as quick-pick');
   }
   function addCustomSection(plt,sec){
     if(!sec||!sec.trim())return;
