@@ -262,8 +262,8 @@ const ALL_SECTIONS = [...new Set([...P_SECTIONS.P1,...P_SECTIONS.P2,...P_SECTION
 
 // ─── TIME SLOTS ─────────────────────────────────────────────────
 const TODS = ['HLS','0745','1300','1730','2030/2230'];
-const TOD_LABEL = {'HLS':'HLS','0745':'FP','1300':'MP','1730':'LP','2030/2230':'NIGHT STR'};
-const TOD_FULL  = {'HLS':'Healthy Life Style','0745':'First Parade','1300':'Midday Parade','1730':'Last Parade','2030/2230':'Night Strength'};
+const TOD_LABEL = {'HLS':'HLS','0745':'FP','1300':'MP','1730':'LP','2030/2230':'NIGHT STR','NR':'NR'};
+const TOD_FULL  = {'HLS':'Healthy Life Style','0745':'First Parade','1300':'Midday Parade','1730':'Last Parade','2030/2230':'Night Strength','NR':'Nominal Roll'};
 
 // ─── STATUS LIST ────────────────────────────────────────────────
 const SL = [
@@ -762,6 +762,132 @@ function ParadeStatePDFPage({plt,personnel,allTodRecs,date,total,allTodMarkedBy}
   );
 }
 
+// ─── NOMINAL ROLL PDF ───────────────────────────────────────────
+function nrAttLabel(rec){
+  if(!rec||!rec.s)return'';
+  if(rec.s==='present')return'PRESENT';
+  const si=SM[rec.s];
+  if(!si)return rec.s.toUpperCase();
+  if(rec.s==='others')return(rec.det||'OTHERS').toUpperCase();
+  // Strip parenthetical explanation e.g. "MC (Medical Certificate)" → "MC"
+  const l=si.l.replace(/\s*\([^)]*\)/g,'').trim().toUpperCase();
+  return l||rec.s.toUpperCase();
+}
+
+function NominalRollPDFPage({plt,personnel,records,date,total}){
+  const pltPpl=personnel.filter(p=>p.active&&p.plt===plt);
+  const customSecs=[...new Set(pltPpl.map(p=>p.sec).filter(Boolean))];
+  const sections=[...new Set([...(P_SECTIONS[plt]||[]),...customSecs])];
+  let sn=0;
+  return(
+    <div className="pdf-pg">
+      <div className="pdf-pg-title">Jurong Node — Nominal Roll</div>
+      <div className="pdf-pg-sub">Date: {fmtDate(date)} &nbsp;|&nbsp; {plt==='HQ'?'HQ':P_LABEL[plt]} &nbsp;|&nbsp; Platoon Strength: {pltPpl.length} &nbsp;|&nbsp; Node Strength: {total}</div>
+      <table className="pdf-tbl" style={{width:'100%'}}>
+        <thead>
+          <tr>
+            <th className="pdf-th-sn">S/N</th>
+            <th className="pdf-th-rk">RANK</th>
+            <th className="pdf-th-nm" style={{width:'50%'}}>NAME</th>
+            <th className="pdf-th-rm" style={{width:'30%'}}>ATTENDANCE</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sections.map(sec=>{
+            const ppl=pltPpl.filter(p=>p.sec===sec);
+            if(!ppl.length)return null;
+            const lbl=plt==='HQ'
+              ?(sec==='NODE CMD'?'NODE COMMANDER':sec==='HQ CMD'?'HQ COMMANDERS':sec)
+              :`${P_LABEL[plt].toUpperCase()} TO (${sec})`;
+            return(
+              <React.Fragment key={sec}>
+                <tr className="pdf-sec-hdr"><td colSpan={4}>{lbl}</td></tr>
+                {ppl.map(p=>{sn++;return(
+                  <tr key={p.id}>
+                    <td className="pdf-c-ctr">{sn}</td>
+                    <td className="pdf-c-ctr">{p.rank}</td>
+                    <td className="pdf-c-lft">{p.name}</td>
+                    <td className="pdf-c-lft">{nrAttLabel(records[p.id])}</td>
+                  </tr>
+                );})}
+              </React.Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+      <div className="pdf-pg-footer" style={{justifyContent:'flex-end'}}>
+        <div style={{textAlign:'right'}}>
+          <div className="pdf-ft-lbl">Total Node Strength</div>
+          <div style={{fontWeight:'bold',fontSize:'14px'}}>{total}</div>
+          <div className="pdf-ft-lbl" style={{marginTop:'4px'}}>Total Plt Strength</div>
+          <div style={{fontWeight:'bold',fontSize:'14px'}}>{pltPpl.length}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+async function renderNominalRollPDF(dateStr,records,pAll,total){
+  const{jsPDF}=window.jspdf;
+  const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const pgW=210,pgH=297;
+  for(let i=0;i<3;i++){
+    const plt=['HQ','P1','P2'][i];
+    if(i>0)pdf.addPage();
+    const wrap=document.createElement('div');
+    wrap.style.cssText='position:absolute;top:0;left:-9999px;width:800px;background:#fff;z-index:-999;overflow:visible;';
+    document.body.appendChild(wrap);
+    const root=ReactDOM.createRoot(wrap);
+    root.render(React.createElement(NominalRollPDFPage,{plt,personnel:pAll,records,date:dateStr,total}));
+    await new Promise(r=>setTimeout(r,500));
+    const h=Math.max(wrap.scrollHeight,wrap.offsetHeight,100);
+    const canvas=await html2canvas(wrap,{scale:2,useCORS:true,logging:false,backgroundColor:'#ffffff',width:800,height:h,scrollX:0,scrollY:0,windowWidth:800,windowHeight:h,x:0,y:0});
+    root.unmount();document.body.removeChild(wrap);
+    const imgData=canvas.toDataURL('image/jpeg',0.92);
+    const imgW=pgW;
+    let imgH=(canvas.height*imgW)/canvas.width;
+    if(imgH>pgH){const scaledW=(canvas.width*pgH)/canvas.height;pdf.addImage(imgData,'JPEG',(pgW-scaledW)/2,0,scaledW,pgH);}
+    else{pdf.addImage(imgData,'JPEG',0,0,imgW,imgH);}
+  }
+  return pdf;
+}
+
+function NominalRollPreviewModal({date,personnel,records,total,onClose}){
+  const[downloading,setDownloading]=useState(false);
+  const[pages,setPages]=useState([]);
+  useEffect(()=>{
+    const plts=['HQ','P1','P2'];
+    setPages(plts.map(plt=>({plt})));
+  },[]);
+  async function handleDownload(){
+    setDownloading(true);
+    try{
+      const pdf=await renderNominalRollPDF(date,records,personnel,total);
+      pdf.save(`NominalRoll_JRN_${date}.pdf`);
+    }catch(e){console.error(e);alert('Failed to generate PDF.');}
+    finally{setDownloading(false);}
+  }
+  return(
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',zIndex:8000,display:'flex',flexDirection:'column'}}>
+      <div style={{background:'#1e293b',padding:'10px 14px',display:'flex',alignItems:'center',gap:'10px',flexShrink:0}}>
+        <span style={{color:'#fff',fontWeight:800,fontSize:'14px',flex:1}}>📋 Nominal Roll — {fmtDate(date)}</span>
+        <button onClick={handleDownload} disabled={downloading}
+          style={{background:'#0d9488',color:'#fff',border:'none',borderRadius:'8px',padding:'8px 14px',fontSize:'13px',fontWeight:700,cursor:'pointer',opacity:downloading?.6:1}}>
+          {downloading?'Generating…':'⬇ PDF'}
+        </button>
+        <button onClick={onClose} style={{background:'#475569',color:'#fff',border:'none',borderRadius:'8px',padding:'8px 12px',fontSize:'13px',fontWeight:700,cursor:'pointer'}}>✕ Close</button>
+      </div>
+      <div style={{flex:1,overflowY:'auto',padding:'12px 8px',display:'flex',flexDirection:'column',gap:'16px',alignItems:'center'}}>
+        {['HQ','P1','P2'].map(plt=>(
+          <div key={plt} style={{width:'100%',maxWidth:'860px',overflowX:'auto',background:'#fff',borderRadius:'8px',boxShadow:'0 2px 8px rgba(0,0,0,.2)'}}>
+            <NominalRollPDFPage plt={plt} personnel={personnel} records={records} date={date} total={total}/>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── FAST BULK PDF BUILDER (portrait A4, pure jsPDF) ─────────────
 function buildPDFForDate(dateStr,allTodRecs,pAll,total,allTodMarkedBy){
   const{jsPDF}=window.jspdf;
@@ -1203,7 +1329,7 @@ function LoginScreen({onLogin}){
 }
 
 // ─── LANDING SCREEN ─────────────────────────────────────────────
-const TOD_TIME = {'HLS':'Before 0745','0745':'0745 hrs','1300':'1300 hrs','1730':'1730 hrs','2030/2230':'2030 / 2230 hrs'};
+const TOD_TIME = {'HLS':'Before 0745','0745':'0745 hrs','1300':'1300 hrs','1730':'1730 hrs','2030/2230':'2030 / 2230 hrs','NR':'Full Day Record'};
 function LandingScreen({onPick,onLogout}){
   useEffect(()=>{window.scrollTo({top:0,left:0,behavior:'instant'});},[]);
   const today=todayStr();
@@ -1237,6 +1363,14 @@ function LandingScreen({onPick,onLogout}){
             <div className="land-slot-arrow">›</div>
           </div>
         ))}
+        <div className="land-slot" onClick={()=>onPick(today,'NR')} style={{borderColor:'rgba(234,88,12,.35)',marginTop:'6px'}}>
+          <div className="land-slot-tag" style={{background:'#ea580c'}}>NR</div>
+          <div className="land-slot-info">
+            <div className="land-slot-name">Nominal Roll</div>
+            <div className="land-slot-time">Full Day Record</div>
+          </div>
+          <div className="land-slot-arrow">›</div>
+        </div>
       </div>
     </div>
   );
@@ -1299,6 +1433,7 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
   const[customSections,setCustomSections]=useState({P1:[],P2:[],HQ:[]});
   const[otherReasons,setOtherReasons]=useState([]);
   const[showSearch,setShowSearch]=useState(false);
+  const[nrPreview,setNrPreview]=useState(false);
   const skipRef=useRef(false);
   const attInitRef=useRef(false); // blocks write until first Firebase read completes
   const personnelRef=useRef(IP);
@@ -1368,8 +1503,8 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
       } else {
         const nr={};
         personnelOnDate(personnelRef.current,date).forEach(p=>applyCarry(nr,p));
-        // HLS: skip auto-carry if fewer than 10 pax (parade likely didn't happen)
-        if(tod==='HLS'&&Object.keys(nr).length<10){
+        // HLS/NR: skip auto-carry if fewer than 10 pax (parade likely didn't happen)
+        if((tod==='HLS'||tod==='NR')&&Object.keys(nr).length<10){
           Object.keys(nr).forEach(k=>delete nr[k]);
         }
         setRecords(nr);setSubmitted({P1:false,P2:false,HQ:false});setMarkedBy({P1:'',P2:'',HQ:''});
@@ -1630,8 +1765,11 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
         <button onClick={onHome} style={{background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:'8px',padding:'6px 10px',fontSize:'12px',fontWeight:700,color:'#475569',cursor:'pointer',flexShrink:0}}>‹ Change</button>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:'11px',color:'#64748b',fontWeight:600}}>{new Date(date+'T00:00:00').toLocaleDateString('en-MY',{weekday:'short',day:'numeric',month:'short',year:'numeric'})}</div>
-          <div style={{fontSize:'15px',fontWeight:800,color:'#0d9488',marginTop:'1px'}}>{TOD_LABEL[tod]} — {TOD_FULL[tod]}</div>
+          <div style={{fontSize:'15px',fontWeight:800,color:tod==='NR'?'#ea580c':'#0d9488',marginTop:'1px'}}>{TOD_LABEL[tod]} — {TOD_FULL[tod]}</div>
         </div>
+        {tod==='NR'&&(
+          <button onClick={()=>setNrPreview(true)} style={{background:'#ea580c',color:'#fff',border:'none',borderRadius:'8px',padding:'7px 11px',fontSize:'12px',fontWeight:700,cursor:'pointer',flexShrink:0}}>📄 Preview</button>
+        )}
       </div>
       <div className="main">
         {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setAllPresent={setAllPresent} clearAll={clearAll} submitted={submitted} setSubmitted={setSubmitted} markedBy={markedBy} setMarkedBy={setMarkedBy} toast_={toast_} overrideUnlocked={isAdmin||overrideUnlocked} onPlatoonSubmit={saveToHistory} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={isAdmin?deleteOtherReason:undefined}/>}
@@ -1642,7 +1780,7 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
       <nav className="bnav">
         {[
           {k:'attendance',icon:'📋',lbl:'Attendance',badge:unassigned>0?unassigned:null},
-          {k:'telegram',icon:'📤',lbl:'Telegram'},
+          ...(tod!=='NR'?[{k:'telegram',icon:'📤',lbl:'Telegram'}]:[]),
           {k:'history',icon:'🗂️',lbl:'History',badge:history.length>0?null:null},
           {k:'manage',icon:'👥',lbl:'Personnel',badge:sisoExpiredCnt>0?sisoExpiredCnt:null},
         ].map(t=>(
@@ -1656,6 +1794,7 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
       {toast&&<div key={toastKey} className="toast">{toast}</div>}
       {pdfPreview&&<PDFPreviewModal date={pdfPreview.date} personnel={pdfPreview.personnelForDate||personnel} allTodRecs={pdfPreview.allTodRecs} total={pdfPreview.total} allTodMarkedBy={pdfPreview.allTodMarkedBy||{}} onClose={()=>setPdfPreview(null)} onDownloaded={onPdfDownloaded} isAdmin={isAdmin}/>}
       {showSearch&&<PersonnelSearchModal personnel={personnelOnDate(personnel,date)} records={records} tod={tod} onClose={()=>setShowSearch(false)}/>}
+      {nrPreview&&<NominalRollPreviewModal date={date} personnel={personnelOnDate(personnel,date)} records={records} total={personnelOnDate(personnel,date).length} onClose={()=>setNrPreview(false)}/>}
     </div>
   );
 }
