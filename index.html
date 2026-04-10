@@ -593,7 +593,20 @@ function genMsg(date,tod,total,records,personnel,extra){
   L.push(line('GP FAM','gp_fam'));
   L.push('');
   L.push(line('Driving Course','driving'));
-  if(cnt('others')){L.push('');L.push(line('Others','others'));}
+  if(cnt('others')){
+    const othersItems=grp['others']||[];
+    const byReason={};
+    othersItems.forEach(x=>{
+      const reason=(x.det&&x.det.trim()?x.det.trim():'Unspecified').toUpperCase();
+      if(!byReason[reason])byReason[reason]=[];
+      byReason[reason].push(x);
+    });
+    L.push('');L.push('----');L.push('');L.push('Others');
+    Object.entries(byReason).forEach(([reason,items])=>{
+      L.push('');
+      L.push(`${reason}: ${items.length}\n`+items.map((x,i)=>`${i+1}. ${x.p.rank} ${x.p.dn||x.p.name.split(' ')[0]}`).join('\n'));
+    });
+  }
   if(extra&&extra.trim()){L.push('');L.push(extra.trim());}
   return L.join('\n');
 }
