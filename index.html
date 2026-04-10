@@ -241,6 +241,7 @@ const DB = firebase.database();
 <script src="https://unpkg.com/@babel/standalone@7.23.3/babel.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script type="text/babel">
 const {useState, useEffect, useMemo, useRef} = React;
 
@@ -745,8 +746,9 @@ function ParadeStatePDFPage({plt,personnel,allTodRecs,date,total,allTodMarkedBy}
 }
 
 // ─── PDF PREVIEW MODAL ──────────────────────────────────────────
-function PDFPreviewModal({date,personnel,allTodRecs,total,allTodMarkedBy,onClose,onDownloaded}){
+function PDFPreviewModal({date,personnel,allTodRecs,total,allTodMarkedBy,onClose,onDownloaded,isAdmin}){
   const[downloading,setDownloading]=useState(false);
+  const[xlDownloading,setXlDownloading]=useState(false);
   const pageRefs=useRef([null,null,null]);
   const PAGES=['HQ','P1','P2'];
   // Scale pages to fit viewport width on mobile
@@ -796,13 +798,62 @@ function PDFPreviewModal({date,personnel,allTodRecs,total,allTodMarkedBy,onClose
       if(err.name!=='AbortError'){console.error(err);alert('Failed to generate PDF. Please try again.');}
     }finally{setDownloading(false);}
   }
+  function handleExcel(){
+    setXlDownloading(true);
+    try{
+      const XLSX=window.XLSX;
+      const wb=XLSX.utils.book_new();
+      ['HQ','P1','P2'].forEach(plt=>{
+        const pltPpl=personnel.filter(p=>p.active&&p.plt===plt);
+        const headers=['S/N','RANK','NAME','IN/OUT','HLS','0745','1300','1730','2030/2230','REMARK'];
+        const rows=[
+          [`JURONG NODE — PARADE STATE`],
+          [`Date: ${fmtDate(date)}  |  ${P_LABEL[plt]}  |  Platoon Strength: ${pltPpl.length}  |  Node Strength: ${total}`],
+          [],
+          headers,
+        ];
+        let sn=0;
+        // group by section
+        const secs=[...new Set(pltPpl.map(p=>p.sec))];
+        secs.forEach(sec=>{
+          rows.push([`${P_LABEL[plt].toUpperCase()} TO (${sec.toUpperCase()})`]);
+          pltPpl.filter(p=>p.sec===sec).forEach(p=>{
+            sn++;
+            rows.push([
+              sn,
+              p.rank,
+              p.name,
+              sisoCell(p),
+              ...TODS.map(tod=>getStatusCell((allTodRecs[tod]||{})[p.id])||''),
+              getRemarkText(allTodRecs,p.id),
+            ]);
+          });
+        });
+        rows.push([]);
+        rows.push([`Total Node Strength: ${total}`]);
+        const ws=XLSX.utils.aoa_to_sheet(rows);
+        // column widths
+        ws['!cols']=[{wch:5},{wch:8},{wch:28},{wch:8},{wch:8},{wch:8},{wch:8},{wch:8},{wch:12},{wch:30}];
+        XLSX.utils.book_append_sheet(wb,ws,plt);
+      });
+      XLSX.writeFile(wb,`ParadeState_JRN_${date}.xlsx`);
+      if(onDownloaded)onDownloaded();
+    }catch(e){console.error(e);alert('Failed to generate Excel.');}
+    finally{setXlDownloading(false);}
+  }
   return(
     <div className="pdf-overlay">
       <div className="pdf-modal-bar">
         <span className="pdf-modal-title">📄 Parade State — {fmtDate(date)}</span>
         <button className="pdf-dl-btn" onClick={handleDownload} disabled={downloading}>
-          {downloading?'Generating…':'⬇ Download PDF'}
+          {downloading?'Generating…':'⬇ PDF'}
         </button>
+        {isAdmin&&(
+          <button onClick={handleExcel} disabled={xlDownloading}
+            style={{padding:'7px 13px',background:'#16a34a',color:'#fff',border:'none',borderRadius:'8px',fontSize:'13px',fontWeight:700,cursor:'pointer',flexShrink:0,opacity:xlDownloading?.6:1}}>
+            {xlDownloading?'Generating…':'⬇ Excel'}
+          </button>
+        )}
         <button className="pdf-close-btn" onClick={onClose}>✕</button>
       </div>
       <div className="pdf-modal-body">
@@ -1367,7 +1418,7 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
         ))}
       </nav>
       {toast&&<div key={toastKey} className="toast">{toast}</div>}
-      {pdfPreview&&<PDFPreviewModal date={pdfPreview.date} personnel={personnel} allTodRecs={pdfPreview.allTodRecs} total={pdfPreview.total} allTodMarkedBy={pdfPreview.allTodMarkedBy||{}} onClose={()=>setPdfPreview(null)} onDownloaded={onPdfDownloaded}/>}
+      {pdfPreview&&<PDFPreviewModal date={pdfPreview.date} personnel={personnel} allTodRecs={pdfPreview.allTodRecs} total={pdfPreview.total} allTodMarkedBy={pdfPreview.allTodMarkedBy||{}} onClose={()=>setPdfPreview(null)} onDownloaded={onPdfDownloaded} isAdmin={isAdmin}/>}
     </div>
   );
 }
