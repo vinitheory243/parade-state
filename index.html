@@ -1493,6 +1493,7 @@ function PlatoonFooter({plt,allPersonnel,records,pltColors,submitted,setSubmitte
 // ─── PERSON ROW ─────────────────────────────────────────────────
 function PersonRow({person,record,setRec,setPersonLeave,tod,locked,currentDate,otherReasons,addOtherReason}){
   const[showMore,setShowMore]=useState(false);
+  const[savedFlash,setSavedFlash]=useState(false);
   const si=record.s?SM[record.s]:null;
   const colorClass=record.s?`sc-${record.s}`:'';
   const pltClass={P1:'plt-p1',P2:'plt-p2',HQ:'plt-hq'}[person.plt]||'';
@@ -1604,20 +1605,32 @@ function PersonRow({person,record,setRec,setPersonLeave,tod,locked,currentDate,o
 
           {/* Text input for non-date detail statuses */}
           {si&&si.d&&!si.datePick&&(
-            <div style={{display:'flex',gap:'6px',alignItems:'center'}}>
-              <input list={record.s==='others'?`or-${person.id}`:undefined}
-                type="text" placeholder={si.dp||'Enter details...'} value={record.det||''}
-                onChange={e=>setRec(person.id,record.s,e.target.value,record.from||'')}
-                style={{flex:1}}/>
-              {record.s==='others'&&record.det&&record.det.trim()&&(
-                <button onClick={()=>addOtherReason&&addOtherReason(record.det.trim())}
-                  title="Save as quick-pick option"
-                  style={{padding:'6px 10px',background:'#0d9488',color:'#fff',border:'none',borderRadius:'8px',fontSize:'14px',fontWeight:800,cursor:'pointer',flexShrink:0}}>✓</button>
-              )}
+            <div>
+              <div style={{display:'flex',gap:'6px',alignItems:'center'}}>
+                <input type="text" placeholder={si.dp||'Enter details...'} value={record.det||''}
+                  onChange={e=>setRec(person.id,record.s,e.target.value,record.from||'')}
+                  style={{flex:1}}/>
+                {record.s==='others'&&record.det&&record.det.trim()&&(
+                  <button
+                    onClick={()=>{
+                      if(addOtherReason)addOtherReason(record.det.trim());
+                      setSavedFlash(true);setTimeout(()=>setSavedFlash(false),1500);
+                    }}
+                    title="Save as quick-pick"
+                    style={{padding:'6px 12px',background:savedFlash?'#16a34a':'#0d9488',color:'#fff',border:'none',borderRadius:'8px',fontSize:'13px',fontWeight:800,cursor:'pointer',flexShrink:0,transition:'background 0.25s',whiteSpace:'nowrap'}}>
+                    {savedFlash?'✓ Saved':'✓'}
+                  </button>
+                )}
+              </div>
               {record.s==='others'&&otherReasons&&otherReasons.length>0&&(
-                <datalist id={`or-${person.id}`}>
-                  {otherReasons.map(r=><option key={r} value={r}/>)}
-                </datalist>
+                <div style={{display:'flex',flexWrap:'wrap',gap:'5px',marginTop:'6px'}}>
+                  {otherReasons.map(r=>(
+                    <button key={r} onClick={()=>setRec(person.id,record.s,r,record.from||'')}
+                      style={{padding:'3px 10px',background:record.det===r?'#0d9488':'#f1f5f9',color:record.det===r?'#fff':'#475569',border:`1px solid ${record.det===r?'#0d9488':'#e2e8f0'}`,borderRadius:'20px',fontSize:'12px',fontWeight:600,cursor:'pointer'}}>
+                      {r}
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
           )}
