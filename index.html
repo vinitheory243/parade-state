@@ -1177,6 +1177,26 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
     const updated={...customSections,[plt]:[...current,sec]};
     DB.ref('jrn/sections').set(updated);
   }
+  // On mount: backfill history records for the last 30 days so every day appears in History
+  useEffect(()=>{
+    const today=todayStr();
+    const snap30=DB.ref('jrn/history').once('value').then(snap=>{
+      const existing=snap.val()||{};
+      const writes={};
+      for(let i=0;i<30;i++){
+        const d=new Date();d.setDate(d.getDate()-i);
+        const ds=d.toISOString().slice(0,10);
+        if(!existing[ds]){
+          writes[ds]={date:ds,savedAt:Date.now(),total:personnelRef.current.filter(p=>p.active).length||127};
+        }
+      }
+      if(Object.keys(writes).length>0){
+        Object.entries(writes).forEach(([ds,val])=>{
+          DB.ref(`jrn/history/${ds}`).set(val);
+        });
+      }
+    });
+  },[]);
   // Auto-create a blank history record for the current date if none exists
   useEffect(()=>{
     const ref=DB.ref(`jrn/history/${date}`);
