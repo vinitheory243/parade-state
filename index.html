@@ -1187,6 +1187,7 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
     if(!r||!r.trim())return;
     const key=r.trim().replace(/[.#$\/\[\]]/g,'_');
     DB.ref(`jrn/otherReasons/${key}`).set(r.trim());
+    toast_('✓ "'+r.trim()+'" saved as quick-pick');
   }
   function addCustomSection(plt,sec){
     if(!sec||!sec.trim())return;
@@ -1493,7 +1494,6 @@ function PlatoonFooter({plt,allPersonnel,records,pltColors,submitted,setSubmitte
 // ─── PERSON ROW ─────────────────────────────────────────────────
 function PersonRow({person,record,setRec,setPersonLeave,tod,locked,currentDate,otherReasons,addOtherReason}){
   const[showMore,setShowMore]=useState(false);
-  const[savedFlash,setSavedFlash]=useState(false);
   const si=record.s?SM[record.s]:null;
   const colorClass=record.s?`sc-${record.s}`:'';
   const pltClass={P1:'plt-p1',P2:'plt-p2',HQ:'plt-hq'}[person.plt]||'';
@@ -1612,13 +1612,10 @@ function PersonRow({person,record,setRec,setPersonLeave,tod,locked,currentDate,o
                   style={{flex:1}}/>
                 {record.s==='others'&&record.det&&record.det.trim()&&(
                   <button
-                    onClick={()=>{
-                      if(addOtherReason)addOtherReason(record.det.trim());
-                      setSavedFlash(true);setTimeout(()=>setSavedFlash(false),1500);
-                    }}
+                    onClick={()=>addOtherReason&&addOtherReason(record.det.trim())}
                     title="Save as quick-pick"
-                    style={{padding:'6px 12px',background:savedFlash?'#16a34a':'#0d9488',color:'#fff',border:'none',borderRadius:'8px',fontSize:'13px',fontWeight:800,cursor:'pointer',flexShrink:0,transition:'background 0.25s',whiteSpace:'nowrap'}}>
-                    {savedFlash?'✓ Saved':'✓'}
+                    style={{padding:'6px 12px',background:'#0d9488',color:'#fff',border:'none',borderRadius:'8px',fontSize:'13px',fontWeight:800,cursor:'pointer',flexShrink:0}}>
+                    ✓
                   </button>
                 )}
               </div>
