@@ -1174,20 +1174,23 @@ function App({onLogout,onHome,initDate,initTod,isAdmin}){
     });
     return()=>ref.off();
   },[]);
-  // Other reasons listener
+  // Load saved other reasons once on mount
   useEffect(()=>{
-    const ref=DB.ref('jrn/otherReasons');
-    ref.on('value',snap=>{
+    DB.ref('jrn/otherReasons').once('value',snap=>{
       const d=snap.val();
-      setOtherReasons(d?Object.values(d):[]);
+      if(d)setOtherReasons(Object.values(d));
     });
-    return()=>ref.off();
   },[]);
   function addOtherReason(r){
     if(!r||!r.trim())return;
-    const key=r.trim().replace(/[.#$\/\[\]]/g,'_');
-    DB.ref(`jrn/otherReasons/${key}`).set(r.trim());
-    toast_('✓ "'+r.trim()+'" saved as quick-pick');
+    const trimmed=r.trim();
+    setOtherReasons(prev=>{
+      if(prev.includes(trimmed))return prev;
+      const key=trimmed.replace(/[.#$\/\[\]]/g,'_');
+      DB.ref(`jrn/otherReasons/${key}`).set(trimmed);
+      return[...prev,trimmed];
+    });
+    toast_('✓ "'+trimmed+'" saved as quick-pick');
   }
   function addCustomSection(plt,sec){
     if(!sec||!sec.trim())return;
