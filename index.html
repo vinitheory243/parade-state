@@ -2029,7 +2029,13 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
     setEditSecInput('');setAddingNewSecEdit(false);
   }
   const active=personnel.filter(p=>p.active&&(filterPlt==='ALL'||p.plt===filterPlt));
-  const inactive=personnel.filter(p=>!p.active);
+  const ARCHIVE_DAYS=10;
+  const inactive=personnel.filter(p=>{
+    if(p.active)return false;
+    if(!p.removedDate)return false; // legacy with no removedDate: don't show
+    const diff=Math.floor((new Date(todayStr())-new Date(p.removedDate))/(1000*60*60*24));
+    return diff<ARCHIVE_DAYS;
+  });
   function add(){
     if(!np.name.trim()){toast_('Enter a name');return}
     if(!np.sec||np.sec==='__new__'){toast_('Enter a section name');return}
@@ -2209,16 +2215,25 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
       </div>
       {inactive.length>0&&(
         <div className="card">
-          <div className="card-hdr" style={{color:'#94a3b8'}}>Archived ({inactive.length})</div>
-          {inactive.map(p=>(
+          <div className="card-hdr" style={{color:'#94a3b8'}}>Archived ({inactive.length}) <span style={{fontWeight:400,fontSize:'12px'}}>— auto-removed after {ARCHIVE_DAYS} days</span></div>
+          {inactive.map(p=>{
+            const daysGone=Math.floor((new Date(todayStr())-new Date(p.removedDate))/(1000*60*60*24));
+            const daysLeft=ARCHIVE_DAYS-daysGone;
+            return(
             <div key={p.id} className="mrow" style={{opacity:.65}}>
               <div className="mrow-info">
                 <div className="mrow-name">{p.rank} {p.name}</div>
-                <div className="mrow-sub">{P_LABEL[p.plt]||p.plt} — {p.sec}</div>
+                <div className="mrow-sub" style={{display:'flex',gap:'8px',alignItems:'center'}}>
+                  <span>{P_LABEL[p.plt]||p.plt} — {p.sec}</span>
+                  <span style={{fontSize:'11px',background:'#fee2e2',color:'#dc2626',borderRadius:'10px',padding:'1px 7px',fontWeight:600}}>
+                    {daysLeft}d left
+                  </span>
+                </div>
               </div>
               <button className="rbtn" onClick={()=>restore(p.id)}>Restore</button>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
