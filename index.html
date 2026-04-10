@@ -499,7 +499,6 @@ function genMsg(date,tod,total,records,personnel,extra){
     return'\n'+items.map((x,i)=>{
       let line=`${i+1}. ${x.p.rank} ${x.p.dn||x.p.name.split(' ')[0]}`;
       if(x.det){const d=fmtDetDate(x.det)||x.det;line+=pre?` ${pre}${d}`:` (${d})`;}
-      if(x.from&&x.from!==x.det){line+=` - ${fmtDetDate(x.from)||x.from}`;}
       return line;
     }).join('\n');
   };
