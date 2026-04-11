@@ -937,29 +937,51 @@ async function renderNominalRollPDF(dateStr,records,pAll,total,eventName){
 
 function NominalRollPreviewModal({date,eventName,personnel,records,total,onClose}){
   const[downloading,setDownloading]=useState(false);
+  const pageRefs=useRef([null,null,null]);
   const title=eventName?`${eventName} CAA ${fmtTeleDate(date)}`:`Nominal Roll CAA ${fmtTeleDate(date)}`;
+  useEffect(()=>{
+    function scalePages(){
+      const vw=window.innerWidth-16;
+      pageRefs.current.forEach(el=>{
+        if(!el)return;
+        const scale=Math.min(1,vw/800);
+        el.style.transform=`scale(${scale})`;
+        el.style.marginBottom=`${(scale-1)*el.offsetHeight}px`;
+      });
+    }
+    scalePages();
+    window.addEventListener('resize',scalePages);
+    return()=>window.removeEventListener('resize',scalePages);
+  },[]);
   async function handleDownload(){
     setDownloading(true);
     try{
       const pdf=await renderNominalRollPDF(date,records,personnel,total,eventName);
-      pdf.save(`NR_${title.replace(/\s+/g,'_')}.pdf`);
-    }catch(e){console.error(e);alert('Failed to generate PDF.');}
+      const filename=`NR_${title.replace(/\s+/g,'_')}.pdf`;
+      const blob=pdf.output('blob');
+      if(navigator.canShare&&navigator.canShare({files:[new File([blob],filename,{type:'application/pdf'})]})){
+        await navigator.share({files:[new File([blob],filename,{type:'application/pdf'})],title:filename});
+      }else{
+        pdf.save(filename);
+      }
+    }catch(err){if(err.name!=='AbortError'){console.error(err);alert('Failed to generate PDF.');}}
     finally{setDownloading(false);}
   }
   return(
-    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',zIndex:8000,display:'flex',flexDirection:'column'}}>
-      <div style={{background:'#1e293b',padding:'10px 14px',display:'flex',alignItems:'center',gap:'10px',flexShrink:0}}>
-        <span style={{color:'#fff',fontWeight:800,fontSize:'14px',flex:1}}>📋 {title}</span>
-        <button onClick={handleDownload} disabled={downloading}
-          style={{background:'#0d9488',color:'#fff',border:'none',borderRadius:'8px',padding:'8px 14px',fontSize:'13px',fontWeight:700,cursor:'pointer',opacity:downloading?.6:1}}>
+    <div className="pdf-overlay">
+      <div className="pdf-modal-bar">
+        <span className="pdf-modal-title">📋 {title}</span>
+        <button className="pdf-dl-btn" onClick={handleDownload} disabled={downloading}>
           {downloading?'Generating…':'⬇ PDF'}
         </button>
-        <button onClick={onClose} style={{background:'#475569',color:'#fff',border:'none',borderRadius:'8px',padding:'8px 12px',fontSize:'13px',fontWeight:700,cursor:'pointer'}}>✕ Close</button>
+        <button className="pdf-close-btn" onClick={onClose}>✕</button>
       </div>
-      <div style={{flex:1,overflowY:'auto',padding:'12px 8px',display:'flex',flexDirection:'column',gap:'16px',alignItems:'center'}}>
-        {['HQ','P1','P2'].map(plt=>(
-          <div key={plt} style={{width:'100%',maxWidth:'860px',overflowX:'auto',background:'#fff',borderRadius:'8px',boxShadow:'0 2px 8px rgba(0,0,0,.2)'}}>
-            <NominalRollPDFPage plt={plt} personnel={personnel} records={records} date={date} total={total} eventName={eventName}/>
+      <div className="pdf-modal-body">
+        {['HQ','P1','P2'].map((plt,i)=>(
+          <div key={plt} className="pdf-page-wrap">
+            <div ref={el=>pageRefs.current[i]=el} style={{boxShadow:'0 2px 16px rgba(0,0,0,.4)',transformOrigin:'top center',flexShrink:0}}>
+              <NominalRollPDFPage plt={plt} personnel={personnel} records={records} date={date} total={total} eventName={eventName}/>
+            </div>
           </div>
         ))}
       </div>
