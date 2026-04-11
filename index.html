@@ -527,7 +527,8 @@ function genMsg(date,tod,total,records,personnel,extra){
   // Auto-count all duty-type statuses (no names)
   const dutyCount=[...DUTY_STATUSES].reduce((s,k)=>s+cnt(k),0);
   const L=[];
-  L.push(`JRN PARADE STATE  ${fmtTeleDate(date)} ${TOD_LABEL[tod]||tod} (${tod})`);
+  const todAmPm=({'HLS':'AM','0745':'AM','1300':'PM','1730':'PM','2030/2230':'NIGHT STR'})[tod]||tod;
+  L.push(`JRN PARADE STATE ${fmtTeleDate(date)} (${todAmPm})`);
   L.push(`Total strength: ${total}`);
   L.push('');
   L.push(`Duty Personnel: ${dutyCount}`);
@@ -635,6 +636,7 @@ function genMsg(date,tod,total,records,personnel,extra){
 const NON_CMDR_RANKS=new Set(['REC','PTE','LCP','CPL','CFC']);
 const TOD_AMPM={'HLS':'AM','0745':'AM','1300':'PM','1730':'PM','2030/2230':'NIGHT STR'};
 function genComdMsg(date,tod,records,personnel){
+
   const cmdrs=personnel.filter(p=>p.active&&!NON_CMDR_RANKS.has(p.rank));
   const grp={};
   cmdrs.forEach(p=>{
@@ -658,7 +660,7 @@ function genComdMsg(date,tod,records,personnel){
     return`${label}: ${items.length}\n${lst(items,showDet)}`;
   }
   const L=[];
-  L.push(`JRN PARADE STATE  ${fmtDate(date)} ${TOD_AMPM[tod]||tod}`);
+  L.push(`JRN PARADE STATE ${fmtTeleDate(date)} (${TOD_AMPM[tod]||tod})`);
   L.push('');
   // Only show lines that have people
   const sections=[
