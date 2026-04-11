@@ -631,6 +631,86 @@ function genMsg(date,tod,total,records,personnel,extra){
   return L.join('\n');
 }
 
+// ─── COMD MESSAGE GENERATION ────────────────────────────────────
+const NON_CMDR_RANKS=new Set(['REC','PTE','LCP','CPL','CFC']);
+const TOD_AMPM={'HLS':'AM','0745':'AM','1300':'PM','1730':'PM','2030/2230':'NIGHT STR'};
+function genComdMsg(date,tod,records,personnel){
+  const cmdrs=personnel.filter(p=>p.active&&!NON_CMDR_RANKS.has(p.rank));
+  const grp={};
+  cmdrs.forEach(p=>{
+    const r=records[p.id];
+    if(r&&r.s){grp[r.s]=grp[r.s]||[];grp[r.s].push({p,det:r.det||''});}
+  });
+  const cnt=k=>(grp[k]||[]).length;
+  function name(x){return`${x.p.rank} ${x.p.dn||x.p.name.split(' ')[0]}`;}
+  function lst(items,showDet){
+    return items.map((x,i)=>{
+      let line=`${i+1}. ${name(x)}`;
+      const isDate=/^\d{4}-\d{2}-\d{2}$/.test(x.det);
+      if(showDet&&x.det&&!isDate)line+=` (${x.det})`;
+      return line;
+    }).join('\n');
+  }
+  function block(label,keys,showDet){
+    // Merge multiple keys into one group
+    const items=keys.flatMap(k=>grp[k]||[]);
+    if(!items.length)return'';
+    return`${label}: ${items.length}\n${lst(items,showDet)}`;
+  }
+  const L=[];
+  L.push(`JRN PARADE STATE  ${fmtDate(date)} ${TOD_AMPM[tod]||tod}`);
+  L.push('');
+  // Only show lines that have people
+  const sections=[
+    block('Detail',['detail'],true),
+    block('MA',['ma'],false),
+    block('MC',['mc'],false),
+    block('Hospitalisation Leave',['hl'],false),
+    block('Hospitalised',['hospitalised'],false),
+    block('OFF',['off'],false),
+    block('OVERSEAS LEAVE',['ol'],false),
+    block('LOCAL LEAVE',['ll'],false),
+    block('URGENT LEAVE',['ul'],false),
+    block('FAMILY CARE LEAVE',['fcl'],false),
+    block('CL',['cl'],false),
+    block('CCL',['ccl'],false),
+    block('ATTACHED OUT',['ao_local','ao_overseas'],false),
+    block('ARF',['arf'],false),
+    block('RSO',['rso'],false),
+    block('RSI',['rsi'],false),
+    block('DDR',['ddr'],false),
+    block('CSE',['cse'],false),
+    block('DCP',['dcp'],false),
+    block('Court',['court'],false),
+    block('CA',['ca'],false),
+    block('Civil',['civil'],false),
+    block('DB / Prison',['db_prison'],false),
+    block('DO(GCM)',['do_gcm'],false),
+    block('AWOL',['awol'],false),
+    block('SOL',['sol'],false),
+    block('Suspended',['suspended'],false),
+    block('LASHING',['lashing'],false),
+    block('RIB',['rib'],false),
+    block('Driving Course',['driving'],false),
+  ];
+  sections.filter(s=>s).forEach(s=>{L.push(s);L.push('');});
+  // Others: group by reason
+  const othersItems=grp['others']||[];
+  if(othersItems.length){
+    const byReason={};
+    othersItems.forEach(x=>{
+      const reason=(x.det&&x.det.trim()?x.det.trim():'Unspecified').toUpperCase();
+      if(!byReason[reason])byReason[reason]=[];
+      byReason[reason].push(x);
+    });
+    Object.entries(byReason).forEach(([reason,items])=>{
+      L.push(`${reason}: ${items.length}\n${lst(items,false)}`);
+      L.push('');
+    });
+  }
+  return L.join('\n').trim();
+}
+
 // ─── PDF HELPERS ────────────────────────────────────────────────
 function getStatusCell(rec){
   if(!rec||!rec.s)return'';
@@ -1879,7 +1959,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       </div>
       <div className="main">
         {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setAllPresent={setAllPresent} clearAll={clearAll} submitted={submitted} setSubmitted={setSubmitted} markedBy={markedBy} setMarkedBy={setMarkedBy} toast_={toast_} overrideUnlocked={isAdmin||overrideUnlocked} onPlatoonSubmit={saveToHistory} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={isAdmin?deleteOtherReason:undefined}/>}
-        {!isNR&&screen==='telegram'&&<GenerateScreen msg={msg} total={total} setTotal={setTotal} totalManual={totalManual} setTotalManual={setTotalManual} autoTotal={personnelOnDate(personnel,date).length} extra={extra} setExtra={setExtra} toast_={toast_} date={date}/>}
+        {!isNR&&screen==='telegram'&&<GenerateScreen msg={msg} total={total} setTotal={setTotal} totalManual={totalManual} setTotalManual={setTotalManual} autoTotal={personnelOnDate(personnel,date).length} extra={extra} setExtra={setExtra} toast_={toast_} date={date} tod={tod} records={records} personnel={personnelOnDate(personnel,date)} isAdmin={isAdmin}/>}
         {screen==='manage'&&<ManageScreen personnel={personnel} setPersonnel={setPersonnelAndSync} toast_={toast_} customSections={customSections} addCustomSection={addCustomSection}/>}
         {!isNR&&screen==='history'&&<HistoryScreen history={history} personnel={personnel} onPreview={(e,setL)=>loadDayAndPreview(e.date,setL)} onDelete={deleteHistory} overrideUnlocked={isAdmin||overrideUnlocked} setOverrideUnlocked={setOverrideUnlocked} toast_={toast_} onEdit={dateStr=>{setDate(dateStr);setScreen('attendance');}} isAdmin={isAdmin} onBulkDownload={isAdmin?(type,setL,setP)=>handleBulkDownload(type,setL,setP):undefined}/>}
         {isNR&&screen==='history'&&<NRHistoryScreen nrHistory={nrHistory} personnel={personnelOnDate(personnel,date)} overrideUnlocked={isAdmin||overrideUnlocked} setOverrideUnlocked={setOverrideUnlocked} toast_={toast_} isAdmin={isAdmin} currentDate={date} currentEventKey={eventKey}/>}
@@ -2363,8 +2443,11 @@ function PersonRow({person,record,setRec,setPersonLeave,tod,locked,currentDate,o
 }
 
 // ─── GENERATE SCREEN ────────────────────────────────────────────
-function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal,extra,setExtra,toast_,date}){
+function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal,extra,setExtra,toast_,date,tod,records,personnel,isAdmin}){
+  const[tab,setTab]=useState('node');
   const[copied,setCopied]=useState(false);
+  const comdMsg=useMemo(()=>genComdMsg(date,tod,records,personnel),[date,tod,records,personnel]);
+  const activeMsg=tab==='node'?msg:comdMsg;
   function copy(){
     const go=text=>{
       if(navigator.clipboard&&navigator.clipboard.writeText){
@@ -2375,36 +2458,55 @@ function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal
         toast_('✓ Copied!');setCopied(true);setTimeout(()=>setCopied(false),2000);
       }
     };
-    go(msg);
+    go(activeMsg);
   }
   return(
     <div>
-      <div className="card" style={{padding:'14px'}}>
-        <div style={{marginBottom:'10px'}}>
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'4px'}}>
-            <div className="label" style={{marginBottom:0}}>Total Node Strength</div>
-            <span style={{fontSize:'11px',color:'#94a3b8'}}>Auto: {autoTotal} pax</span>
-          </div>
-          <div style={{display:'flex',gap:'8px',alignItems:'center'}}>
-            <input type="number" value={total} min={0}
-              onChange={e=>{setTotal(Number(e.target.value));setTotalManual(true);}}
-              style={{flex:1}}/>
-            {totalManual&&(
-              <button onClick={()=>{setTotal(autoTotal);setTotalManual(false);}}
-                style={{padding:'8px 12px',background:'#f1f5f9',border:'1.5px solid #e2e8f0',borderRadius:'8px',fontSize:'12px',fontWeight:700,color:'#64748b',cursor:'pointer',flexShrink:0,whiteSpace:'nowrap'}}>
-                Reset to auto
-              </button>
-            )}
-          </div>
-          {totalManual&&<div style={{fontSize:'11px',color:'#f59e0b',fontWeight:600,marginTop:'4px'}}>⚠ Manual override active</div>}
-        </div>
-        <div className="label">Additional notes (appended at end)</div>
-        <textarea value={extra} onChange={e=>setExtra(e.target.value)} rows={3} placeholder="e.g. extra remarks..." style={{resize:'vertical'}}/>
+      {/* Tab switcher */}
+      <div style={{display:'flex',gap:'8px',padding:'14px 14px 0'}}>
+        <button onClick={()=>{setTab('node');setCopied(false);}} style={{flex:1,padding:'10px',borderRadius:'10px',border:'2px solid',borderColor:tab==='node'?'#0d9488':'#e2e8f0',background:tab==='node'?'#0d9488':'#fff',color:tab==='node'?'#fff':'#475569',fontWeight:800,fontSize:'13px',cursor:'pointer'}}>
+          📤 Node Msg
+        </button>
+        <button onClick={()=>{setTab('comd');setCopied(false);}} style={{flex:1,padding:'10px',borderRadius:'10px',border:'2px solid',borderColor:tab==='comd'?'#7c3aed':'#e2e8f0',background:tab==='comd'?'#7c3aed':'#fff',color:tab==='comd'?'#fff':'#475569',fontWeight:800,fontSize:'13px',cursor:'pointer'}}>
+          👑 Comd Msg
+        </button>
       </div>
+
+      {tab==='node'&&(
+        <div className="card" style={{padding:'14px',marginTop:'12px'}}>
+          <div style={{marginBottom:'10px'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'4px'}}>
+              <div className="label" style={{marginBottom:0}}>Total Node Strength</div>
+              <span style={{fontSize:'11px',color:'#94a3b8'}}>Auto: {autoTotal} pax</span>
+            </div>
+            <div style={{display:'flex',gap:'8px',alignItems:'center'}}>
+              <input type="number" value={total} min={0}
+                onChange={e=>{setTotal(Number(e.target.value));setTotalManual(true);}}
+                style={{flex:1}}/>
+              {totalManual&&(
+                <button onClick={()=>{setTotal(autoTotal);setTotalManual(false);}}
+                  style={{padding:'8px 12px',background:'#f1f5f9',border:'1.5px solid #e2e8f0',borderRadius:'8px',fontSize:'12px',fontWeight:700,color:'#64748b',cursor:'pointer',flexShrink:0,whiteSpace:'nowrap'}}>
+                  Reset to auto
+                </button>
+              )}
+            </div>
+            {totalManual&&<div style={{fontSize:'11px',color:'#f59e0b',fontWeight:600,marginTop:'4px'}}>⚠ Manual override active</div>}
+          </div>
+          <div className="label">Additional notes (appended at end)</div>
+          <textarea value={extra} onChange={e=>setExtra(e.target.value)} rows={3} placeholder="e.g. extra remarks..." style={{resize:'vertical'}}/>
+        </div>
+      )}
+
+      {tab==='comd'&&(
+        <div className="card" style={{padding:'14px',marginTop:'12px',background:'#faf5ff',border:'1px solid #e9d5ff'}}>
+          <div style={{fontSize:'12px',color:'#7c3aed',fontWeight:700,marginBottom:'8px'}}>👑 Commander message — 3SG and above only</div>
+        </div>
+      )}
+
       <div className="card" style={{padding:'14px'}}>
-        <div className="label" style={{marginBottom:'8px'}}>Message Preview</div>
-        <div className="msg-box">{msg}</div>
-        <button className="copy-btn" onClick={copy} style={{background:copied?'#16a34a':undefined}}>
+        <div className="label" style={{marginBottom:'8px'}}>{tab==='node'?'Node Message':'Comd Message'} Preview</div>
+        <div className="msg-box">{activeMsg}</div>
+        <button className="copy-btn" onClick={copy} style={{background:copied?'#16a34a':tab==='comd'?'#7c3aed':undefined}}>
           {copied?'✓ Copied!':'📋 Copy Message for Telegram'}
         </button>
       </div>
