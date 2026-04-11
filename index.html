@@ -1899,10 +1899,11 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   // Update history record when a platoon submits
   function saveToHistory(){
     if(isNR){
-      DB.ref(`jrn/nr/${date}/${eventKey}`).update({savedAt:Date.now(),total,eventName});
-    } else {
-      DB.ref(`jrn/history/${date}`).update({savedAt:Date.now(),total});
+      // NR: write effect already persists submitted/total/eventName to attPath on every change.
+      // Writing to attPath here would re-trigger the Firebase listener and reset submitted → skip.
+      return;
     }
+    DB.ref(`jrn/history/${date}`).update({savedAt:Date.now(),total});
   }
   // Load all TODs for a date and show PDF preview
   async function loadDayAndPreview(dateStr,setLoadingFn){
