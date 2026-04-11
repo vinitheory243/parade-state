@@ -247,7 +247,7 @@ const DB = firebase.database();
 const {useState, useEffect, useMemo, useRef} = React;
 
 // ─── RANKS ──────────────────────────────────────────────────────
-const RANKS = ['REC','PTE','LCP','CPL','CFC','3SG','2SG','1SG','SSG','MSG','ME1','ME2','ME3','ME4','ME5','3WO','2WO','1WO','MWO','SWO','CWO','2LT','LTA','CPT','MAJ','LTC','COL','DX12','BG'];
+const RANKS = ['REC','PTE','LCP','CPL','CFC','SCT','3SG','2SG','1SG','SSG','MSG','ME1','ME2','ME3','ME4','ME5','3WO','2WO','1WO','MWO','SWO','CWO','2LT','LTA','CPT','MAJ','LTC','COL','DX12','BG'];
 
 // ─── PLATOONS & SECTIONS ────────────────────────────────────────
 const PLATOONS = ['P1','P2','HQ'];
@@ -711,6 +711,67 @@ function genComdMsg(date,tod,records,personnel){
     });
   }
   return L.join('\n').trim();
+}
+
+// ─── NR MESSAGE GENERATION ──────────────────────────────────────
+const NR_NSF_RANKS=new Set(['REC','PTE','LCP','CPL','CFC']);
+function genNRMsg(date,eventName,records,active){
+  const cmdrs=active.filter(p=>!NR_NSF_RANKS.has(p.rank));
+  const nsfs=active.filter(p=>NR_NSF_RANKS.has(p.rank));
+  const total=active.length;
+  const cmdTotal=cmdrs.length;
+  const nsfTotal=nsfs.length;
+  const isP=p=>records[p.id]?.s==='present';
+  const cmdPresent=cmdrs.filter(isP).length;
+  const nsfPresent=nsfs.filter(isP).length;
+  const totalPresent=cmdPresent+nsfPresent;
+  const pct=(n,d)=>d===0?100:Math.round((n/d)*100);
+  // Build absent groups (keyed by status, others by reason)
+  const grp={};
+  active.forEach(p=>{
+    const r=records[p.id];
+    if(!r||!r.s||r.s==='present')return;
+    const key=r.s==='others'?`__or__${(r.det||'').trim().toUpperCase()||'OTHERS'}`:r.s;
+    if(!grp[key])grp[key]=[];
+    grp[key].push(p);
+  });
+  function dspName(p){return`${p.rank} ${p.dn||p.name.split(' ')[0]}`;}
+  function statusLabel(key){
+    if(key.startsWith('__or__'))return key.slice(6)||'OTHERS';
+    const si=SM[key];
+    if(!si)return key.toUpperCase();
+    return si.l.replace(/\s*\([^)]*\)/g,'').trim();
+  }
+  const title=eventName?`${eventName} CAA ${fmtTeleDate(date)}`:`Nominal Roll CAA ${fmtTeleDate(date)}`;
+  const SEP='——————';
+  const L=[];
+  L.push(title);
+  L.push('');
+  L.push(`Total No. Of Strength: ${total}`);
+  L.push(`Total No. Of Commanders including TLs : ${cmdTotal}`);
+  L.push(`Total No. Of NSFs excluding TLs : ${nsfTotal}`);
+  L.push('');
+  L.push(SEP);
+  L.push('Reason For Not Attending:');
+  const absentKeys=Object.keys(grp);
+  if(absentKeys.length===0){
+    L.push('NIL');
+    L.push('');
+  }else{
+    absentKeys.forEach(key=>{
+      const people=grp[key];
+      L.push(`${statusLabel(key)}: ${people.length}`);
+      people.forEach((p,i)=>L.push(`${i+1}. ${dspName(p)}`));
+      L.push('');
+    });
+  }
+  L.push(SEP);
+  L.push('');
+  L.push(`Commanders Completed: ${cmdPresent}/${cmdTotal} (${pct(cmdPresent,cmdTotal)}%)`);
+  L.push(`NSFs Completed: ${nsfPresent}/${nsfTotal} (${pct(nsfPresent,nsfTotal)}%)`);
+  L.push('');
+  L.push(`JRN Completion rate: ${pct(totalPresent,total)}%`);
+  return L.join('\n');
 }
 
 // ─── PDF HELPERS ────────────────────────────────────────────────
@@ -1997,6 +2058,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       </div>
       <div className="main">
         {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setAllPresent={setAllPresent} clearAll={clearAll} submitted={submitted} setSubmitted={setSubmitted} markedBy={markedBy} setMarkedBy={setMarkedBy} toast_={toast_} overrideUnlocked={isAdmin||overrideUnlocked} onPlatoonSubmit={saveToHistory} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={isAdmin?deleteOtherReason:undefined}/>}
+        {isNR&&screen==='telegram'&&<NRGenerateScreen date={date} eventName={eventName} records={records} personnel={personnelOnDate(personnel,date)} toast_={toast_}/>}
         {!isNR&&screen==='telegram'&&<GenerateScreen msg={msg} total={total} setTotal={setTotal} totalManual={totalManual} setTotalManual={setTotalManual} autoTotal={personnelOnDate(personnel,date).length} extra={extra} setExtra={setExtra} toast_={toast_} date={date} tod={tod} records={records} personnel={personnelOnDate(personnel,date)} isAdmin={isAdmin}/>}
         {screen==='manage'&&<ManageScreen personnel={personnel} setPersonnel={setPersonnelAndSync} toast_={toast_} customSections={customSections} addCustomSection={addCustomSection}/>}
         {!isNR&&screen==='history'&&<HistoryScreen history={history} personnel={personnel} onPreview={(e,setL)=>loadDayAndPreview(e.date,setL)} onDelete={deleteHistory} overrideUnlocked={isAdmin||overrideUnlocked} setOverrideUnlocked={setOverrideUnlocked} toast_={toast_} onEdit={dateStr=>{setDate(dateStr);setScreen('attendance');}} isAdmin={isAdmin} onBulkDownload={isAdmin?(type,setL,setP)=>handleBulkDownload(type,setL,setP):undefined}/>}
@@ -2005,7 +2067,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       <nav className="bnav">
         {[
           {k:'attendance',icon:'📋',lbl:'Attendance',badge:unassigned>0?unassigned:null},
-          ...(isNR?[]:[{k:'telegram',icon:'📤',lbl:'Telegram'}]),
+          {k:'telegram',icon:'📤',lbl:'Telegram'},
           {k:'history',icon:'🗂️',lbl:isNR?'NR History':'History'},
           {k:'manage',icon:'👥',lbl:'Personnel',badge:sisoExpiredCnt>0?sisoExpiredCnt:null},
         ].map(t=>(
@@ -2476,6 +2538,40 @@ function PersonRow({person,record,setRec,setPersonLeave,tod,locked,currentDate,o
           )}
         </>
       )}
+    </div>
+  );
+}
+
+// ─── NR GENERATE SCREEN ─────────────────────────────────────────
+function NRGenerateScreen({date,eventName,records,personnel,toast_}){
+  const[copied,setCopied]=useState(false);
+  const active=useMemo(()=>personnelOnDate(personnel,date),[personnel,date]);
+  const msg=useMemo(()=>genNRMsg(date,eventName,records,active),[date,eventName,records,active]);
+  function copy(){
+    const go=text=>{
+      if(navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(()=>{toast_('✓ Copied! Paste in Telegram');setCopied(true);setTimeout(()=>setCopied(false),2000)});
+      }else{
+        const ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;opacity:0';
+        document.body.appendChild(ta);ta.focus();ta.select();document.execCommand('copy');document.body.removeChild(ta);
+        toast_('✓ Copied!');setCopied(true);setTimeout(()=>setCopied(false),2000);
+      }
+    };
+    go(msg);
+  }
+  return(
+    <div>
+      <div className="card" style={{padding:'12px 14px',background:'#fff7ed',border:'1.5px solid #fed7aa'}}>
+        <div style={{fontSize:'12px',color:'#ea580c',fontWeight:800}}>📤 NR Telegram Message</div>
+        <div style={{fontSize:'11px',color:'#9a3412',marginTop:'2px'}}>{eventName||'Nominal Roll'} · {new Date(date+'T00:00:00').toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'})}</div>
+      </div>
+      <div className="card" style={{padding:'14px'}}>
+        <div className="label" style={{marginBottom:'8px'}}>Message Preview</div>
+        <div className="msg-box">{msg}</div>
+        <button className="copy-btn" onClick={copy} style={{background:copied?'#16a34a':'#ea580c'}}>
+          {copied?'✓ Copied!':'📋 Copy NR Message for Telegram'}
+        </button>
+      </div>
     </div>
   );
 }
