@@ -1374,10 +1374,14 @@ function HistoryScreen({history,personnel,onPreview,onDelete,overrideUnlocked,se
 
 // ─── LOGIN ──────────────────────────────────────────────────────
 const USERS=[{user:'comd',pass:'comd123',label:'Commander'},{user:'admin',pass:'Transport1409$',label:'Admin',isAdmin:true}];
+// Derive a stored token from credentials — never stores raw password
+function mkToken(u,p){return btoa(unescape(encodeURIComponent(`jrn:${u}:${p}:2026`)));}
+// Sanitize any string used as a Firebase path segment
+function safePath(s){return String(s).replace(/[.#$\[\]/]/g,'_').slice(0,120);}
 function LoginScreen({onLogin}){
   useEffect(()=>{window.scrollTo({top:0,left:0,behavior:'instant'});},[]);
   const[user,setUser]=useState(()=>{try{return localStorage.getItem('jrn_saved_user')||''}catch{return ''}});
-  const[pass,setPass]=useState(()=>{try{return localStorage.getItem('jrn_saved_pass')||''}catch{return ''}});
+  const[pass,setPass]=useState('');
   const[err,setErr]=useState('');
   const[showPass,setShowPass]=useState(false);
   const[remember,setRemember]=useState(()=>{try{return localStorage.getItem('jrn_remember')==='1'}catch{return false}});
@@ -1385,9 +1389,9 @@ function LoginScreen({onLogin}){
     const found=USERS.find(u=>u.user===user.trim()&&u.pass===pass);
     if(found){
       if(remember){
-        try{localStorage.setItem('jrn_saved_user',user.trim());localStorage.setItem('jrn_saved_pass',pass);localStorage.setItem('jrn_remember','1');}catch{}
+        try{localStorage.setItem('jrn_saved_user',user.trim());localStorage.setItem('jrn_saved_token',mkToken(found.user,found.pass));localStorage.setItem('jrn_remember','1');}catch{}
       } else {
-        try{localStorage.removeItem('jrn_saved_user');localStorage.removeItem('jrn_saved_pass');localStorage.setItem('jrn_remember','0');}catch{}
+        try{localStorage.removeItem('jrn_saved_user');localStorage.removeItem('jrn_saved_token');localStorage.setItem('jrn_remember','0');}catch{}
       }
       onLogin(found);
     } else {setErr('Incorrect username or password.');setPass('');}
@@ -1464,7 +1468,7 @@ function LandingScreen({onPick,onLogout}){
   function confirmNR(){
     const name=nrName.trim();
     if(!name){if(nrInputRef.current)nrInputRef.current.focus();return;}
-    onPick(today,'NR',name,`nr_${Date.now()}`);
+    onPick(today,'NR',name.slice(0,80),`nr_${Date.now()}`);
   }
   function closeNR(){setNrModal(null);}
 
@@ -1559,17 +1563,22 @@ function LandingScreen({onPick,onLogout}){
 
 // ─── ROOT (auth gate) ───────────────────────────────────────────
 function Root(){
-  const[loggedIn,setLoggedIn]=useState(()=>{try{return sessionStorage.getItem('jrn_auth')==='1'||localStorage.getItem('jrn_remember')==='1'}catch{return false}});
+  // Validate remember-me via token, not raw password
+  function validateRemember(){
+    try{
+      if(localStorage.getItem('jrn_remember')!=='1')return null;
+      const su=localStorage.getItem('jrn_saved_user');
+      const tok=localStorage.getItem('jrn_saved_token');
+      if(!su||!tok)return null;
+      return USERS.find(u=>u.user===su&&mkToken(u.user,u.pass)===tok)||null;
+    }catch{return null;}
+  }
+  const[loggedIn,setLoggedIn]=useState(()=>{try{return sessionStorage.getItem('jrn_auth')==='1'||!!validateRemember()}catch{return false}});
   const[isAdmin,setIsAdmin]=useState(()=>{
     try{
       if(sessionStorage.getItem('jrn_admin')==='1')return true;
-      // Restore admin flag on remember-me auto-login (check saved credentials)
-      if(localStorage.getItem('jrn_remember')==='1'){
-        const su=localStorage.getItem('jrn_saved_user');
-        const sp=localStorage.getItem('jrn_saved_pass');
-        const found=USERS.find(u=>u.user===su&&u.pass===sp);
-        return !!(found&&found.isAdmin);
-      }
+      const found=validateRemember();
+      return !!(found&&found.isAdmin);
     }catch{}
     return false;
   });
@@ -1582,7 +1591,11 @@ function Root(){
   }
   function handleLogout(){
     setLoggedIn(false);setIsAdmin(false);setPicked(null);
-    try{sessionStorage.removeItem('jrn_auth');sessionStorage.removeItem('jrn_admin');}catch{}
+    try{
+      sessionStorage.removeItem('jrn_auth');sessionStorage.removeItem('jrn_admin');
+      // Also clear any legacy jrn_saved_pass that may have been stored by older versions
+      localStorage.removeItem('jrn_saved_pass');
+    }catch{}
   }
   if(!loggedIn)return <LoginScreen onLogin={handleLogin}/>;
   if(!picked)return <LandingScreen onPick={(date,tod,eventName,eventKey)=>setPicked({date,tod,eventName,eventKey})} onLogout={handleLogout}/>;
@@ -1620,7 +1633,8 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   const[nrPreview,setNrPreview]=useState(false);
   const[nrHistory,setNrHistory]=useState([]);
   // Compute current Firebase path
-  const attPath=isNR?`jrn/nr/${date}/${eventKey}`:fbAttPath(date,tod);
+  const safeEventKey=safePath(eventKey||'nr_unknown');
+  const attPath=isNR?`jrn/nr/${date}/${safeEventKey}`:fbAttPath(date,tod);
   const skipRef=useRef(false);
   const attInitRef=useRef(false); // blocks write until first Firebase read completes
   const personnelRef=useRef(IP);
@@ -1769,18 +1783,18 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   function addOtherReason(r){
     if(!r||!r.trim())return;
     // Normalize: uppercase + collapse multiple spaces
-    const normalized=r.trim().replace(/\s+/g,' ').toUpperCase();
+    const normalized=r.trim().replace(/\s+/g,' ').toUpperCase().slice(0,60);
     setOtherReasons(prev=>{
       // Deduplicate: ignore if same after normalization
       if(prev.some(x=>x.replace(/\s+/g,' ').toUpperCase()===normalized))return prev;
-      const key=normalized.replace(/[.#$\/\[\]]/g,'_');
+      const key=safePath(normalized);
       DB.ref(`jrn/otherReasons/${key}`).set(normalized);
       return[...prev,normalized];
     });
     toast_('✓ "'+normalized+'" saved as quick-pick');
   }
   function deleteOtherReason(r){
-    const key=r.replace(/[.#$\/\[\]]/g,'_');
+    const key=safePath(r.replace(/\s+/g,' ').toUpperCase());
     DB.ref(`jrn/otherReasons/${key}`).remove();
     setOtherReasons(prev=>prev.filter(x=>x!==r));
     toast_('Deleted "'+r+'"');
