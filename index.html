@@ -173,6 +173,9 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .alert-banner{background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;padding:10px 14px;margin-bottom:10px}
 .alert-banner-title{font-size:13px;font-weight:800;margin-bottom:4px;color:#dc2626}
 .alert-banner-item{font-size:12px;color:#991b1b;padding:1px 0}
+.alert-banner-warn{background:#fffbeb;border:1.5px solid #fcd34d;border-radius:10px;padding:10px 14px;margin-bottom:10px}
+.alert-banner-warn-title{font-size:13px;font-weight:800;margin-bottom:4px;color:#92400e}
+.alert-banner-warn-item{font-size:12px;color:#78350f;padding:1px 0}
 @keyframes siso-pulse{0%,100%{opacity:1}50%{opacity:.6}}
 /* ── PDF Modal ── */
 .pdf-overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:300;display:flex;flex-direction:column;overflow:hidden}
@@ -2311,6 +2314,18 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setA
   const[plt,setPlt]=useState('P1');
   const active=personnelOnDate(personnel,date);
   const expiredSiso=active.filter(p=>sisoExpired(p));
+  // Leave expiry alerts: statuses with a till-date expiring today or tomorrow
+  const EXPIRY_STATUSES=new Set(['mc','hl','ol','ll','ul','fcl','off','arf','ao_local','ao_overseas','hospitalised','cl','ccl','court','ca','civil','db_prison','do_gcm','awol','sol','suspended','rib','driving','cse','dcp','safer_upcat','so_till']);
+  const tomorrow=(()=>{const d=new Date(date+'T00:00:00');d.setDate(d.getDate()+1);return d.toISOString().slice(0,10);})();
+  const expiringToday=[], expiringTomorrow=[];
+  active.forEach(p=>{
+    const r=records[p.id];
+    if(!r||!r.s||!r.det)return;
+    if(!EXPIRY_STATUSES.has(r.s))return;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(r.det))return;
+    if(r.det===date)expiringToday.push({p,rec:r});
+    else if(r.det===tomorrow)expiringTomorrow.push({p,rec:r});
+  });
   const filtered=active.filter(p=>{
     const q=search.toLowerCase();
     if(q)return p.name.toLowerCase().includes(q)||p.rank.toLowerCase().includes(q)||(p.dn&&p.dn.toLowerCase().includes(q));
@@ -2333,6 +2348,13 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setA
         <div className="alert-banner">
           <div className="alert-banner-title">⚠ {expiredSiso.length} S/O Till Date Reached — Update Required</div>
           {expiredSiso.map(p=><div key={p.id} className="alert-banner-item">• {dispName(p)} — {sisoLabel(p)}</div>)}
+        </div>
+      )}
+      {(expiringToday.length>0||expiringTomorrow.length>0)&&(
+        <div className="alert-banner-warn">
+          <div className="alert-banner-warn-title">📅 {expiringToday.length+expiringTomorrow.length} Leave/Status Expiring Soon</div>
+          {expiringToday.map(({p,rec})=><div key={p.id} className="alert-banner-warn-item">🔴 {dispName(p)} — {SM[rec.s]?.l||rec.s} ends <strong>today</strong></div>)}
+          {expiringTomorrow.map(({p,rec})=><div key={p.id} className="alert-banner-warn-item">🟡 {dispName(p)} — {SM[rec.s]?.l||rec.s} ends <strong>tomorrow</strong></div>)}
         </div>
       )}
       <div className="stats-grid">
