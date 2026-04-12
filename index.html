@@ -475,7 +475,7 @@ function load(k,def){try{const s=localStorage.getItem(k);return s?JSON.parse(s):
 function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
 
 // ─── UTILS ──────────────────────────────────────────────────────
-function todayStr(){return new Date().toISOString().split('T')[0]}
+function todayStr(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 // Returns personnel who were active on a given date
 function personnelOnDate(personnel,date){
   return personnel.filter(p=>{
