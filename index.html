@@ -2312,6 +2312,7 @@ function NRHistoryScreen({nrHistory,personnel,overrideUnlocked,setOverrideUnlock
 function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setAllPresent,clearAll,submitted,setSubmitted,markedBy,setMarkedBy,toast_,overrideUnlocked,onPlatoonSubmit,otherReasons,addOtherReason,deleteOtherReason}){
   const[search,setSearch]=useState('');
   const[plt,setPlt]=useState('P1');
+  const[confirmClear,setConfirmClear]=useState(false);
   const active=personnelOnDate(personnel,date);
   const expiredSiso=active.filter(p=>sisoExpired(p));
   // Leave expiry alerts: statuses with a till-date expiring today or tomorrow
@@ -2362,16 +2363,22 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setA
         <div className="stat-box"><div className="stat-n" style={{color:'#16a34a'}}>{presentCnt}</div><div className="stat-l">Present</div></div>
         <div className="stat-box"><div className="stat-n" style={{color:unCnt>0?'#f59e0b':'#16a34a'}}>{unCnt}</div><div className="stat-l">Unassigned</div></div>
       </div>
-      {(()=>{const isPastDate=date<todayStr();const isLocked=(submitted[plt]||false)||(isPastDate&&!overrideUnlocked);return(
+      {(()=>{const isPastDate=date<todayStr();const isLocked=(submitted[plt]||false)||(isPastDate&&!overrideUnlocked);return confirmClear?(
+        <div style={{display:'flex',gap:'8px',marginBottom:'10px',background:'#fef2f2',border:'1.5px solid #fca5a5',borderRadius:'10px',padding:'10px 12px',alignItems:'center'}}>
+          <span style={{flex:1,fontSize:'13px',fontWeight:700,color:'#991b1b'}}>Clear all {P_LABEL[plt]||plt} statuses?</span>
+          <button className="conf-yes" onClick={()=>{clearAll(plt,submitted);setConfirmClear(false);}}>Clear</button>
+          <button className="conf-no" onClick={()=>setConfirmClear(false)}>Cancel</button>
+        </div>
+      ):(
         <button className="qbtn qbtn-r" style={{width:'100%',marginBottom:'10px',opacity:isLocked?.4:1,cursor:isLocked?'not-allowed':'pointer'}}
-          onClick={()=>!isLocked&&clearAll(plt,submitted)}>
+          onClick={()=>!isLocked&&setConfirmClear(true)}>
           ✕ Clear {P_LABEL[plt]||plt} Statuses{isLocked?' (Locked)':''}
         </button>
       );})()}
       <input className="search-inp" placeholder="🔍  Search name or rank..." value={search} onChange={e=>setSearch(e.target.value)}/>
       <div className="ftabs" style={{paddingBottom:0,marginBottom:'12px'}}>
         {['P1','P2','HQ'].map(p=>(
-          <button key={p} className={`ftab${plt===p?' on':''}`} style={{flex:1,textAlign:'center'}} onClick={()=>setPlt(p)}>
+          <button key={p} className={`ftab${plt===p?' on':''}`} style={{flex:1,textAlign:'center'}} onClick={()=>{setPlt(p);setConfirmClear(false);}}>
             {p==='HQ'?'HQ':P_LABEL[p]}
           </button>
         ))}
