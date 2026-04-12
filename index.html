@@ -1703,6 +1703,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   const skipRef=useRef(false);
   const attInitRef=useRef(false); // blocks write until first Firebase read completes
   const skipCarryPltRef=useRef(null); // set to plt key after clearAll to suppress carry re-application
+  const listenerPausedRef=useRef(false); // blocks attendance listener from overwriting during clearAll
   const personnelRef=useRef(IP);
   const totalManualRef=useRef(false);
   useEffect(()=>{personnelRef.current=personnel;},[personnel]);
@@ -1735,6 +1736,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
     attInitRef.current=false; // reset — block writes until this listener responds
     const ref=DB.ref(attPath);
     ref.on('value',snap=>{
+      if(listenerPausedRef.current)return; // clearAll in progress — ignore incoming data
       const d=snap.val();
       skipRef.current=true;
       attInitRef.current=true; // now safe to write
@@ -2032,18 +2034,17 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
     if(submittedState[plt]){return;}
     const next={...records};
     pltPpl.forEach(p=>{delete next[p.id];});
-    // Suppress carry re-application for this platoon for 3s
     skipCarryPltRef.current=plt;
-    setTimeout(()=>{skipCarryPltRef.current=null;},3000);
-    // Write directly to Firebase NOW before React re-renders, so Firebase has cleared data
-    // before the listener can fire with stale records. Block write effect with skipRef
-    // to prevent it overwriting with potentially stale records from React state.
-    skipRef.current=true;
+    // Pause the listener so Firebase echo doesn't overwrite cleared state
+    listenerPausedRef.current=true;
+    // Write cleared records directly to Firebase
     const data={records:next,total,totalManual,duty,extra,submitted,markedBy};
     if(isNR)data.eventName=eventName;
     DB.ref(attPath).set(data);
-    setTimeout(()=>{skipRef.current=false;},1000);
+    // Update React state — write effect will also fire and confirm write
     setRecords(next);
+    // Unpause after 2s (enough for listener echo to arrive and be ignored)
+    setTimeout(()=>{listenerPausedRef.current=false;skipCarryPltRef.current=null;},2000);
     toast_(`Cleared ${P_LABEL[plt]} statuses`);
   }
   const unassigned=useMemo(()=>personnelOnDate(personnel,date).filter(p=>(!records[p.id]||!records[p.id].s)).length,[personnel,date,records]);
