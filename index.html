@@ -2027,11 +2027,11 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   function clearAll(plt,submittedState){
     const pltPpl=personnelOnDate(personnel,date).filter(p=>p.plt===plt);
     if(submittedState[plt]){return;}
-    setRecords(prev=>{
-      const next={...prev};
-      pltPpl.forEach(p=>{delete next[p.id];});
-      return next;
-    });
+    const next={...records};
+    pltPpl.forEach(p=>{delete next[p.id];});
+    setRecords(next);
+    // Write directly to Firebase — bypasses skipRef timing window so clear always persists
+    DB.ref(attPath).update({records:next});
     toast_(`Cleared ${P_LABEL[plt]} statuses`);
   }
   const unassigned=useMemo(()=>personnelOnDate(personnel,date).filter(p=>(!records[p.id]||!records[p.id].s)).length,[personnel,date,records]);
