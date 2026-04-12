@@ -2032,10 +2032,17 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
     if(submittedState[plt]){return;}
     const next={...records};
     pltPpl.forEach(p=>{delete next[p.id];});
-    // Suppress carry re-application for this platoon for 3s (listener fires after write and would re-add activeLeave)
+    // Suppress carry re-application for this platoon for 3s
     skipCarryPltRef.current=plt;
     setTimeout(()=>{skipCarryPltRef.current=null;},3000);
-    skipRef.current=false; // ensure write effect fires immediately
+    // Write directly to Firebase NOW before React re-renders, so Firebase has cleared data
+    // before the listener can fire with stale records. Block write effect with skipRef
+    // to prevent it overwriting with potentially stale records from React state.
+    skipRef.current=true;
+    const data={records:next,total,totalManual,duty,extra,submitted,markedBy};
+    if(isNR)data.eventName=eventName;
+    DB.ref(attPath).set(data);
+    setTimeout(()=>{skipRef.current=false;},1000);
     setRecords(next);
     toast_(`Cleared ${P_LABEL[plt]} statuses`);
   }
