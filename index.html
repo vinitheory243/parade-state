@@ -1691,6 +1691,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   const[customSections,setCustomSections]=useState({P1:[],P2:[],HQ:[]});
   const[otherReasons,setOtherReasons]=useState([]);
   const[showSearch,setShowSearch]=useState(false);
+  const[showSO,setShowSO]=useState(false);
   const[nrPreview,setNrPreview]=useState(false);
   const[nrHistory,setNrHistory]=useState([]);
   // Compute current Firebase path
@@ -2042,6 +2043,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
             <div className="hdr-sub">Jurong Node &nbsp;·&nbsp; <span style={{color:online?'#4ade80':'#f87171',fontWeight:800}}>{online?'● Live':'● Offline'}</span></div>
           </div>
           <div style={{display:'flex',gap:'8px',alignItems:'center'}}>
+            <button onClick={()=>setShowSO(true)} title="S/O List" style={{background:'rgba(255,255,255,.12)',border:'1px solid rgba(255,255,255,.2)',color:'#fff',borderRadius:'8px',padding:'6px 10px',fontSize:'16px',cursor:'pointer',flexShrink:0,lineHeight:1}}>🌙</button>
             <button onClick={()=>setShowSearch(true)} title="Find Personnel" style={{background:'rgba(255,255,255,.12)',border:'1px solid rgba(255,255,255,.2)',color:'#fff',borderRadius:'8px',padding:'6px 10px',fontSize:'16px',cursor:'pointer',flexShrink:0,lineHeight:1}}>🔍</button>
             <button onClick={onLogout} style={{background:'rgba(255,255,255,.12)',border:'1px solid rgba(255,255,255,.2)',color:'#fff',borderRadius:'8px',padding:'6px 12px',fontSize:'12px',fontWeight:700,cursor:'pointer',flexShrink:0}}>Sign Out</button>
           </div>
@@ -2082,6 +2084,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       {toast&&<div key={toastKey} className="toast">{toast}</div>}
       {pdfPreview&&<PDFPreviewModal date={pdfPreview.date} personnel={pdfPreview.personnelForDate||personnel} allTodRecs={pdfPreview.allTodRecs} total={pdfPreview.total} allTodMarkedBy={pdfPreview.allTodMarkedBy||{}} onClose={()=>setPdfPreview(null)} onDownloaded={onPdfDownloaded} isAdmin={isAdmin}/>}
       {showSearch&&<PersonnelSearchModal personnel={personnelOnDate(personnel,date)} records={records} tod={tod} onClose={()=>setShowSearch(false)}/>}
+      {showSO&&<SOListModal personnel={personnel} onClose={()=>setShowSO(false)}/>}
       {nrPreview&&<NominalRollPreviewModal date={date} eventName={eventName} personnel={personnelOnDate(personnel,date)} records={records} total={personnelOnDate(personnel,date).length} onClose={()=>setNrPreview(false)}/>}
     </div>
   );
@@ -2151,6 +2154,80 @@ function PersonnelSearchModal({personnel,records,tod,onClose}){
             );
           })}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── S/O LIST MODAL ─────────────────────────────────────────────
+function SOListModal({personnel,onClose}){
+  const today=todayStr();
+  const PLT_COLOR={P1:'#0d9488',P2:'#16a34a',HQ:'#d97706'};
+  // All active personnel currently on S/O (permanent or till-date)
+  const soList=personnel.filter(p=>{
+    if(!p.active)return false;
+    const s=getSiso(p);
+    if(s.type==='so')return true;
+    if(s.type==='so_till'&&s.date&&s.date>=today)return true;
+    return false;
+  });
+  // Group by platoon
+  const byPlt={P1:[],P2:[],HQ:[]};
+  soList.forEach(p=>{if(byPlt[p.plt])byPlt[p.plt].push(p);});
+  const total=soList.length;
+  return(
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.55)',zIndex:9000,display:'flex',flexDirection:'column'}} onClick={onClose}>
+      <div style={{background:'#fff',borderRadius:'0 0 18px 18px',padding:'16px 14px 20px',boxShadow:'0 8px 32px rgba(0,0,0,.18)',maxHeight:'85vh',display:'flex',flexDirection:'column'}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'14px'}}>
+          <span style={{fontSize:'20px'}}>🌙</span>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:800,fontSize:'16px',color:'#0f172a'}}>Stay Out List</div>
+            <div style={{fontSize:'12px',color:'#64748b',marginTop:'1px'}}>{total} personnel currently on S/O</div>
+          </div>
+          <button onClick={onClose} style={{background:'none',border:'none',fontSize:'20px',color:'#94a3b8',cursor:'pointer',padding:'0 4px',lineHeight:1}}>✕</button>
+        </div>
+        {total===0?(
+          <div style={{textAlign:'center',color:'#94a3b8',fontSize:'14px',padding:'32px 0'}}>No one is currently on Stay Out</div>
+        ):(
+          <div style={{overflowY:'auto',flex:1}}>
+            {['P1','P2','HQ'].map(plt=>{
+              const ppl=byPlt[plt];
+              if(!ppl.length)return null;
+              const color=PLT_COLOR[plt];
+              return(
+                <div key={plt} style={{marginBottom:'14px'}}>
+                  <div style={{fontSize:'11px',fontWeight:800,color:color,textTransform:'uppercase',letterSpacing:'.6px',marginBottom:'6px',paddingLeft:'2px'}}>
+                    {plt==='HQ'?'HQ':P_LABEL[plt]} — {ppl.length} pax
+                  </div>
+                  {ppl.map(p=>{
+                    const s=getSiso(p);
+                    const isPerm=s.type==='so';
+                    const daysLeft=s.date?Math.ceil((new Date(s.date)-new Date(today))/(1000*60*60*24)):null;
+                    return(
+                      <div key={p.id} style={{display:'flex',alignItems:'center',gap:'10px',padding:'9px 12px',borderRadius:'10px',background:'#f8fafc',border:'1.5px solid #e2e8f0',marginBottom:'6px'}}>
+                        <span style={{width:'8px',height:'8px',borderRadius:'50%',background:color,flexShrink:0,display:'inline-block'}}/>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontWeight:700,fontSize:'14px',color:'#0f172a'}}>{p.rank} {p.name}</div>
+                          <div style={{fontSize:'11px',color:'#64748b',marginTop:'1px'}}>{p.sec}</div>
+                        </div>
+                        <div style={{textAlign:'right',flexShrink:0}}>
+                          {isPerm?(
+                            <span style={{fontSize:'11px',fontWeight:800,color:'#7c3aed',background:'#f3e8ff',padding:'3px 8px',borderRadius:'8px'}}>Permanent</span>
+                          ):(
+                            <div>
+                              <div style={{fontSize:'11px',fontWeight:800,color:'#0369a1',background:'#e0f2fe',padding:'3px 8px',borderRadius:'8px'}}>Till {fmtDate(s.date)}</div>
+                              {daysLeft!==null&&<div style={{fontSize:'10px',color:daysLeft<=1?'#dc2626':'#64748b',fontWeight:700,marginTop:'2px',textAlign:'right'}}>{daysLeft===0?'Ends today':daysLeft===1?'1 day left':`${daysLeft} days left`}</div>}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
