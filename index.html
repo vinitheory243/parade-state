@@ -1809,6 +1809,13 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       }
       if(d){
         const nr={...(d.records||{})};
+        // Night Strength: clear any date-range status that ends today (person is back tmr)
+        if(tod==='2030/2230'){
+          personnelOnDate(personnelRef.current,date).forEach(p=>{
+            const rec=nr[p.id];
+            if(rec&&rec.s&&rec.det===date&&SM[rec.s]?.datePick&&rec.s!=='so_till'){delete nr[p.id];}
+          });
+        }
         if(d.totalManual&&d.total){setTotal(d.total);setTotalManual(true);}
         setDuty(d.duty??0);setExtra(d.extra||'');
         // Carry active leaves into anyone not yet assigned in this slot
