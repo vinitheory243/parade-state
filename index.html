@@ -326,6 +326,8 @@ const SL = [
 const SM = Object.fromEntries(SL.map(s=>[s.k,s]));
 // Statuses counted as "Duty Personnel" in the telegram message (no names shown)
 const DUTY_STATUSES = new Set(['duty','dto','adtl','doo','dtl','amb_t1','amb_t2']);
+// Whole-day duty statuses: carried across all TODs on the same date
+const WHOLE_DAY_DUTY = new Set(['duty','dto','adtl','doo','dtl']);
 
 // ─── ALL PERSONNEL (P1 + P2 + HQ) ──────────────────────────────
 const IP = [
@@ -1748,6 +1750,8 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       function applyCarry(nr,p){
         if(skipCarryPltRef.current===p.plt)return; // platoon was just cleared — don't re-add carry
         if(nr[p.id]&&nr[p.id].s)return; // already assigned, skip
+        const dd=p.dailyDuty;
+        if(dd&&dd.date===date&&WHOLE_DAY_DUTY.has(dd.s)){nr[p.id]={s:dd.s,det:'',from:''};return;}
         const al=p.activeLeave;
         if(al&&al.det&&al.from&&date>=al.from&&date<=al.det){
           if(date===al.det&&tod==='2030/2230'){
@@ -1803,6 +1807,8 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       personnelOnDate(personnel,date).forEach(p=>{
         if(skipCarryPltRef.current===p.plt)return; // platoon just cleared — skip
         if(nr[p.id]&&nr[p.id].s)return;
+        const dd=p.dailyDuty;
+        if(dd&&dd.date===date&&WHOLE_DAY_DUTY.has(dd.s)){nr[p.id]={s:dd.s,det:'',from:''};changed=true;return;}
         const al=p.activeLeave;
         if(al&&al.det&&al.from&&date>=al.from&&date<=al.det){
           nr[p.id]={s:al.s,det:al.det,from:al.from};
@@ -2027,6 +2033,10 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
     // update personnel activeLeave for auto-carry
     setPersonnelAndSync(prev=>prev.map(p=>p.id===id?{...p,activeLeave:till?{s,from:from||todayStr(),det:till}:null}:p));
   }
+  function setPersonDailyDuty(id,s,d){
+    // update personnel dailyDuty for whole-day carry across TODs
+    setPersonnelAndSync(prev=>prev.map(p=>p.id===id?{...p,dailyDuty:s?{s,date:d}:null}:p));
+  }
   function toast_(msg,dur=3000){setToast(msg);setToastKey(k=>k+1);setTimeout(()=>setToast(null),dur)}
   function setAllPresent(){
     const nr={};
@@ -2080,7 +2090,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         )}
       </div>
       <div className="main">
-        {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setAllPresent={setAllPresent} clearAll={clearAll} submitted={submitted} setSubmitted={setSubmitted} markedBy={markedBy} setMarkedBy={setMarkedBy} toast_={toast_} overrideUnlocked={isAdmin||overrideUnlocked} onPlatoonSubmit={saveToHistory} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={isAdmin?deleteOtherReason:undefined}/>}
+        {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setPersonDailyDuty={setPersonDailyDuty} setAllPresent={setAllPresent} clearAll={clearAll} submitted={submitted} setSubmitted={setSubmitted} markedBy={markedBy} setMarkedBy={setMarkedBy} toast_={toast_} overrideUnlocked={isAdmin||overrideUnlocked} onPlatoonSubmit={saveToHistory} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={isAdmin?deleteOtherReason:undefined}/>}
         {isNR&&screen==='telegram'&&<NRGenerateScreen date={date} eventName={eventName} records={records} personnel={personnelOnDate(personnel,date)} toast_={toast_}/>}
         {!isNR&&screen==='telegram'&&<GenerateScreen msg={msg} total={total} setTotal={setTotal} totalManual={totalManual} setTotalManual={setTotalManual} autoTotal={personnelOnDate(personnel,date).length} extra={extra} setExtra={setExtra} toast_={toast_} date={date} tod={tod} records={records} personnel={personnelOnDate(personnel,date)} isAdmin={isAdmin}/>}
         {screen==='manage'&&<ManageScreen personnel={personnel} setPersonnel={setPersonnelAndSync} toast_={toast_} customSections={customSections} addCustomSection={addCustomSection}/>}
@@ -2326,7 +2336,7 @@ function NRHistoryScreen({nrHistory,personnel,overrideUnlocked,setOverrideUnlock
 }
 
 // ─── ATTENDANCE SCREEN ──────────────────────────────────────────
-function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setAllPresent,clearAll,submitted,setSubmitted,markedBy,setMarkedBy,toast_,overrideUnlocked,onPlatoonSubmit,otherReasons,addOtherReason,deleteOtherReason}){
+function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setPersonDailyDuty,setAllPresent,clearAll,submitted,setSubmitted,markedBy,setMarkedBy,toast_,overrideUnlocked,onPlatoonSubmit,otherReasons,addOtherReason,deleteOtherReason}){
   const[search,setSearch]=useState('');
   const[plt,setPlt]=useState('P1');
   const[confirmClear,setConfirmClear]=useState(null); // null or plt key
@@ -2420,7 +2430,7 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setA
                 <div className="sec-prog"><div className={`sec-prog-fill${done?' complete':''}`} style={{width:`${pct}%`}}/></div>
                 <div className="card-body">
                   {secPpl.map(person=>(
-                    <PersonRow key={person.id} person={person} record={records[person.id]||{}} setRec={setRec} setPersonLeave={setPersonLeave} tod={tod} locked={isLocked} currentDate={date} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={deleteOtherReason}/>
+                    <PersonRow key={person.id} person={person} record={records[person.id]||{}} setRec={setRec} setPersonLeave={setPersonLeave} setPersonDailyDuty={setPersonDailyDuty} tod={tod} locked={isLocked} currentDate={date} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={deleteOtherReason}/>
                   ))}
                 </div>
               </div>
@@ -2509,7 +2519,7 @@ function PlatoonFooter({plt,allPersonnel,records,pltColors,submitted,setSubmitte
 }
 
 // ─── PERSON ROW ─────────────────────────────────────────────────
-function PersonRow({person,record,setRec,setPersonLeave,tod,locked,currentDate,otherReasons,addOtherReason,deleteOtherReason}){
+function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,locked,currentDate,otherReasons,addOtherReason,deleteOtherReason}){
   const[showMore,setShowMore]=useState(false);
   const si=record.s?SM[record.s]:null;
   const colorClass=record.s?`sc-${record.s}`:'';
@@ -2522,8 +2532,9 @@ function PersonRow({person,record,setRec,setPersonLeave,tod,locked,currentDate,o
   function quickSet(s){
     if(locked)return;
     setRec(person.id,s,'','');
-    // clear activeLeave if switching away from a date-range status
     if(SM[s]&&!SM[s].datePick&&person.activeLeave)setPersonLeave(person.id,null,null,null);
+    if(WHOLE_DAY_DUTY.has(s))setPersonDailyDuty(person.id,s,currentDate);
+    else if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
     setShowMore(false);
   }
   function handleStatusChange(newS){
@@ -2531,11 +2542,14 @@ function PersonRow({person,record,setRec,setPersonLeave,tod,locked,currentDate,o
     if(newS.startsWith('__or__')){
       const reason=newS.slice(6);
       setRec(person.id,'others',reason,'');
+      if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
       setShowMore(false);
       return;
     }
     setRec(person.id,newS,'','');
     if(SM[newS]&&!SM[newS].datePick&&person.activeLeave)setPersonLeave(person.id,null,null,null);
+    if(WHOLE_DAY_DUTY.has(newS))setPersonDailyDuty(person.id,newS,currentDate);
+    else if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
     if(newS)setShowMore(false);
   }
   function handleTillDate(till){
