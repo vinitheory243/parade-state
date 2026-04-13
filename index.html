@@ -547,6 +547,13 @@ function genMsg(date,tod,total,records,personnel,extra){
   L.push('');
   L.push(`Present: ${cnt('present')}`);
   L.push('');
+  if(tod==='2030/2230'){
+    const soItems=(grp['so']||[]).concat(grp['so_till']||[]);
+    L.push(soItems.length
+      ?`Stay Out: ${soItems.length}\n`+soItems.map((x,i)=>`${i+1}. ${x.p.rank} ${x.p.dn||x.p.name.split(' ')[0]}`).join('\n')
+      :`Stay Out: NIL`);
+    L.push('');
+  }
   L.push(line('Late','late'));
   L.push('');
   L.push(line('Detail','detail'));
