@@ -548,9 +548,11 @@ function genMsg(date,tod,total,records,personnel,extra){
   L.push(`Present: ${cnt('present')}`);
   L.push('');
   if(tod==='2030/2230'){
-    const soItems=(grp['so']||[]).concat(grp['so_till']||[]);
+    const soPermItems=(grp['so']||[]).map(x=>({x,suffix:' (PERM)'}));
+    const soTillItems=(grp['so_till']||[]).map(x=>({x,suffix:x.det?` TILL ${fmtTeleDate(x.det)}`:''}));
+    const soItems=[...soPermItems,...soTillItems];
     L.push(soItems.length
-      ?`Stay Out: ${soItems.length}\n`+soItems.map((x,i)=>`${i+1}. ${x.p.rank} ${x.p.dn||x.p.name.split(' ')[0]}`).join('\n')
+      ?`Stay Out: ${soItems.length}\n`+soItems.map((d,i)=>`${i+1}. ${d.x.p.rank} ${d.x.p.dn||d.x.p.name.split(' ')[0]}${d.suffix}`).join('\n')
       :`Stay Out: NIL`);
     L.push('');
   }
