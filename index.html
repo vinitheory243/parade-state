@@ -534,14 +534,16 @@ function genMsg(date,tod,total,records,personnel,extra){
   };
   const line=(label,k,pre)=>`${label}: ${cnt(k)}${lst(k,pre)}`;
   const lineMulti=(label,keys,pre)=>{const items=keys.flatMap(k=>grp[k]||[]);const n=items.length;if(!n)return`${label}: 0`;const names='\n'+items.map((x,i)=>{let l=`${i+1}. ${x.p.rank} ${x.p.dn||x.p.name.split(' ')[0]}`;if(x.det){const isDate=/^\d{4}-\d{2}-\d{2}$/.test(x.det);const d=isDate?fmtTeleDate(x.det):x.det;if(isDate)l+=` ${pre||'TILL '}${d}`;else if(pre)l+=` ${pre}${d}`;else l+=` (${d})`;}return l;}).join('\n');return`${label}: ${n}${names}`;};
-  // Auto-count all duty-type statuses (no names)
-  const dutyCount=[...DUTY_STATUSES].reduce((s,k)=>s+cnt(k),0);
+  // Duty Personnel: collect all with their status label
+  const dutyItems=[...DUTY_STATUSES].flatMap(k=>(grp[k]||[]).map(x=>({x,label:(SM[k]?.l||k).toUpperCase()})));
+  const dutyCount=dutyItems.length;
+  const dutyList=dutyItems.length?'\n'+dutyItems.map((d,i)=>`${i+1}. ${d.x.p.rank} ${d.x.p.dn||d.x.p.name.split(' ')[0]} (${d.label})`).join('\n'):'';
   const L=[];
   const todAmPm=({'HLS':'AM','0745':'AM','1300':'PM','1730':'PM','2030/2230':'NIGHT STR'})[tod]||tod;
   L.push(`JRN PARADE STATE ${fmtTeleDate(date)} (${todAmPm})`);
   L.push(`Total strength: ${total}`);
   L.push('');
-  L.push(`Duty Personnel: ${dutyCount}`);
+  L.push(`Duty Personnel: ${dutyCount}${dutyList}`);
   L.push('');
   L.push(`Present: ${cnt('present')}`);
   L.push('');
