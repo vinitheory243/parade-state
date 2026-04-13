@@ -750,7 +750,7 @@ function genMCMsg(date,records,personnel){
       const from=fmtD(r.from||date);
       const till=fmtD(r.det||'');
       const dur=till?`${from} - ${till}`:from;
-      L.push(`${i+1}. ${p.rank} ${p.name.toUpperCase()}, ${plt}${sec}`);
+      L.push(`${i+1}. ${p.rank} ${(p.dn||p.name.split(' ')[0]).toUpperCase()}, ${plt}${sec}`);
       L.push(`${statusLabel(r.s)} ${dur}`);
       L.push('');
     });
