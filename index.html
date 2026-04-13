@@ -1929,7 +1929,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
     const ref=DB.ref('jrn/history');
     ref.on('value',snap=>{
       const d=snap.val();
-      setHistory(d?Object.values(d).sort((a,b)=>b.date.localeCompare(a.date)):[]);
+      setHistory(d?Object.values(d).filter(v=>!v.deleted).sort((a,b)=>b.date.localeCompare(a.date)):[]);
     });
     return()=>ref.off();
   },[]);
@@ -2028,7 +2028,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       // Writing to attPath here would re-trigger the Firebase listener and reset submitted → skip.
       return;
     }
-    DB.ref(`jrn/history/${date}`).update({savedAt:Date.now(),total});
+    DB.ref(`jrn/history/${date}`).set({date,savedAt:Date.now(),total});
   }
   // Load all TODs for a date and show PDF preview
   async function loadDayAndPreview(dateStr,setLoadingFn){
@@ -2056,7 +2056,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
     DB.ref(`jrn/history/${pdfPreview.date}`).set({date:pdfPreview.date,savedAt:Date.now(),total:pdfPreview.total});
     toast_('✓ Saved to History');
   }
-  function deleteHistory(dateStr){DB.ref(`jrn/history/${dateStr}`).remove();}
+  function deleteHistory(dateStr){DB.ref(`jrn/history/${dateStr}`).set({date:dateStr,deleted:true,deletedAt:Date.now()});}
   async function handleBulkDownload(type,setBulkLoading,setProgress){
     setBulkLoading(type);
     try{
