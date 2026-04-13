@@ -2154,7 +2154,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         )}
       </div>
       <div className="main">
-        {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setPersonDailyDuty={setPersonDailyDuty} setAllPresent={setAllPresent} clearAll={clearAll} submitted={submitted} setSubmitted={setSubmitted} markedBy={markedBy} setMarkedBy={setMarkedBy} toast_={toast_} overrideUnlocked={isAdmin||overrideUnlocked} onPlatoonSubmit={saveToHistory} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={isAdmin?deleteOtherReason:undefined} jumpTo={jumpTo} onJumpDone={()=>setJumpTo(null)}/>}
+        {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setPersonDailyDuty={setPersonDailyDuty} setAllPresent={setAllPresent} clearAll={clearAll} submitted={submitted} setSubmitted={setSubmitted} markedBy={markedBy} setMarkedBy={setMarkedBy} toast_={toast_} overrideUnlocked={isAdmin||overrideUnlocked} onPlatoonSubmit={saveToHistory} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={isAdmin?deleteOtherReason:undefined} jumpTo={jumpTo} onJumpDone={()=>setJumpTo(null)} isNR={isNR}/>}
         {isNR&&screen==='telegram'&&<NRGenerateScreen date={date} eventName={eventName} records={records} personnel={personnelOnDate(personnel,date)} toast_={toast_}/>}
         {!isNR&&screen==='telegram'&&<GenerateScreen msg={msg} total={total} setTotal={setTotal} totalManual={totalManual} setTotalManual={setTotalManual} autoTotal={personnelOnDate(personnel,date).length} extra={extra} setExtra={setExtra} toast_={toast_} date={date} tod={tod} records={records} personnel={personnelOnDate(personnel,date)} isAdmin={isAdmin}/>}
         {screen==='manage'&&<ManageScreen personnel={personnel} setPersonnel={setPersonnelAndSync} toast_={toast_} customSections={customSections} addCustomSection={addCustomSection}/>}
@@ -2407,7 +2407,7 @@ function NRHistoryScreen({nrHistory,personnel,overrideUnlocked,setOverrideUnlock
 }
 
 // ─── ATTENDANCE SCREEN ──────────────────────────────────────────
-function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setPersonDailyDuty,setAllPresent,clearAll,submitted,setSubmitted,markedBy,setMarkedBy,toast_,overrideUnlocked,onPlatoonSubmit,otherReasons,addOtherReason,deleteOtherReason,jumpTo,onJumpDone}){
+function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setPersonDailyDuty,setAllPresent,clearAll,submitted,setSubmitted,markedBy,setMarkedBy,toast_,overrideUnlocked,onPlatoonSubmit,otherReasons,addOtherReason,deleteOtherReason,jumpTo,onJumpDone,isNR}){
   const[search,setSearch]=useState('');
   const[plt,setPlt]=useState('P1');
   const[confirmClear,setConfirmClear]=useState(null); // null or plt key
@@ -2519,7 +2519,7 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setP
                 <div className="sec-prog"><div className={`sec-prog-fill${done?' complete':''}`} style={{width:`${pct}%`}}/></div>
                 <div className="card-body">
                   {secPpl.map(person=>(
-                    <PersonRow key={person.id} person={person} record={records[person.id]||{}} setRec={setRec} setPersonLeave={setPersonLeave} setPersonDailyDuty={setPersonDailyDuty} tod={tod} locked={isLocked&&tempUnlocked!==person.id} currentDate={date} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={deleteOtherReason} tempUnlocked={tempUnlocked===person.id} onLockBack={()=>setTempUnlocked(null)}/>
+                    <PersonRow key={person.id} person={person} record={records[person.id]||{}} setRec={setRec} setPersonLeave={setPersonLeave} setPersonDailyDuty={setPersonDailyDuty} tod={tod} locked={isLocked&&tempUnlocked!==person.id} currentDate={date} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={deleteOtherReason} tempUnlocked={tempUnlocked===person.id} onLockBack={()=>setTempUnlocked(null)} isNR={isNR}/>
                   ))}
                 </div>
               </div>
@@ -2608,7 +2608,7 @@ function PlatoonFooter({plt,allPersonnel,records,pltColors,submitted,setSubmitte
 }
 
 // ─── PERSON ROW ─────────────────────────────────────────────────
-function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,locked,currentDate,otherReasons,addOtherReason,deleteOtherReason,tempUnlocked,onLockBack}){
+function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,locked,currentDate,otherReasons,addOtherReason,deleteOtherReason,tempUnlocked,onLockBack,isNR}){
   const[showMore,setShowMore]=useState(false);
   const si=record.s?SM[record.s]:null;
   const colorClass=record.s?`sc-${record.s}`:'';
@@ -2621,9 +2621,11 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
   function quickSet(s){
     if(locked)return;
     setRec(person.id,s,'','');
-    if(SM[s]&&!SM[s].datePick&&person.activeLeave)setPersonLeave(person.id,null,null,null);
-    if(WHOLE_DAY_DUTY.has(s))setPersonDailyDuty(person.id,s,currentDate);
-    else if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
+    if(!isNR){
+      if(SM[s]&&!SM[s].datePick&&person.activeLeave)setPersonLeave(person.id,null,null,null);
+      if(WHOLE_DAY_DUTY.has(s))setPersonDailyDuty(person.id,s,currentDate);
+      else if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
+    }
     setShowMore(false);
   }
   function handleStatusChange(newS){
@@ -2631,23 +2633,25 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
     if(newS.startsWith('__or__')){
       const reason=newS.slice(6);
       setRec(person.id,'others',reason,'');
-      if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
+      if(!isNR&&person.dailyDuty)setPersonDailyDuty(person.id,null,null);
       setShowMore(false);
       return;
     }
     setRec(person.id,newS,'','');
-    if(SM[newS]&&!SM[newS].datePick&&person.activeLeave)setPersonLeave(person.id,null,null,null);
-    if(WHOLE_DAY_DUTY.has(newS))setPersonDailyDuty(person.id,newS,currentDate);
-    else if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
+    if(!isNR){
+      if(SM[newS]&&!SM[newS].datePick&&person.activeLeave)setPersonLeave(person.id,null,null,null);
+      if(WHOLE_DAY_DUTY.has(newS))setPersonDailyDuty(person.id,newS,currentDate);
+      else if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
+    }
     if(newS)setShowMore(false);
   }
   function handleTillDate(till){
     setRec(person.id,record.s,till,record.from||currentDate);
-    setPersonLeave(person.id,record.s,record.from||currentDate,till);
+    if(!isNR)setPersonLeave(person.id,record.s,record.from||currentDate,till);
   }
   function handleFromDate(from){
     setRec(person.id,record.s,record.det||'',from);
-    if(record.det)setPersonLeave(person.id,record.s,from,record.det);
+    if(!isNR&&record.det)setPersonLeave(person.id,record.s,from,record.det);
   }
 
   // Display summary for locked date-pick statuses
