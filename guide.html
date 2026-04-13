@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>JRN Parade State — User Guide</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f1f5f9;color:#1e293b;font-size:15px;line-height:1.6}
+.top-bar{background:#0d9488;color:#fff;padding:16px 18px;position:sticky;top:0;z-index:10;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.top-bar h1{font-size:17px;font-weight:800;letter-spacing:.3px}
+.top-bar p{font-size:12px;opacity:.85;margin-top:2px}
+.content{max-width:640px;margin:0 auto;padding:16px 14px 48px}
+.section{background:#fff;border-radius:14px;padding:18px 16px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.section-title{font-size:14px;font-weight:800;color:#0d9488;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.section-title span{font-size:18px}
+h3{font-size:14px;font-weight:700;color:#1e293b;margin:14px 0 6px}
+h3:first-child{margin-top:0}
+p{color:#475569;font-size:14px;margin-bottom:8px}
+p:last-child{margin-bottom:0}
+ul,ol{padding-left:18px;color:#475569;font-size:14px}
+li{margin-bottom:5px}
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap}
+.badge-green{background:#dcfce7;color:#166534}
+.badge-teal{background:#ccfbf1;color:#0f766e}
+.badge-purple{background:#f3e8ff;color:#6b21a8}
+.badge-red{background:#fee2e2;color:#991b1b}
+.badge-yellow{background:#fef9c3;color:#854d0e}
+.badge-blue{background:#dbeafe;color:#1e40af}
+.badge-orange{background:#ffedd5;color:#9a3412}
+.badge-gray{background:#f1f5f9;color:#475569}
+.tip{background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13px;color:#166534}
+.tip strong{color:#15803d}
+.warn{background:#fffbeb;border:1.5px solid #fde68a;border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13px;color:#92400e}
+.warn strong{color:#b45309}
+.step{display:flex;gap:12px;margin-bottom:10px;align-items:flex-start}
+.step-num{background:#0d9488;color:#fff;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;margin-top:1px}
+.step-body{flex:1}
+.step-body strong{display:block;font-size:14px;color:#1e293b;margin-bottom:2px}
+.step-body p{margin:0;font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:13px;margin:10px 0}
+th{background:#f8fafc;padding:8px 10px;text-align:left;font-weight:700;color:#475569;border-bottom:2px solid #e2e8f0}
+td{padding:8px 10px;border-bottom:1px solid #f1f5f9;color:#1e293b;vertical-align:top}
+tr:last-child td{border-bottom:none}
+.divider{height:1px;background:#f1f5f9;margin:14px 0}
+.msg-preview{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;font-family:monospace;font-size:12px;color:#334155;white-space:pre-wrap;line-height:1.7;margin:8px 0}
+.nav-pill{display:inline-flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+a.pill{display:inline-block;padding:5px 12px;background:#f1f5f9;border-radius:20px;font-size:12px;font-weight:600;color:#0d9488;text-decoration:none;border:1px solid #e2e8f0}
+a.pill:hover{background:#ccfbf1}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <h1>📋 JRN Parade State — User Guide</h1>
+  <p>For Sgts and above · Last updated Apr 2026</p>
+</div>
+
+<div class="content">
+
+  <!-- Quick Nav -->
+  <div class="section">
+    <div class="section-title"><span>🗂</span> Contents</div>
+    <div class="nav-pill">
+      <a class="pill" href="#login">Login</a>
+      <a class="pill" href="#home">Home Screen</a>
+      <a class="pill" href="#attendance">Marking Attendance</a>
+      <a class="pill" href="#statuses">Status Reference</a>
+      <a class="pill" href="#carry">Auto Carry</a>
+      <a class="pill" href="#alerts">Expiry Alerts</a>
+      <a class="pill" href="#submit">Submitting</a>
+      <a class="pill" href="#telegram">Telegram Messages</a>
+      <a class="pill" href="#so">S/O List</a>
+      <a class="pill" href="#nr">Nominal Roll</a>
+      <a class="pill" href="#history">History</a>
+    </div>
+  </div>
+
+  <!-- Login -->
+  <div class="section" id="login">
+    <div class="section-title"><span>🔑</span> Logging In</div>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Open the app</strong>
+        <p>Access the link on your phone browser. Bookmark it for quick access.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Sign in with Google</strong>
+        <p>Tap <strong>Sign in with Google</strong> and use your authorised account. Only approved accounts can access the app.</p>
+      </div>
+    </div>
+    <div class="tip">💡 Stay signed in — the app remembers your session. You only need to sign in again if you manually sign out.</div>
+  </div>
+
+  <!-- Home Screen -->
+  <div class="section" id="home">
+    <div class="section-title"><span>🏠</span> Home Screen</div>
+    <p>After logging in you will see the <strong>attendance screen</strong> defaulting to today's date and the current TOD (time of day).</p>
+    <h3>Selecting the Date & TOD</h3>
+    <ul>
+      <li>Tap the <strong>date</strong> at the top to change it</li>
+      <li>Tap the <strong>TOD selector</strong> to switch between parade states:</li>
+    </ul>
+    <table>
+      <tr><th>TOD</th><th>Parade State</th></tr>
+      <tr><td><span class="badge badge-teal">HLS / FP</span></td><td>Morning (first parade)</td></tr>
+      <tr><td><span class="badge badge-teal">0745</span></td><td>Morning parade</td></tr>
+      <tr><td><span class="badge badge-teal">1300</span></td><td>Afternoon parade</td></tr>
+      <tr><td><span class="badge badge-teal">1730</span></td><td>Evening parade</td></tr>
+      <tr><td><span class="badge badge-teal">2030/2230</span></td><td>Night Strength</td></tr>
+    </table>
+    <div class="tip">💡 Each TOD is saved separately. You can go back to any TOD to view or edit it (if not yet submitted).</div>
+  </div>
+
+  <!-- Marking Attendance -->
+  <div class="section" id="attendance">
+    <div class="section-title"><span>✅</span> Marking Attendance</div>
+    <p>Tap the <strong>Platoon tab</strong> (Platoon 1 / Platoon 2 / HQ) to switch between platoons. Personnel are grouped by section.</p>
+
+    <h3>Setting a Status</h3>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Quick buttons</strong>
+        <p>Each row has quick-tap buttons for the most common statuses (Present, Duty, MC, etc.). Tap once to assign.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>More statuses</strong>
+        <p>Tap <strong>More…</strong> on a person's row to see all available statuses. Scroll down the list to find less common ones.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>Date-range statuses (MC, Leave, etc.)</strong>
+        <p>After selecting a date-range status, enter the <strong>From</strong> and <strong>Till</strong> dates. The status will auto-carry to other TODs and future days within the range.</p>
+      </div>
+    </div>
+
+    <h3>Clearing Statuses</h3>
+    <p>Tap <strong>✕ Clear [Platoon] Statuses</strong> at the bottom of a platoon section, then confirm. This resets everyone in that platoon to unassigned.</p>
+    <div class="warn">⚠ <strong>Clearing is irreversible.</strong> Only clear if you need to start over for that platoon.</div>
+
+    <h3>Set All Present</h3>
+    <p>Tap the <strong>✓ All Present</strong> button to mark everyone in the platoon as Present in one tap. Useful when almost everyone is in — then individually update those who are not.</p>
+  </div>
+
+  <!-- Status Reference -->
+  <div class="section" id="statuses">
+    <div class="section-title"><span>📖</span> Status Reference</div>
+
+    <h3>Duty Personnel <span class="badge badge-teal">Counted as Duty, no names shown in telegram</span></h3>
+    <table>
+      <tr><th>Status</th><th>Meaning</th></tr>
+      <tr><td><span class="badge badge-teal">DUTY</span></td><td>Duty personnel (whole day, carries across all TODs)</td></tr>
+      <tr><td><span class="badge badge-teal">DTO</span></td><td>Duty Transport Operator (whole day)</td></tr>
+      <tr><td><span class="badge badge-teal">ADTL</span></td><td>Assistant Duty Team Leader (whole day)</td></tr>
+      <tr><td><span class="badge badge-teal">DOO</span></td><td>Duty Operations Officer (whole day)</td></tr>
+      <tr><td><span class="badge badge-teal">DTL</span></td><td>Duty Team Leader (whole day)</td></tr>
+      <tr><td><span class="badge badge-green">AMB T1</span></td><td>Ambulance Team 1 — requires from/till dates, carries over</td></tr>
+      <tr><td><span class="badge badge-green">AMB T2</span></td><td>Ambulance Team 2 — requires from/till dates, carries over</td></tr>
+    </table>
+
+    <h3>Duty/Detail Rest <span class="badge badge-blue">Names shown in telegram</span></h3>
+    <table>
+      <tr><th>Status</th><th>Meaning</th></tr>
+      <tr><td><span class="badge badge-blue">DDR</span></td><td>Duty/Detail Rest</td></tr>
+      <tr><td><span class="badge badge-blue">DTO/R</span></td><td>DTO Rest</td></tr>
+      <tr><td><span class="badge badge-blue">ADTL/R</span></td><td>ADTL Rest</td></tr>
+    </table>
+
+    <h3>Leave & Medical <span class="badge badge-red">Requires from/till dates · Auto-carries</span></h3>
+    <table>
+      <tr><th>Status</th><th>Notes</th></tr>
+      <tr><td><span class="badge badge-red">MC</span></td><td>Medical Certificate — enter from & till dates</td></tr>
+      <tr><td><span class="badge badge-red">HL</span></td><td>Hospitalisation Leave — enter from & till dates</td></tr>
+      <tr><td><span class="badge badge-red">Hospitalised</span></td><td>Currently hospitalised</td></tr>
+      <tr><td><span class="badge badge-yellow">OFF</span></td><td>Day off — enter date</td></tr>
+      <tr><td><span class="badge badge-yellow">OL</span></td><td>Overseas Leave — enter from & till</td></tr>
+      <tr><td><span class="badge badge-yellow">LL</span></td><td>Local Leave — enter from & till</td></tr>
+      <tr><td><span class="badge badge-yellow">UL</span></td><td>Urgent Leave</td></tr>
+      <tr><td><span class="badge badge-yellow">FCL</span></td><td>Family Care Leave</td></tr>
+      <tr><td><span class="badge badge-yellow">CL / CCL</span></td><td>Compassionate / Child Care Leave</td></tr>
+      <tr><td><span class="badge badge-yellow">ARF</span></td><td>Attend Return Flight — enter dates</td></tr>
+      <tr><td><span class="badge badge-yellow">A/O Local / Overseas</span></td><td>Attached Out</td></tr>
+    </table>
+
+    <h3>Stay Out</h3>
+    <table>
+      <tr><th>Status</th><th>Notes</th></tr>
+      <tr><td><span class="badge badge-yellow">S/O</span></td><td>Permanent Stay Out — auto-marked at Night Strength</td></tr>
+      <tr><td><span class="badge badge-yellow">S/O Till</span></td><td>Temporary Stay Out — enter end date. Auto-marked at Night Strength until date expires</td></tr>
+    </table>
+
+    <h3>Disciplinary / Admin</h3>
+    <table>
+      <tr><th>Status</th><th></th></tr>
+      <tr><td><span class="badge badge-red">AWOL</span></td><td>Absent Without Official Leave</td></tr>
+      <tr><td><span class="badge badge-red">SOL</span></td><td>Soldier On Leave (unauthorised)</td></tr>
+      <tr><td><span class="badge badge-red">Suspended</span></td><td>Suspended from duties</td></tr>
+      <tr><td><span class="badge badge-red">DB / Prison</span></td><td>Detention Barracks</td></tr>
+      <tr><td><span class="badge badge-gray">RIB</span></td><td>Rest In Bunk (medical)</td></tr>
+      <tr><td><span class="badge badge-gray">RSO / RSI</span></td><td>Report Sick Out / In Camp</td></tr>
+      <tr><td><span class="badge badge-gray">MA</span></td><td>Medical Appointment</td></tr>
+      <tr><td><span class="badge badge-gray">Detail</span></td><td>On detail — specify details</td></tr>
+      <tr><td><span class="badge badge-gray">Others</span></td><td>Anything not listed — specify reason</td></tr>
+    </table>
+  </div>
+
+  <!-- Auto Carry -->
+  <div class="section" id="carry">
+    <div class="section-title"><span>🔄</span> Auto Carry-Forward</div>
+    <p>The app automatically fills in statuses when you switch to a different TOD, so you don't have to re-enter everything.</p>
+
+    <h3>Whole-Day Duty (carries across TODs same day)</h3>
+    <p>Once set at <strong>HLS/FP</strong>, these statuses automatically appear in MP, LP, and Night Strength:</p>
+    <p><span class="badge badge-teal">DUTY</span> <span class="badge badge-teal">DTO</span> <span class="badge badge-teal">ADTL</span> <span class="badge badge-teal">DOO</span> <span class="badge badge-teal">DTL</span></p>
+
+    <h3>Date-Range Statuses (carries across days)</h3>
+    <p>Statuses with a from/till date carry across <strong>all TODs for all days within the range</strong>:</p>
+    <p><span class="badge badge-red">MC</span> <span class="badge badge-red">HL</span> <span class="badge badge-yellow">OL</span> <span class="badge badge-yellow">LL</span> <span class="badge badge-yellow">ARF</span> <span class="badge badge-green">AMB T1</span> <span class="badge badge-green">AMB T2</span> and all other leave statuses</p>
+
+    <h3>Night Strength (S/O)</h3>
+    <p>Personnel with <strong>S/O</strong> or <strong>S/O Till</strong> (within date range) are automatically marked at the 2030/2230 TOD.</p>
+
+    <div class="tip">💡 Carry only fills in people who have <strong>no status yet</strong> for that slot. If you manually set a different status, it will not be overwritten.</div>
+  </div>
+
+  <!-- Expiry Alerts -->
+  <div class="section" id="alerts">
+    <div class="section-title"><span>⚠️</span> Expiry Alerts</div>
+    <p>A yellow banner appears at the top of the attendance screen when someone's leave or status is ending soon.</p>
+    <table>
+      <tr><th>Icon</th><th>Meaning</th></tr>
+      <tr><td>🔴</td><td>Status ends <strong>today</strong></td></tr>
+      <tr><td>🟡</td><td>Status ends <strong>tomorrow</strong></td></tr>
+    </table>
+    <p>For S/O Till entries the banner also shows the reporting time:</p>
+    <div class="msg-preview">🔴 LCP JAKIN — Stay Out Till ends tdy, back tmr 0800 (S/O)</div>
+    <div class="tip">💡 Use this banner as a reminder to follow up — confirm the person is extending their MC/leave, or update their status for the next day.</div>
+  </div>
+
+  <!-- Submitting -->
+  <div class="section" id="submit">
+    <div class="section-title"><span>✍️</span> Submitting Attendance</div>
+    <p>Once all statuses for a platoon are filled in, scroll to the bottom of that platoon tab and tap:</p>
+    <p><strong>Save & Submit [Platoon] Attendance</strong></p>
+    <ul>
+      <li>The platoon is <strong>locked</strong> — no further changes can be made</li>
+      <li>A green <strong>Edit</strong> button appears if you need to unlock and make corrections (admin / authorised users only)</li>
+      <li>Submit each platoon separately (P1, P2, HQ)</li>
+    </ul>
+    <div class="warn">⚠ Submit only when all statuses are confirmed. Submitting early will lock the platoon and require admin override to edit.</div>
+  </div>
+
+  <!-- Telegram Messages -->
+  <div class="section" id="telegram">
+    <div class="section-title"><span>📤</span> Telegram Messages</div>
+    <p>Tap the <strong>Telegram</strong> tab (bottom nav) to generate messages. There are three message types:</p>
+
+    <h3>📤 Node Message</h3>
+    <p>Full parade state for the whole node. Sent to the node group chat. Shows total strength, duty count, and all statuses with names.</p>
+    <ul>
+      <li>You can adjust the <strong>Total Node Strength</strong> manually if needed</li>
+      <li>Add <strong>Additional Notes</strong> that appear at the end of the message</li>
+    </ul>
+
+    <h3>👑 Comd Message</h3>
+    <p>Commanders-only view (3SG and above). Shows only commanders' statuses. Sent to the commanders' group chat.</p>
+
+    <h3>🏥 MC List</h3>
+    <p>Lists all personnel currently on MC or Hospitalisation Leave. Format:</p>
+    <div class="msg-preview">Node: JRN
+Date: 130426
+
+MC
+
+1. LCP JAKIN, PLT 2 TO BASE
+MC 130426 - 130426
+
+2. PTE BRAXTON, PLT 1 TO BASE
+HL 110426 - 310526</div>
+
+    <p>Tap <strong>📋 Copy Message for Telegram</strong> to copy, then paste into the Telegram group.</p>
+    <div class="tip">💡 The message is generated live from current attendance records. Make sure statuses are filled in before copying.</div>
+  </div>
+
+  <!-- S/O List -->
+  <div class="section" id="so">
+    <div class="section-title"><span>🌙</span> S/O Consolidated List</div>
+    <p>Tap the <strong>🌙 button</strong> in the top header of the attendance screen to open the Stay Out list.</p>
+    <p>This shows <strong>all personnel currently on S/O or S/O Till</strong>, grouped by platoon, with:</p>
+    <ul>
+      <li>Permanent S/O badge</li>
+      <li>Temporary S/O Till — end date and days remaining</li>
+    </ul>
+    <div class="tip">💡 Use this as a quick reference before Night Strength to know who will be auto-marked S/O.</div>
+  </div>
+
+  <!-- NR Mode -->
+  <div class="section" id="nr">
+    <div class="section-title"><span>📋</span> Nominal Roll (NR) Mode</div>
+    <p>NR mode is for events like CST, IPPT, or any activity where you need a separate attendance record outside the normal parade state.</p>
+
+    <h3>Starting an NR</h3>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Tap NR on the home screen</strong>
+        <p>Select <strong>Nominal Roll</strong> from the TOD options.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Enter the event name</strong>
+        <p>E.g. "IPPT", "CST", "SOC". This appears in the NR telegram message header.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>Mark attendance normally</strong>
+        <p>Mark each person as Present or with a reason. Submit each platoon when done.</p>
+      </div>
+    </div>
+
+    <h3>NR Telegram Message</h3>
+    <p>The NR tab generates a formatted CAA message:</p>
+    <div class="msg-preview">IPPT CAA 13 Apr 26
+
+Total No. Of Strength: 42
+Total No. Of Commanders including TLs : 14
+Total No. Of NSFs excluding TLs : 28
+
+——————
+Reason For Not Attending:
+MC (Medical Certificate): 2
+1. LCP JAKIN
+2. PTE BRAXTON
+
+——————
+
+Commanders Completed: 13/14 (93%)
+NSFs Completed: 27/28 (96%)
+
+JRN Completion rate: 95%</div>
+
+    <div class="tip">💡 SCT and above (including 3SG, 2SG, etc.) are counted as Commanders. REC to CFC are counted as NSFs.</div>
+  </div>
+
+  <!-- History -->
+  <div class="section" id="history">
+    <div class="section-title"><span>🕓</span> History</div>
+    <p>Tap <strong>History</strong> in the bottom nav to view past parade states.</p>
+    <ul>
+      <li>Tap a date to <strong>Preview</strong> the parade state PDF</li>
+      <li>Tap <strong>Edit</strong> to go back to that date's attendance (admin only for past dates)</li>
+      <li>Download a <strong>date range</strong> as a bulk PDF (admin feature)</li>
+    </ul>
+    <div class="tip">💡 History is read-only for normal users. Contact your admin if you need to correct a past record.</div>
+  </div>
+
+  <!-- Tips -->
+  <div class="section">
+    <div class="section-title"><span>💡</span> Quick Tips</div>
+    <ul>
+      <li>Always mark attendance at <strong>HLS/FP first</strong> — duty statuses carry forward automatically</li>
+      <li>For MC/Leave, always enter the <strong>From date</strong> (first day sick) and <strong>Till date</strong> (last day, i.e. the MC date) so carry-forward works correctly</li>
+      <li>Check the <strong>expiry banner</strong> at the start of each parade state — it flags anyone whose MC or leave ends that day</li>
+      <li>Do not submit until you are sure — submitted platoons are locked</li>
+      <li>If a status looks wrong after switching TODs, check if carry-forward applied — you can override by tapping the person and changing their status</li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>
