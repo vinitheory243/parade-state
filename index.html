@@ -734,6 +734,38 @@ function genComdMsg(date,tod,records,personnel){
   return L.join('\n').trim();
 }
 
+// ─── QUICK SUMMARY GENERATION ───────────────────────────────────
+function genSummaryMsg(date,tod,records,personnel,total){
+  const grp={};
+  SL.forEach(s=>{grp[s.k]=[];});
+  personnel.forEach(p=>{const r=records[p.id];if(r&&r.s)(grp[r.s]=grp[r.s]||[]).push(p);});
+  const cnt=k=>(grp[k]||[]).length;
+  const todAmPm=({'HLS':'AM','0745':'AM','1300':'PM','1730':'PM','2030/2230':'NIGHT STR'})[tod]||tod;
+  const rows=[];
+  const dutyCount=[...DUTY_STATUSES].reduce((s,k)=>s+cnt(k),0);
+  rows.push({label:'Duty Personnel',count:dutyCount});
+  rows.push({label:'Present',count:cnt('present')});
+  if(tod==='2030/2230')rows.push({label:'Stay Out',count:cnt('so')+cnt('so_till')});
+  const skip=new Set([...DUTY_STATUSES,'present','so','so_till']);
+  SL.forEach(s=>{
+    if(skip.has(s.k))return;
+    const c=cnt(s.k);
+    if(c>0)rows.push({label:s.l.replace(/\s*\([^)]*\)/g,'').trim(),count:c});
+  });
+  const accounted=rows.reduce((s,r)=>s+r.count,0);
+  const maxLabel=Math.max(...rows.map(r=>r.label.length));
+  const pad=s=>s+' '.repeat(Math.max(0,maxLabel-s.length));
+  const SEP='─'.repeat(maxLabel+6);
+  const L=[];
+  L.push(`JRN PARADE STATE ${fmtTeleDate(date)} (${todAmPm})`);
+  L.push(`Total strength: ${total}`);
+  L.push('');
+  rows.forEach(r=>L.push(`${pad(r.label)} : ${r.count}`));
+  L.push(SEP);
+  L.push(`${pad('Total accounted')} : ${accounted} / ${total}`);
+  return L.join('\n');
+}
+
 // ─── MC LIST GENERATION ─────────────────────────────────────────
 function genMCMsg(date,records,personnel){
   const fmtD=d=>{if(!d)return'';const[y,m,day]=d.split('-');return`${day}${m}${y.slice(2)}`;};
@@ -2830,25 +2862,8 @@ function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal
   const[copied,setCopied]=useState(false);
   const comdMsg=useMemo(()=>genComdMsg(date,tod,records,personnel),[date,tod,records,personnel]);
   const mcMsg=useMemo(()=>genMCMsg(date,records,personnel),[date,records,personnel]);
-  const activeMsg=tab==='node'?msg:tab==='comd'?comdMsg:mcMsg;
-  const summaryRows=useMemo(()=>{
-    const grp={};
-    SL.forEach(s=>{grp[s.k]=[];});
-    personnel.forEach(p=>{const r=records[p.id];if(r&&r.s)(grp[r.s]=grp[r.s]||[]).push(p);});
-    const cnt=k=>(grp[k]||[]).length;
-    const rows=[];
-    const dutyCount=[...DUTY_STATUSES].reduce((s,k)=>s+cnt(k),0);
-    rows.push({label:'Duty Personnel',count:dutyCount});
-    rows.push({label:'Present',count:cnt('present')});
-    if(tod==='2030/2230')rows.push({label:'Stay Out',count:cnt('so')+cnt('so_till')});
-    const skip=new Set([...DUTY_STATUSES,'present','so','so_till']);
-    SL.forEach(s=>{
-      if(skip.has(s.k))return;
-      const c=cnt(s.k);
-      if(c>0)rows.push({label:s.l.replace(/\s*\([^)]*\)/g,'').trim(),count:c});
-    });
-    return rows;
-  },[records,personnel,tod]);
+  const summaryMsg=useMemo(()=>genSummaryMsg(date,tod,records,personnel,total),[date,tod,records,personnel,total]);
+  const activeMsg=tab==='node'?msg:tab==='comd'?comdMsg:tab==='mc'?mcMsg:summaryMsg;
   function copy(){
     const go=text=>{
       if(navigator.clipboard&&navigator.clipboard.writeText){
@@ -2873,6 +2888,9 @@ function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal
         </button>
         <button onClick={()=>{setTab('mc');setCopied(false);}} style={{flex:1,padding:'10px',borderRadius:'10px',border:'2px solid',borderColor:tab==='mc'?'#dc2626':'#e2e8f0',background:tab==='mc'?'#dc2626':'#fff',color:tab==='mc'?'#fff':'#475569',fontWeight:800,fontSize:'13px',cursor:'pointer'}}>
           🏥 MC List
+        </button>
+        <button onClick={()=>{setTab('summary');setCopied(false);}} style={{flex:1,padding:'10px',borderRadius:'10px',border:'2px solid',borderColor:tab==='summary'?'#0369a1':'#e2e8f0',background:tab==='summary'?'#0369a1':'#fff',color:tab==='summary'?'#fff':'#475569',fontWeight:800,fontSize:'13px',cursor:'pointer'}}>
+          📊 Summary
         </button>
       </div>
 
@@ -2907,30 +2925,10 @@ function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal
         </div>
       )}
 
-      <div className="card" style={{padding:'14px',marginTop:'12px'}}>
-        <div className="label" style={{marginBottom:'10px'}}>📊 Quick Summary</div>
-        <table style={{width:'100%',borderCollapse:'collapse',fontSize:'13px'}}>
-          <tbody>
-            {summaryRows.map((r,i)=>(
-              <tr key={i} style={{borderBottom:'1px solid #f1f5f9'}}>
-                <td style={{padding:'5px 4px',color:'#475569'}}>{r.label}</td>
-                <td style={{padding:'5px 4px',fontWeight:800,color:'#0f172a',textAlign:'right',width:'40px'}}>{r.count}</td>
-              </tr>
-            ))}
-            <tr style={{borderTop:'2px solid #e2e8f0'}}>
-              <td style={{padding:'7px 4px',fontWeight:800,color:'#0d9488'}}>Total accounted</td>
-              <td style={{padding:'7px 4px',fontWeight:800,textAlign:'right',color:summaryRows.reduce((s,r)=>s+r.count,0)===total?'#16a34a':'#dc2626'}}>
-                {summaryRows.reduce((s,r)=>s+r.count,0)} / {total}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
       <div className="card" style={{padding:'14px'}}>
-        <div className="label" style={{marginBottom:'8px'}}>{tab==='node'?'Node Message':tab==='comd'?'Comd Message':'MC List'} Preview</div>
+        <div className="label" style={{marginBottom:'8px'}}>{tab==='node'?'Node Message':tab==='comd'?'Comd Message':tab==='mc'?'MC List':'Quick Summary'} Preview</div>
         <div className="msg-box">{activeMsg}</div>
-        <button className="copy-btn" onClick={copy} style={{background:copied?'#16a34a':tab==='comd'?'#7c3aed':tab==='mc'?'#dc2626':undefined}}>
+        <button className="copy-btn" onClick={copy} style={{background:copied?'#16a34a':tab==='comd'?'#7c3aed':tab==='mc'?'#dc2626':tab==='summary'?'#0369a1':undefined}}>
           {copied?'✓ Copied!':'📋 Copy Message for Telegram'}
         </button>
       </div>
