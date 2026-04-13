@@ -722,6 +722,42 @@ function genComdMsg(date,tod,records,personnel){
   return L.join('\n').trim();
 }
 
+// ─── MC LIST GENERATION ─────────────────────────────────────────
+function genMCMsg(date,records,personnel){
+  const fmtD=d=>{if(!d)return'';const[y,m,day]=d.split('-');return`${day}${m}${y.slice(2)}`;};
+  const MC_STATUSES=new Set(['mc','hl','hospitalised']);
+  const active=personnel.filter(p=>p.active);
+  const list=[];
+  active.forEach(p=>{
+    const r=records[p.id];
+    if(!r||!MC_STATUSES.has(r.s))return;
+    list.push({p,r});
+  });
+  const pOrder={P1:0,P2:1,HQ:2};
+  list.sort((a,b)=>(pOrder[a.p.plt]??3)-(pOrder[b.p.plt]??3)||a.p.name.localeCompare(b.p.name));
+  const statusLabel=s=>s==='mc'?'MC':'HL';
+  const L=[];
+  L.push('Node: JRN');
+  L.push(`Date: ${fmtD(date)}`);
+  L.push('');
+  L.push('MC');
+  L.push('');
+  if(!list.length){L.push('NIL');}
+  else{
+    list.forEach(({p,r},i)=>{
+      const plt=p.plt==='HQ'?'HQ':`PLT ${p.plt==='P1'?'1':'2'}`;
+      const sec=p.sec?` TO ${p.sec.toUpperCase()}`:'';
+      const from=fmtD(r.from||date);
+      const till=fmtD(r.det||'');
+      const dur=till?`${from} - ${till}`:from;
+      L.push(`${i+1}. ${p.rank} ${p.name.toUpperCase()}, ${plt}${sec}`);
+      L.push(`${statusLabel(r.s)} ${dur}`);
+      L.push('');
+    });
+  }
+  return L.join('\n').trim();
+}
+
 // ─── NR MESSAGE GENERATION ──────────────────────────────────────
 const NR_NSF_RANKS=new Set(['REC','PTE','LCP','CPL','CFC']);
 function genNRMsg(date,eventName,records,active){
@@ -2719,7 +2755,8 @@ function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal
   const[tab,setTab]=useState('node');
   const[copied,setCopied]=useState(false);
   const comdMsg=useMemo(()=>genComdMsg(date,tod,records,personnel),[date,tod,records,personnel]);
-  const activeMsg=tab==='node'?msg:comdMsg;
+  const mcMsg=useMemo(()=>genMCMsg(date,records,personnel),[date,records,personnel]);
+  const activeMsg=tab==='node'?msg:tab==='comd'?comdMsg:mcMsg;
   function copy(){
     const go=text=>{
       if(navigator.clipboard&&navigator.clipboard.writeText){
@@ -2741,6 +2778,9 @@ function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal
         </button>
         <button onClick={()=>{setTab('comd');setCopied(false);}} style={{flex:1,padding:'10px',borderRadius:'10px',border:'2px solid',borderColor:tab==='comd'?'#7c3aed':'#e2e8f0',background:tab==='comd'?'#7c3aed':'#fff',color:tab==='comd'?'#fff':'#475569',fontWeight:800,fontSize:'13px',cursor:'pointer'}}>
           👑 Comd Msg
+        </button>
+        <button onClick={()=>{setTab('mc');setCopied(false);}} style={{flex:1,padding:'10px',borderRadius:'10px',border:'2px solid',borderColor:tab==='mc'?'#dc2626':'#e2e8f0',background:tab==='mc'?'#dc2626':'#fff',color:tab==='mc'?'#fff':'#475569',fontWeight:800,fontSize:'13px',cursor:'pointer'}}>
+          🏥 MC List
         </button>
       </div>
 
@@ -2776,9 +2816,9 @@ function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal
       )}
 
       <div className="card" style={{padding:'14px'}}>
-        <div className="label" style={{marginBottom:'8px'}}>{tab==='node'?'Node Message':'Comd Message'} Preview</div>
+        <div className="label" style={{marginBottom:'8px'}}>{tab==='node'?'Node Message':tab==='comd'?'Comd Message':'MC List'} Preview</div>
         <div className="msg-box">{activeMsg}</div>
-        <button className="copy-btn" onClick={copy} style={{background:copied?'#16a34a':tab==='comd'?'#7c3aed':undefined}}>
+        <button className="copy-btn" onClick={copy} style={{background:copied?'#16a34a':tab==='comd'?'#7c3aed':tab==='mc'?'#dc2626':undefined}}>
           {copied?'✓ Copied!':'📋 Copy Message for Telegram'}
         </button>
       </div>
