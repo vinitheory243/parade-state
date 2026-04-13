@@ -530,6 +530,7 @@ function genMsg(date,tod,total,records,personnel,extra){
     }).join('\n');
   };
   const line=(label,k,pre)=>`${label}: ${cnt(k)}${lst(k,pre)}`;
+  const lineMulti=(label,keys,pre)=>{const items=keys.flatMap(k=>grp[k]||[]);const n=items.length;if(!n)return`${label}: 0`;const names='\n'+items.map((x,i)=>{let l=`${i+1}. ${x.p.rank} ${x.p.dn||x.p.name.split(' ')[0]}`;if(x.det){const isDate=/^\d{4}-\d{2}-\d{2}$/.test(x.det);const d=isDate?fmtTeleDate(x.det):x.det;if(isDate)l+=` ${pre||'TILL '}${d}`;else if(pre)l+=` ${pre}${d}`;else l+=` (${d})`;}return l;}).join('\n');return`${label}: ${n}${names}`;};
   // Auto-count all duty-type statuses (no names)
   const dutyCount=[...DUTY_STATUSES].reduce((s,k)=>s+cnt(k),0);
   const L=[];
@@ -547,11 +548,7 @@ function genMsg(date,tod,total,records,personnel,extra){
   L.push('');
   L.push(line('ARF','arf'));
   L.push('');
-  L.push(line('Duty/Detail Rest','ddr'));
-  L.push('');
-  L.push(line('DTO/R','dto_r'));
-  L.push('');
-  L.push(line('ADTL/R','adtl_r'));
+  L.push(lineMulti('Duty/Detail Rest',['ddr','dto_r','adtl_r']));
   L.push('');
   L.push(line('MA','ma'));
   L.push('');
