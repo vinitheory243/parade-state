@@ -2165,7 +2165,11 @@ function PersonnelSearchModal({personnel,records,tod,onClose}){
   const PLT_COLOR={P1:'#0d9488',P2:'#16a34a',HQ:'#d97706'};
   const results=q.trim().length>0?personnel.filter(p=>{
     const s=q.toLowerCase();
-    return p.name.toLowerCase().includes(s)||p.rank.toLowerCase().includes(s)||(p.dn&&p.dn.toLowerCase().includes(s));
+    const rec=records[p.id];
+    const statusKey=(rec&&rec.s)||'';
+    const statusLbl=SM[statusKey]?SM[statusKey].l.toLowerCase():'';
+    const det=(rec&&rec.det||'').toLowerCase();
+    return p.name.toLowerCase().includes(s)||p.rank.toLowerCase().includes(s)||(p.dn&&p.dn.toLowerCase().includes(s))||statusKey.toLowerCase().includes(s)||statusLbl.includes(s)||det.includes(s);
   }):[];
   function statusLabel(pid){
     const rec=records[pid];
@@ -2393,7 +2397,13 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setP
   });
   const filtered=active.filter(p=>{
     const q=search.toLowerCase();
-    if(q)return p.name.toLowerCase().includes(q)||p.rank.toLowerCase().includes(q)||(p.dn&&p.dn.toLowerCase().includes(q));
+    if(q){
+      const rec=records[p.id];
+      const statusKey=(rec&&rec.s)||'';
+      const statusLbl=SM[statusKey]?SM[statusKey].l.toLowerCase():'';
+      const det=(rec&&rec.det||'').toLowerCase();
+      return p.name.toLowerCase().includes(q)||p.rank.toLowerCase().includes(q)||(p.dn&&p.dn.toLowerCase().includes(q))||statusKey.toLowerCase().includes(q)||statusLbl.includes(q)||det.includes(q);
+    }
     return p.plt===plt;
   });
   // Group: plt → sec → people
