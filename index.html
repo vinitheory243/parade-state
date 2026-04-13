@@ -2831,6 +2831,24 @@ function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal
   const comdMsg=useMemo(()=>genComdMsg(date,tod,records,personnel),[date,tod,records,personnel]);
   const mcMsg=useMemo(()=>genMCMsg(date,records,personnel),[date,records,personnel]);
   const activeMsg=tab==='node'?msg:tab==='comd'?comdMsg:mcMsg;
+  const summaryRows=useMemo(()=>{
+    const grp={};
+    SL.forEach(s=>{grp[s.k]=[];});
+    personnel.forEach(p=>{const r=records[p.id];if(r&&r.s)(grp[r.s]=grp[r.s]||[]).push(p);});
+    const cnt=k=>(grp[k]||[]).length;
+    const rows=[];
+    const dutyCount=[...DUTY_STATUSES].reduce((s,k)=>s+cnt(k),0);
+    rows.push({label:'Duty Personnel',count:dutyCount});
+    rows.push({label:'Present',count:cnt('present')});
+    if(tod==='2030/2230')rows.push({label:'Stay Out',count:cnt('so')+cnt('so_till')});
+    const skip=new Set([...DUTY_STATUSES,'present','so','so_till']);
+    SL.forEach(s=>{
+      if(skip.has(s.k))return;
+      const c=cnt(s.k);
+      if(c>0)rows.push({label:s.l.replace(/\s*\([^)]*\)/g,'').trim(),count:c});
+    });
+    return rows;
+  },[records,personnel,tod]);
   function copy(){
     const go=text=>{
       if(navigator.clipboard&&navigator.clipboard.writeText){
@@ -2888,6 +2906,26 @@ function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal
           <div style={{fontSize:'12px',color:'#7c3aed',fontWeight:700,marginBottom:'8px'}}>👑 Commander message — 3SG and above only</div>
         </div>
       )}
+
+      <div className="card" style={{padding:'14px',marginTop:'12px'}}>
+        <div className="label" style={{marginBottom:'10px'}}>📊 Quick Summary</div>
+        <table style={{width:'100%',borderCollapse:'collapse',fontSize:'13px'}}>
+          <tbody>
+            {summaryRows.map((r,i)=>(
+              <tr key={i} style={{borderBottom:'1px solid #f1f5f9'}}>
+                <td style={{padding:'5px 4px',color:'#475569'}}>{r.label}</td>
+                <td style={{padding:'5px 4px',fontWeight:800,color:'#0f172a',textAlign:'right',width:'40px'}}>{r.count}</td>
+              </tr>
+            ))}
+            <tr style={{borderTop:'2px solid #e2e8f0'}}>
+              <td style={{padding:'7px 4px',fontWeight:800,color:'#0d9488'}}>Total accounted</td>
+              <td style={{padding:'7px 4px',fontWeight:800,textAlign:'right',color:summaryRows.reduce((s,r)=>s+r.count,0)===total?'#16a34a':'#dc2626'}}>
+                {summaryRows.reduce((s,r)=>s+r.count,0)} / {total}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <div className="card" style={{padding:'14px'}}>
         <div className="label" style={{marginBottom:'8px'}}>{tab==='node'?'Node Message':tab==='comd'?'Comd Message':'MC List'} Preview</div>
