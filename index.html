@@ -40,9 +40,9 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .ftab{padding:6px 14px;border-radius:20px;border:1.5px solid #cbd5e1;font-size:12px;white-space:nowrap;cursor:pointer;background:#fff;color:#475569;font-weight:700;transition:all .15s}
 .ftab.on{background:#0d9488;color:#fff;border-color:#0d9488;box-shadow:0 2px 6px rgba(13,148,136,.3)}
 .unset-tag{font-size:11px;color:#f59e0b;font-weight:700}
-.sc-present{background:#f0fdf4}.sc-duty{background:#ecfdf5}
+.sc-present{background:#f0fdf4}.sc-duty,.sc-dtl,.sc-amb_t1,.sc-amb_t2{background:#ecfdf5}
 .sc-late{background:#fffbeb}.sc-mc,.sc-hl,.sc-hospitalised{background:#fff1f2}
-.sc-off,.sc-ol,.sc-ll,.sc-ul,.sc-fcl,.sc-ddr{background:#eef2ff}
+.sc-off,.sc-ol,.sc-ll,.sc-ul,.sc-fcl,.sc-ddr,.sc-dto_r,.sc-adtl_r{background:#eef2ff}
 .sc-so,.sc-so_till{background:#fef9c3}
 .sc-arf,.sc-rsi,.sc-rso{background:#fff7ed}
 .sc-detail,.sc-ma,.sc-safer_upcat,.sc-cse,.sc-6ton_fam{background:#f0f9ff}
@@ -276,6 +276,9 @@ const SL = [
   {k:'adtl',         l:'ADTL',                     d:false},
   {k:'dto_r',        l:'DTO/R',                    d:false},
   {k:'adtl_r',       l:'ADTL/R',                   d:false},
+  {k:'dtl',          l:'DTL',                      d:false},
+  {k:'amb_t1',       l:'AMB T1',                   d:false},
+  {k:'amb_t2',       l:'AMB T2',                   d:false},
   {k:'doo',          l:'DOO',                      d:false},
   {k:'so',           l:'Stay Out (S/O)',             d:false},
   {k:'so_till',      l:'Stay Out Till (S/O Till)',   d:true, datePick:true, dateRange:true, names:true, pre:'TILL '},
@@ -322,7 +325,7 @@ const SL = [
 ];
 const SM = Object.fromEntries(SL.map(s=>[s.k,s]));
 // Statuses counted as "Duty Personnel" in the telegram message (no names shown)
-const DUTY_STATUSES = new Set(['duty','dto','adtl','dto_r','adtl_r','doo']);
+const DUTY_STATUSES = new Set(['duty','dto','adtl','doo','dtl','amb_t1','amb_t2']);
 
 // ─── ALL PERSONNEL (P1 + P2 + HQ) ──────────────────────────────
 const IP = [
@@ -546,6 +549,10 @@ function genMsg(date,tod,total,records,personnel,extra){
   L.push('');
   L.push(line('Duty/Detail Rest','ddr'));
   L.push('');
+  L.push(line('DTO/R','dto_r'));
+  L.push('');
+  L.push(line('ADTL/R','adtl_r'));
+  L.push('');
   L.push(line('MA','ma'));
   L.push('');
   L.push(line('Medical Certificate','mc','TILL '));
@@ -683,7 +690,7 @@ function genComdMsg(date,tod,records,personnel){
     block('ARF',['arf'],false),
     block('RSO',['rso'],false),
     block('RSI',['rsi'],false),
-    block('DDR',['ddr'],false),
+    block('DDR',['ddr','dto_r','adtl_r'],false),
     block('CSE',['cse'],false),
     block('DCP',['dcp'],false),
     block('Court',['court'],false),
