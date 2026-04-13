@@ -2878,18 +2878,18 @@ function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal
   }
   return(
     <div>
-      {/* Tab switcher */}
-      <div style={{display:'flex',gap:'8px',padding:'14px 14px 0'}}>
-        <button onClick={()=>{setTab('node');setCopied(false);}} style={{flex:1,padding:'10px',borderRadius:'10px',border:'2px solid',borderColor:tab==='node'?'#0d9488':'#e2e8f0',background:tab==='node'?'#0d9488':'#fff',color:tab==='node'?'#fff':'#475569',fontWeight:800,fontSize:'13px',cursor:'pointer'}}>
+      {/* Tab switcher 2x2 */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px',padding:'14px 14px 0'}}>
+        <button onClick={()=>{setTab('node');setCopied(false);}} style={{padding:'11px 8px',borderRadius:'10px',border:'2px solid',borderColor:tab==='node'?'#0d9488':'#e2e8f0',background:tab==='node'?'#0d9488':'#fff',color:tab==='node'?'#fff':'#475569',fontWeight:800,fontSize:'13px',cursor:'pointer'}}>
           📤 Node Msg
         </button>
-        <button onClick={()=>{setTab('comd');setCopied(false);}} style={{flex:1,padding:'10px',borderRadius:'10px',border:'2px solid',borderColor:tab==='comd'?'#7c3aed':'#e2e8f0',background:tab==='comd'?'#7c3aed':'#fff',color:tab==='comd'?'#fff':'#475569',fontWeight:800,fontSize:'13px',cursor:'pointer'}}>
+        <button onClick={()=>{setTab('comd');setCopied(false);}} style={{padding:'11px 8px',borderRadius:'10px',border:'2px solid',borderColor:tab==='comd'?'#7c3aed':'#e2e8f0',background:tab==='comd'?'#7c3aed':'#fff',color:tab==='comd'?'#fff':'#475569',fontWeight:800,fontSize:'13px',cursor:'pointer'}}>
           👑 Comd Msg
         </button>
-        <button onClick={()=>{setTab('mc');setCopied(false);}} style={{flex:1,padding:'10px',borderRadius:'10px',border:'2px solid',borderColor:tab==='mc'?'#dc2626':'#e2e8f0',background:tab==='mc'?'#dc2626':'#fff',color:tab==='mc'?'#fff':'#475569',fontWeight:800,fontSize:'13px',cursor:'pointer'}}>
+        <button onClick={()=>{setTab('mc');setCopied(false);}} style={{padding:'11px 8px',borderRadius:'10px',border:'2px solid',borderColor:tab==='mc'?'#dc2626':'#e2e8f0',background:tab==='mc'?'#dc2626':'#fff',color:tab==='mc'?'#fff':'#475569',fontWeight:800,fontSize:'13px',cursor:'pointer'}}>
           🏥 MC List
         </button>
-        <button onClick={()=>{setTab('summary');setCopied(false);}} style={{flex:1,padding:'10px',borderRadius:'10px',border:'2px solid',borderColor:tab==='summary'?'#0369a1':'#e2e8f0',background:tab==='summary'?'#0369a1':'#fff',color:tab==='summary'?'#fff':'#475569',fontWeight:800,fontSize:'13px',cursor:'pointer'}}>
+        <button onClick={()=>{setTab('summary');setCopied(false);}} style={{padding:'11px 8px',borderRadius:'10px',border:'2px solid',borderColor:tab==='summary'?'#0369a1':'#e2e8f0',background:tab==='summary'?'#0369a1':'#fff',color:tab==='summary'?'#fff':'#475569',fontWeight:800,fontSize:'13px',cursor:'pointer'}}>
           📊 Summary
         </button>
       </div>
