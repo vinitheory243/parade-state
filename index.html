@@ -170,6 +170,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .siso-sotill{background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:800;white-space:nowrap}
 .siso-expired{background:#ef4444;color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:800;white-space:nowrap;animation:siso-pulse 1.2s infinite}
 .siso-row-alert{border-left:3px solid #ef4444;background:#fff5f5!important}
+.temp-unlock{border-left:3px solid #f59e0b!important;background:#fffbeb!important}
 .alert-banner{background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;padding:10px 14px;margin-bottom:10px}
 .alert-banner-title{font-size:13px;font-weight:800;margin-bottom:4px;color:#dc2626}
 .alert-banner-item{font-size:12px;color:#991b1b;padding:1px 0}
@@ -1737,6 +1738,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   const[otherReasons,setOtherReasons]=useState([]);
   const[showSearch,setShowSearch]=useState(false);
   const[showSO,setShowSO]=useState(false);
+  const[jumpTo,setJumpTo]=useState(null); // {id,plt} — navigate search result to person row
   const[nrPreview,setNrPreview]=useState(false);
   const[nrHistory,setNrHistory]=useState([]);
   // Compute current Firebase path
@@ -2127,7 +2129,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         )}
       </div>
       <div className="main">
-        {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setPersonDailyDuty={setPersonDailyDuty} setAllPresent={setAllPresent} clearAll={clearAll} submitted={submitted} setSubmitted={setSubmitted} markedBy={markedBy} setMarkedBy={setMarkedBy} toast_={toast_} overrideUnlocked={isAdmin||overrideUnlocked} onPlatoonSubmit={saveToHistory} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={isAdmin?deleteOtherReason:undefined}/>}
+        {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setPersonDailyDuty={setPersonDailyDuty} setAllPresent={setAllPresent} clearAll={clearAll} submitted={submitted} setSubmitted={setSubmitted} markedBy={markedBy} setMarkedBy={setMarkedBy} toast_={toast_} overrideUnlocked={isAdmin||overrideUnlocked} onPlatoonSubmit={saveToHistory} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={isAdmin?deleteOtherReason:undefined} jumpTo={jumpTo} onJumpDone={()=>setJumpTo(null)}/>}
         {isNR&&screen==='telegram'&&<NRGenerateScreen date={date} eventName={eventName} records={records} personnel={personnelOnDate(personnel,date)} toast_={toast_}/>}
         {!isNR&&screen==='telegram'&&<GenerateScreen msg={msg} total={total} setTotal={setTotal} totalManual={totalManual} setTotalManual={setTotalManual} autoTotal={personnelOnDate(personnel,date).length} extra={extra} setExtra={setExtra} toast_={toast_} date={date} tod={tod} records={records} personnel={personnelOnDate(personnel,date)} isAdmin={isAdmin}/>}
         {screen==='manage'&&<ManageScreen personnel={personnel} setPersonnel={setPersonnelAndSync} toast_={toast_} customSections={customSections} addCustomSection={addCustomSection}/>}
@@ -2150,7 +2152,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       </nav>
       {toast&&<div key={toastKey} className="toast">{toast}</div>}
       {pdfPreview&&<PDFPreviewModal date={pdfPreview.date} personnel={pdfPreview.personnelForDate||personnel} allTodRecs={pdfPreview.allTodRecs} total={pdfPreview.total} allTodMarkedBy={pdfPreview.allTodMarkedBy||{}} onClose={()=>setPdfPreview(null)} onDownloaded={onPdfDownloaded} isAdmin={isAdmin}/>}
-      {showSearch&&<PersonnelSearchModal personnel={personnelOnDate(personnel,date)} records={records} tod={tod} onClose={()=>setShowSearch(false)}/>}
+      {showSearch&&<PersonnelSearchModal personnel={personnelOnDate(personnel,date)} records={records} tod={tod} onClose={()=>setShowSearch(false)} onGoTo={({id,plt})=>{setShowSearch(false);setScreen('attendance');setJumpTo({id,plt});}}/>}
       {showSO&&<SOListModal personnel={personnel} onClose={()=>setShowSO(false)}/>}
       {nrPreview&&<NominalRollPreviewModal date={date} eventName={eventName} personnel={personnelOnDate(personnel,date)} records={records} total={personnelOnDate(personnel,date).length} onClose={()=>setNrPreview(false)}/>}
     </div>
@@ -2158,7 +2160,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
 }
 
 // ─── PERSONNEL SEARCH MODAL ─────────────────────────────────────
-function PersonnelSearchModal({personnel,records,tod,onClose}){
+function PersonnelSearchModal({personnel,records,tod,onClose,onGoTo}){
   const[q,setQ]=useState('');
   const inputRef=useRef(null);
   useEffect(()=>{setTimeout(()=>inputRef.current&&inputRef.current.focus(),80);},[]);
@@ -2206,21 +2208,24 @@ function PersonnelSearchModal({personnel,records,tod,onClose}){
             const sl=statusLabel(p.id);
             const pltColor=PLT_COLOR[p.plt]||'#64748b';
             return(
-              <div key={p.id} style={{border:'1.5px solid #e2e8f0',borderRadius:'12px',padding:'11px 13px',marginBottom:'8px',background:hasStatus?`var(--sc-bg,#f8fafc)`:'#fffbeb'}}>
-                <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'5px'}}>
-                  <span style={{background:pltColor,color:'#fff',fontSize:'10px',fontWeight:800,padding:'2px 8px',borderRadius:'10px',flexShrink:0}}>{p.plt==='HQ'?'HQ':p.plt}</span>
-                  <span style={{fontSize:'11px',color:'#64748b',fontWeight:600,flexShrink:0}}>{p.sec}</span>
+              <div key={p.id} onClick={()=>onGoTo&&onGoTo({id:p.id,plt:p.plt})} style={{border:'1.5px solid #e2e8f0',borderRadius:'12px',padding:'11px 13px',marginBottom:'8px',background:hasStatus?'#f8fafc':'#fffbeb',cursor:'pointer',display:'flex',alignItems:'center',gap:'10px'}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'5px'}}>
+                    <span style={{background:pltColor,color:'#fff',fontSize:'10px',fontWeight:800,padding:'2px 8px',borderRadius:'10px',flexShrink:0}}>{p.plt==='HQ'?'HQ':p.plt}</span>
+                    <span style={{fontSize:'11px',color:'#64748b',fontWeight:600,flexShrink:0}}>{p.sec}</span>
+                  </div>
+                  <div style={{fontWeight:800,fontSize:'15px',color:'#0f172a'}}>{p.rank} {p.name}</div>
+                  <div style={{marginTop:'5px'}}>
+                    {hasStatus?(
+                      <span style={{display:'inline-block',fontSize:'13px',fontWeight:700,color:'#0f172a',background:'#f1f5f9',padding:'3px 10px',borderRadius:'8px',border:'1px solid #e2e8f0'}}>
+                        {sl}
+                      </span>
+                    ):(
+                      <span style={{fontSize:'12px',color:'#f59e0b',fontWeight:700}}>⚠ Not assigned yet ({TOD_LABEL[tod]})</span>
+                    )}
+                  </div>
                 </div>
-                <div style={{fontWeight:800,fontSize:'15px',color:'#0f172a'}}>{p.rank} {p.name}</div>
-                <div style={{marginTop:'5px'}}>
-                  {hasStatus?(
-                    <span style={{display:'inline-block',fontSize:'13px',fontWeight:700,color:'#0f172a',background:si?undefined:'#f1f5f9',padding:'3px 10px',borderRadius:'8px',border:'1px solid #e2e8f0'}}>
-                      {sl}
-                    </span>
-                  ):(
-                    <span style={{fontSize:'12px',color:'#f59e0b',fontWeight:700}}>⚠ Not assigned yet ({TOD_LABEL[tod]})</span>
-                  )}
-                </div>
+                <span style={{fontSize:'18px',color:'#94a3b8',flexShrink:0}}>›</span>
               </div>
             );
           })}
@@ -2377,10 +2382,22 @@ function NRHistoryScreen({nrHistory,personnel,overrideUnlocked,setOverrideUnlock
 }
 
 // ─── ATTENDANCE SCREEN ──────────────────────────────────────────
-function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setPersonDailyDuty,setAllPresent,clearAll,submitted,setSubmitted,markedBy,setMarkedBy,toast_,overrideUnlocked,onPlatoonSubmit,otherReasons,addOtherReason,deleteOtherReason}){
+function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setPersonDailyDuty,setAllPresent,clearAll,submitted,setSubmitted,markedBy,setMarkedBy,toast_,overrideUnlocked,onPlatoonSubmit,otherReasons,addOtherReason,deleteOtherReason,jumpTo,onJumpDone}){
   const[search,setSearch]=useState('');
   const[plt,setPlt]=useState('P1');
   const[confirmClear,setConfirmClear]=useState(null); // null or plt key
+  const[tempUnlocked,setTempUnlocked]=useState(null); // person id temporarily unlocked via search
+  useEffect(()=>{
+    if(!jumpTo)return;
+    setPlt(jumpTo.plt);
+    setSearch('');
+    setTempUnlocked(jumpTo.id);
+    setTimeout(()=>{
+      const el=document.getElementById(`pr-${jumpTo.id}`);
+      if(el)el.scrollIntoView({behavior:'smooth',block:'center'});
+    },120);
+    if(onJumpDone)onJumpDone();
+  },[jumpTo]);
   const active=personnelOnDate(personnel,date);
   const expiredSiso=active.filter(p=>sisoExpired(p));
   // Leave expiry alerts: statuses with a till-date expiring today or tomorrow
@@ -2477,7 +2494,7 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setP
                 <div className="sec-prog"><div className={`sec-prog-fill${done?' complete':''}`} style={{width:`${pct}%`}}/></div>
                 <div className="card-body">
                   {secPpl.map(person=>(
-                    <PersonRow key={person.id} person={person} record={records[person.id]||{}} setRec={setRec} setPersonLeave={setPersonLeave} setPersonDailyDuty={setPersonDailyDuty} tod={tod} locked={isLocked} currentDate={date} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={deleteOtherReason}/>
+                    <PersonRow key={person.id} person={person} record={records[person.id]||{}} setRec={setRec} setPersonLeave={setPersonLeave} setPersonDailyDuty={setPersonDailyDuty} tod={tod} locked={isLocked&&tempUnlocked!==person.id} currentDate={date} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={deleteOtherReason} tempUnlocked={tempUnlocked===person.id} onLockBack={()=>setTempUnlocked(null)}/>
                   ))}
                 </div>
               </div>
@@ -2566,7 +2583,7 @@ function PlatoonFooter({plt,allPersonnel,records,pltColors,submitted,setSubmitte
 }
 
 // ─── PERSON ROW ─────────────────────────────────────────────────
-function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,locked,currentDate,otherReasons,addOtherReason,deleteOtherReason}){
+function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,locked,currentDate,otherReasons,addOtherReason,deleteOtherReason,tempUnlocked,onLockBack}){
   const[showMore,setShowMore]=useState(false);
   const si=record.s?SM[record.s]:null;
   const colorClass=record.s?`sc-${record.s}`:'';
@@ -2619,7 +2636,7 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
   }
 
   return(
-    <div className={`prow ${colorClass}${expired?' siso-row-alert':''}${record.s?' has-status':''}`}>
+    <div id={`pr-${person.id}`} className={`prow ${colorClass}${expired?' siso-row-alert':''}${record.s?' has-status':''}${tempUnlocked?' temp-unlock':''}`}>
       <div className="prow-top">
         <div className="prow-name">{person.rank} {person.name}</div>
         <div style={{display:'flex',alignItems:'center',gap:'6px',flexShrink:0}}>
@@ -2648,6 +2665,12 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
         <div className="prow-unassigned">⚠ Not assigned yet</div>
       )}
 
+      {tempUnlocked&&(
+        <div style={{display:'flex',alignItems:'center',gap:'8px',background:'#fef9c3',border:'1px solid #fde68a',borderRadius:'8px',padding:'6px 10px',marginBottom:'6px'}}>
+          <span style={{fontSize:'12px',fontWeight:700,color:'#92400e',flex:1}}>🔓 Quick edit unlocked</span>
+          <button onClick={onLockBack} style={{background:'#16a34a',color:'#fff',border:'none',borderRadius:'8px',padding:'5px 12px',fontSize:'13px',fontWeight:800,cursor:'pointer'}}>✓ Done</button>
+        </div>
+      )}
       {!locked&&(
         <>
           <div className="prow-quick">
