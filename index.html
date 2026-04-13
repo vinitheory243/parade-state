@@ -277,8 +277,8 @@ const SL = [
   {k:'dto_r',        l:'DTO/R',                    d:false},
   {k:'adtl_r',       l:'ADTL/R',                   d:false},
   {k:'dtl',          l:'DTL',                      d:false},
-  {k:'amb_t1',       l:'AMB T1',                   d:false},
-  {k:'amb_t2',       l:'AMB T2',                   d:false},
+  {k:'amb_t1',       l:'AMB T1',                   d:true, datePick:true, dateRange:true},
+  {k:'amb_t2',       l:'AMB T2',                   d:true, datePick:true, dateRange:true},
   {k:'doo',          l:'DOO',                      d:false},
   {k:'so',           l:'Stay Out (S/O)',             d:false},
   {k:'so_till',      l:'Stay Out Till (S/O Till)',   d:true, datePick:true, dateRange:true, names:true, pre:'TILL '},
@@ -2333,7 +2333,7 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setA
   const active=personnelOnDate(personnel,date);
   const expiredSiso=active.filter(p=>sisoExpired(p));
   // Leave expiry alerts: statuses with a till-date expiring today or tomorrow
-  const EXPIRY_STATUSES=new Set(['mc','hl','ol','ll','ul','fcl','off','arf','ao_local','ao_overseas','hospitalised','cl','ccl','court','ca','civil','db_prison','do_gcm','awol','sol','suspended','rib','driving','cse','dcp','safer_upcat','so_till']);
+  const EXPIRY_STATUSES=new Set(['mc','hl','ol','ll','ul','fcl','off','arf','ao_local','ao_overseas','hospitalised','cl','ccl','court','ca','civil','db_prison','do_gcm','awol','sol','suspended','rib','driving','cse','dcp','safer_upcat','so_till','amb_t1','amb_t2']);
   const tomorrow=(()=>{const d=new Date(date+'T00:00:00');d.setDate(d.getDate()+1);return d.toISOString().slice(0,10);})();
   const expiringToday=[], expiringTomorrow=[];
   active.forEach(p=>{
