@@ -1821,10 +1821,14 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
           // Seed NR from most recent parade state (Night Str → LP → MP → FP → HLS)
           const seedNR=async()=>{
             let seeded={};
+            const activePpl=personnelOnDate(personnelRef.current,date);
+            const needed=activePpl.length;
             for(const t of [...TODS].reverse()){
               const snap2=await DB.ref(fbAttPath(date,t)).once('value');
               const td=snap2.val();
-              if(td&&td.records&&Object.keys(td.records).length>0){seeded={...td.records};break;}
+              if(!td||!td.records)continue;
+              const assigned=activePpl.filter(p=>td.records[p.id]&&td.records[p.id].s).length;
+              if(assigned>=needed){seeded={...td.records};break;}
             }
             const nr={...seeded};
             personnelOnDate(personnelRef.current,date).forEach(p=>applyCarry(nr,p));
