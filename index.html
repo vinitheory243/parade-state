@@ -2381,8 +2381,8 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setP
       {(expiringToday.length>0||expiringTomorrow.length>0)&&(
         <div className="alert-banner-warn">
           <div className="alert-banner-warn-title">📅 {expiringToday.length+expiringTomorrow.length} Leave/Status Expiring Soon</div>
-          {expiringToday.map(({p,rec})=><div key={p.id} className="alert-banner-warn-item">🔴 {dispName(p)} — {SM[rec.s]?.l||rec.s} ends <strong>today</strong></div>)}
-          {expiringTomorrow.map(({p,rec})=><div key={p.id} className="alert-banner-warn-item">🟡 {dispName(p)} — {SM[rec.s]?.l||rec.s} ends <strong>tomorrow</strong></div>)}
+          {expiringToday.map(({p,rec})=><div key={p.id} className="alert-banner-warn-item">🔴 {dispName(p)} — {SM[rec.s]?.l||rec.s} ends <strong>today</strong>{(rec.s==='so'||rec.s==='so_till')?', back tmr 0800 (S/O)':''}</div>)}
+          {expiringTomorrow.map(({p,rec})=><div key={p.id} className="alert-banner-warn-item">🟡 {dispName(p)} — {SM[rec.s]?.l||rec.s} ends <strong>tomorrow</strong>{(rec.s==='so'||rec.s==='so_till')?', back tmr 0800 (S/O)':''}</div>)}
         </div>
       )}
       <div className="stats-grid">
