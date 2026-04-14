@@ -543,9 +543,9 @@ function genMsg(date,tod,total,records,personnel,extra){
   L.push(`JRN PARADE STATE ${fmtTeleDate(date)} (${todAmPm})`);
   L.push(`Total strength: ${total}`);
   L.push('');
-  L.push(`Duty Personnel: ${dutyCount}${dutyList}`);
-  L.push('');
   L.push(`Present: ${cnt('present')}`);
+  L.push('');
+  L.push(`Duty Personnel: ${dutyCount}${dutyList}`);
   L.push('');
   if(tod==='2030/2230'){
     const soPermItems=(grp['so']||[]).map(x=>({x,suffix:' (PERM)'}));
@@ -743,8 +743,8 @@ function genSummaryMsg(date,tod,records,personnel,total){
   const todAmPm=({'HLS':'AM','0745':'AM','1300':'PM','1730':'PM','2030/2230':'NIGHT STR'})[tod]||tod;
   const rows=[];
   const dutyCount=[...DUTY_STATUSES].reduce((s,k)=>s+cnt(k),0);
-  rows.push({label:'Duty Personnel',count:dutyCount});
   rows.push({label:'Present',count:cnt('present')});
+  rows.push({label:'Duty Personnel',count:dutyCount});
   if(tod==='2030/2230')rows.push({label:'Stay Out',count:cnt('so')+cnt('so_till')});
   const skip=new Set([...DUTY_STATUSES,'present','so','so_till']);
   SL.forEach(s=>{
