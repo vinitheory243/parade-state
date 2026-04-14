@@ -1863,6 +1863,26 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         setRecords(nr);
         setSubmitted(d.submitted||{P1:false,P2:false,HQ:false});
         setMarkedBy(d.markedBy||{P1:'',P2:'',HQ:''});
+        // Async: fill anyone still unassigned from the most recent previous TOD
+        if(!isNR&&tod!=='HLS'){
+          const todIdx=TODS.indexOf(tod);
+          if(todIdx>0){(async()=>{
+            let prevRec={};
+            for(let i=todIdx-1;i>=0;i--){
+              const snap2=await DB.ref(fbAttPath(date,TODS[i])).once('value');
+              const td=snap2.val();
+              if(td&&td.records){prevRec=td.records;break;}
+            }
+            if(!Object.keys(prevRec).length)return;
+            setRecords(prev=>{
+              const next={...prev};let changed=false;
+              personnelOnDate(personnelRef.current,date).forEach(p=>{
+                if(!next[p.id]?.s&&prevRec[p.id]?.s){next[p.id]={...prevRec[p.id]};changed=true;}
+              });
+              return changed?next:prev;
+            });
+          })();}
+        }
       } else {
         if(isNR){
           // Seed NR from most recent parade state (Night Str → LP → MP → FP → HLS)
