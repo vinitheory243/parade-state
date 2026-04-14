@@ -42,7 +42,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .unset-tag{font-size:11px;color:#f59e0b;font-weight:700}
 .sc-present{background:#f0fdf4}
 .sc-mc,.sc-hl,.sc-hospitalised{background:#fef9c3}
-.sc-duty,.sc-dto,.sc-adtl,.sc-doo,.sc-dtl,.sc-amb_t1,.sc-amb_t2,.sc-late,.sc-off,.sc-ol,.sc-ll,.sc-ul,.sc-fcl,.sc-ddr,.sc-dto_r,.sc-adtl_r,.sc-so,.sc-so_till,.sc-arf,.sc-rsi,.sc-rso,.sc-detail,.sc-ma,.sc-safer_upcat,.sc-cse,.sc-6ton_fam,.sc-attached_out,.sc-ao_local,.sc-ao_overseas,.sc-awol,.sc-sol,.sc-suspended,.sc-db_prison,.sc-others,.sc-cl,.sc-ccl,.sc-court,.sc-ca,.sc-civil,.sc-do_gcm,.sc-rib,.sc-driving,.sc-dcp{background:#fef9c3}
+.sc-duty,.sc-dto,.sc-adtl,.sc-doo,.sc-dtl,.sc-amb_t1,.sc-amb_t2,.sc-late,.sc-off,.sc-birthday_off,.sc-oil,.sc-node_off,.sc-ol,.sc-ll,.sc-ul,.sc-fcl,.sc-ddr,.sc-dto_r,.sc-adtl_r,.sc-so,.sc-so_till,.sc-arf,.sc-rsi,.sc-rso,.sc-detail,.sc-ma,.sc-safer_upcat,.sc-cse,.sc-6ton_fam,.sc-attached_out,.sc-ao_local,.sc-ao_overseas,.sc-awol,.sc-sol,.sc-suspended,.sc-db_prison,.sc-others,.sc-cl,.sc-ccl,.sc-court,.sc-ca,.sc-civil,.sc-do_gcm,.sc-rib,.sc-driving,.sc-dcp{background:#fef9c3}
 .msg-box{font-family:'Courier New',monospace;font-size:12px;line-height:1.55;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:14px;white-space:pre;overflow-x:auto;-webkit-overflow-scrolling:touch;max-height:60vh}
 .copy-btn{width:100%;padding:14px;background:#0d9488;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;margin-top:12px}
 .copy-btn:active{background:#0f766e}
@@ -291,6 +291,9 @@ const SL = [
   {k:'rso',          l:'RSO',                        d:false},
   {k:'rsi',          l:'RSI',                        d:false, names:true},
   {k:'off',          l:'OFF',                        d:true,  datePick:true, dateRange:true, names:true},
+  {k:'birthday_off', l:'Birthday OFF',               d:true,  datePick:true, dateRange:true, names:true},
+  {k:'oil',          l:'Off-In-Lieu (OIL)',          d:true,  datePick:true, dateRange:true, names:true},
+  {k:'node_off',     l:'Node OFF',                   d:true,  datePick:true, dateRange:true, names:true},
   {k:'ol',           l:'Overseas Leave',             d:true,  datePick:true, dateRange:true, names:true, pre:'TILL '},
   {k:'ll',           l:'Local Leave',                d:true,  datePick:true, dateRange:true, names:true, pre:'TILL '},
   {k:'ao_local',     l:'A/O Local (Attached Out Locally)',   d:true, datePick:true, dateRange:true, names:true},
@@ -573,7 +576,7 @@ function genMsg(date,tod,total,records,personnel,extra){
   L.push('');
   L.push(line('RSI','rsi'));
   L.push('');
-  L.push(line('OFF','off'));
+  L.push(lineMulti('OFF',['off','birthday_off','oil','node_off']));
   L.push('');
   L.push(line('OVERSEAS LEAVE','ol','TILL '));
   L.push('');
@@ -687,7 +690,7 @@ function genComdMsg(date,tod,records,personnel){
     block('MC',['mc'],false),
     block('Hospitalisation Leave',['hl'],false),
     block('Hospitalised',['hospitalised'],false),
-    block('OFF',['off'],false),
+    block('OFF',['off','birthday_off','oil','node_off'],false),
     block('OVERSEAS LEAVE',['ol'],false),
     block('LOCAL LEAVE',['ll'],false),
     block('URGENT LEAVE',['ul'],false),
@@ -870,7 +873,7 @@ function getStatusCell(rec){
   if(k==='mc')return'MC';
   if(k==='hl')return'HL';
   if(k==='hospitalised')return'HOSP';
-  if(k==='off')return'OFF';
+  if(k==='off'||k==='birthday_off'||k==='oil'||k==='node_off')return'OFF';
   if(k==='ol')return'OL';
   if(k==='ll')return'LL';
   if(k==='ul')return'UL';
@@ -2569,7 +2572,7 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setP
   const active=personnelOnDate(personnel,date);
   const expiredSiso=active.filter(p=>sisoExpired(p));
   // Leave expiry alerts: statuses with a till-date expiring today or tomorrow
-  const EXPIRY_STATUSES=new Set(['mc','hl','ol','ll','ul','fcl','off','arf','ao_local','ao_overseas','hospitalised','cl','ccl','court','ca','civil','db_prison','do_gcm','awol','sol','suspended','rib','driving','cse','dcp','safer_upcat','so_till','amb_t1','amb_t2']);
+  const EXPIRY_STATUSES=new Set(['mc','hl','ol','ll','ul','fcl','off','birthday_off','oil','node_off','arf','ao_local','ao_overseas','hospitalised','cl','ccl','court','ca','civil','db_prison','do_gcm','awol','sol','suspended','rib','driving','cse','dcp','safer_upcat','so_till','amb_t1','amb_t2']);
   const tomorrow=(()=>{const d=new Date(date+'T00:00:00');d.setDate(d.getDate()+1);return d.toISOString().slice(0,10);})();
   const expiringToday=[], expiringTomorrow=[];
   active.forEach(p=>{
