@@ -1804,6 +1804,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       const d=snap.val();
       if(d){
         const ppl=Object.values(d).sort((a,b)=>a.id>b.id?1:-1);
+        personnelRef.current=ppl; // sync immediately so attendance listener sees fresh siso/activeLeave
         setPersonnel(ppl);
         if(!totalManualRef.current)setTotal(personnelOnDate(ppl,todayStr()).length);
       } else {
@@ -1908,18 +1909,22 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       const nr={...prev};
       personnelOnDate(personnel,date).forEach(p=>{
         if(skipCarryPltRef.current===p.plt)return; // platoon just cleared — skip
-        if(nr[p.id]&&nr[p.id].s)return;
+        if(nr[p.id]?.s)return; // already has a status
         const dd=p.dailyDuty;
         if(dd&&dd.date===date&&WHOLE_DAY_DUTY.has(dd.s)){nr[p.id]={s:dd.s,det:'',from:''};changed=true;return;}
         const al=p.activeLeave;
         if(al&&al.det&&al.from&&date>=al.from&&date<=al.det){
-          nr[p.id]={s:al.s,det:al.det,from:al.from};
-          changed=true;
+          nr[p.id]={s:al.s,det:al.det,from:al.from};changed=true;return;
+        }
+        if(tod==='2030/2230'){
+          const si=getSiso(p);
+          if(si.type==='so'){nr[p.id]={s:'so',det:'',from:''};changed=true;}
+          else if(si.type==='so_till'){nr[p.id]={s:'so_till',det:si.date||'',from:''};changed=true;}
         }
       });
       return changed?nr:prev;
     });
-  },[personnel,date]);
+  },[personnel,date,tod]);
   // History listener
   useEffect(()=>{
     const ref=DB.ref('jrn/history');
@@ -2662,9 +2667,15 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
     if(locked)return;
     setRec(person.id,s,'','');
     if(!isNR){
-      if(SM[s]&&!SM[s].datePick&&person.activeLeave)setPersonLeave(person.id,null,null,null);
-      if(WHOLE_DAY_DUTY.has(s))setPersonDailyDuty(person.id,s,currentDate);
-      else if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
+      if(!s){
+        // Explicit clear — wipe carry sources so status doesn't snap back
+        if(person.activeLeave)setPersonLeave(person.id,null,null,null);
+        if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
+      } else {
+        if(SM[s]&&!SM[s].datePick&&person.activeLeave)setPersonLeave(person.id,null,null,null);
+        if(WHOLE_DAY_DUTY.has(s))setPersonDailyDuty(person.id,s,currentDate);
+        else if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
+      }
     }
     setShowMore(false);
   }
@@ -2679,9 +2690,14 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
     }
     setRec(person.id,newS,'','');
     if(!isNR){
-      if(SM[newS]&&!SM[newS].datePick&&person.activeLeave)setPersonLeave(person.id,null,null,null);
-      if(WHOLE_DAY_DUTY.has(newS))setPersonDailyDuty(person.id,newS,currentDate);
-      else if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
+      if(!newS){
+        if(person.activeLeave)setPersonLeave(person.id,null,null,null);
+        if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
+      } else {
+        if(SM[newS]&&!SM[newS].datePick&&person.activeLeave)setPersonLeave(person.id,null,null,null);
+        if(WHOLE_DAY_DUTY.has(newS))setPersonDailyDuty(person.id,newS,currentDate);
+        else if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
+      }
     }
     if(newS)setShowMore(false);
   }
