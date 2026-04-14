@@ -1882,11 +1882,33 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
             setRecords(nr);setSubmitted({P1:false,P2:false,HQ:false});setMarkedBy({P1:'',P2:'',HQ:''});
           };
           seedNR();
+        } else if(tod!=='HLS'){
+          // FP/MP/LP/Night Str with no data: seed from most recent previous TOD, then apply carry
+          const todIdx=TODS.indexOf(tod);
+          const seedFromPrev=async()=>{
+            let seeded={};
+            for(let i=todIdx-1;i>=0;i--){
+              const snap2=await DB.ref(fbAttPath(date,TODS[i])).once('value');
+              const td=snap2.val();
+              if(td&&td.records){seeded={...td.records};break;}
+            }
+            const nr={...seeded};
+            // Night Strength: clear date-range statuses ending today before applying carry
+            if(tod==='2030/2230'){
+              personnelOnDate(personnelRef.current,date).forEach(p=>{
+                const rec=nr[p.id];
+                if(rec&&rec.s&&rec.det===date&&SM[rec.s]?.datePick&&rec.s!=='so_till'){delete nr[p.id];}
+              });
+            }
+            personnelOnDate(personnelRef.current,date).forEach(p=>applyCarry(nr,p));
+            setRecords(nr);setSubmitted({P1:false,P2:false,HQ:false});setMarkedBy({P1:'',P2:'',HQ:''});
+          };
+          seedFromPrev();
         } else {
+          // HLS: apply carry only (fresh start for the day)
           const nr={};
           personnelOnDate(personnelRef.current,date).forEach(p=>applyCarry(nr,p));
-          // HLS: skip auto-carry if fewer than 10 pax (parade likely didn't happen)
-          if(tod==='HLS'&&Object.keys(nr).length<10){Object.keys(nr).forEach(k=>delete nr[k]);}
+          if(Object.keys(nr).length<10){Object.keys(nr).forEach(k=>delete nr[k]);}
           setRecords(nr);setSubmitted({P1:false,P2:false,HQ:false});setMarkedBy({P1:'',P2:'',HQ:''});
         }
       }
