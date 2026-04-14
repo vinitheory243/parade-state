@@ -2799,7 +2799,7 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
           <div className="prow-quick">
             <button className={`pq${isPresent?' pq-on-g':''}`} onClick={()=>quickSet('present')}>✓ Present</button>
             {showSO&&<button className={`pq${isSO?' pq-on-y':''}`} onClick={()=>quickSet('so')}>S/O</button>}
-            <button className={`pq${showMore?' pq-on-b':record.s&&!isPresent&&!isSO?' pq-on-g':''}`} onClick={()=>setShowMore(v=>!v)}>
+            <button className={`pq${showMore?' pq-on-b':record.s&&!isPresent&&!isSO?' pq-on-y':''}`} onClick={()=>setShowMore(v=>!v)}>
               {showMore?'▲ Less':'▾ More'}
             </button>
           </div>
