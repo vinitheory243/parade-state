@@ -2459,6 +2459,13 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setP
   const[confirmClear,setConfirmClear]=useState(null); // null or plt key
   const[tempUnlocked,setTempUnlocked]=useState(null); // person id temporarily unlocked via search
   const[highlightIds,setHighlightIds]=useState(new Set()); // IDs of unmarked pax highlighted after failed submit
+  // Once a highlighted person gets marked, remove them so clearing later doesn't re-highlight
+  useEffect(()=>{
+    if(!highlightIds.size)return;
+    const toRemove=[...highlightIds].filter(id=>records[id]?.s);
+    if(!toRemove.length)return;
+    setHighlightIds(prev=>{const n=new Set(prev);toRemove.forEach(id=>n.delete(id));return n;});
+  },[records]);
   useEffect(()=>{
     if(!jumpTo)return;
     setPlt(jumpTo.plt);
