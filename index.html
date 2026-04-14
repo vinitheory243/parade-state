@@ -1877,7 +1877,8 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
             setRecords(prev=>{
               const next={...prev};let changed=false;
               personnelOnDate(personnelRef.current,date).forEach(p=>{
-                if(!next[p.id]?.s&&prevRec[p.id]?.s){next[p.id]={...prevRec[p.id]};changed=true;}
+                const ps=prevRec[p.id]?.s;
+                if(!next[p.id]?.s&&ps&&ps!=='present'){next[p.id]={...prevRec[p.id]};changed=true;}
               });
               return changed?next:prev;
             });
@@ -1913,6 +1914,8 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
               if(td&&td.records){seeded={...td.records};break;}
             }
             const nr={...seeded};
+            // Present does not carry — sgts must actively account for presence each TOD
+            Object.keys(nr).forEach(id=>{if(nr[id]?.s==='present')delete nr[id];});
             // Night Strength: clear date-range statuses ending today before applying carry
             if(tod==='2030/2230'){
               personnelOnDate(personnelRef.current,date).forEach(p=>{
