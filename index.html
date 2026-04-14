@@ -42,7 +42,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .unset-tag{font-size:11px;color:#f59e0b;font-weight:700}
 .sc-present{background:#f0fdf4}.sc-duty,.sc-dtl,.sc-amb_t1,.sc-amb_t2{background:#ecfdf5}
 .sc-late{background:#fffbeb}.sc-mc,.sc-hl,.sc-hospitalised{background:#fff1f2}
-.sc-off,.sc-ol,.sc-ll,.sc-ul,.sc-fcl,.sc-ddr,.sc-dto_r,.sc-adtl_r{background:#eef2ff}
+.sc-off,.sc-ol,.sc-ll,.sc-ul,.sc-fcl,.sc-ddr,.sc-dto_r,.sc-adtl_r{background:#fef9c3}
 .sc-so,.sc-so_till{background:#fef9c3}
 .sc-arf,.sc-rsi,.sc-rso{background:#fff7ed}
 .sc-detail,.sc-ma,.sc-safer_upcat,.sc-cse,.sc-6ton_fam{background:#f0f9ff}
@@ -1788,6 +1788,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   const safeEventKey=safePath(eventKey||'nr_unknown');
   const attPath=isNR?`jrn/nr/${date}/${safeEventKey}`:fbAttPath(date,tod);
   const skipRef=useRef(false);
+  const forceWriteRef=useRef(false); // user-initiated changes bypass skipRef
   const attInitRef=useRef(false); // blocks write until first Firebase read completes
   const skipCarryPltRef=useRef(null); // set to plt key after clearAll to suppress carry re-application
   const listenerPausedRef=useRef(false); // blocks attendance listener from overwriting during clearAll
@@ -1807,11 +1808,9 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
     ref.on('value',snap=>{
       const d=snap.val();
       if(d){
-        skipRef.current=true;
         const ppl=Object.values(d).sort((a,b)=>a.id>b.id?1:-1);
         setPersonnel(ppl);
         if(!totalManualRef.current)setTotal(personnelOnDate(ppl,todayStr()).length);
-        setTimeout(()=>{skipRef.current=false;},400);
       } else {
         const obj={};IP.forEach(p=>{obj[p.id]=p;});ref.set(obj);
       }
@@ -1899,7 +1898,9 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   },[attPath]);
   // Write attendance to Firebase (only after initial read from Firebase)
   useEffect(()=>{
-    if(skipRef.current||!attInitRef.current)return;
+    if(!attInitRef.current)return;
+    if(skipRef.current&&!forceWriteRef.current)return;
+    forceWriteRef.current=false;
     const data={records,total,totalManual,duty,extra,submitted,markedBy};
     if(isNR)data.eventName=eventName;
     DB.ref(attPath).set(data);
@@ -2134,7 +2135,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       return next;
     });
   }
-  function setRec(id,s,det,from){setRecords(p=>({...p,[id]:{s,det:det||'',from:from||''}}))}
+  function setRec(id,s,det,from){forceWriteRef.current=true;setRecords(p=>({...p,[id]:{s,det:det||'',from:from||''}}))}
   function setPersonLeave(id,s,from,till){
     // update personnel activeLeave for auto-carry
     setPersonnelAndSync(prev=>prev.map(p=>p.id===id?{...p,activeLeave:till?{s,from:from||todayStr(),det:till}:null}:p));
@@ -2147,7 +2148,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   function setAllPresent(){
     const nr={};
     personnel.filter(p=>p.active).forEach(p=>{nr[p.id]={s:'present',det:''}});
-    setRecords(nr);toast_('✓ All set to Present');
+    forceWriteRef.current=true;setRecords(nr);toast_('✓ All set to Present');
   }
   function clearAll(plt,submittedState){
     const pltPpl=personnelOnDate(personnel,date).filter(p=>p.plt===plt);
