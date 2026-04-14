@@ -1893,6 +1893,8 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
               if(td&&td.records){seeded={...td.records};break;}
             }
             const nr={...seeded};
+            // Present does not carry — sgts re-mark presence each TOD
+            Object.keys(nr).forEach(id=>{if(nr[id]?.s==='present')delete nr[id];});
             // Night Strength: clear date-range statuses ending today before applying carry
             if(tod==='2030/2230'){
               personnelOnDate(personnelRef.current,date).forEach(p=>{
