@@ -2443,37 +2443,44 @@ function BuddyModal({personnel,date,onClose}){
     const pltColors={P1:[13,148,136],P2:[22,163,74],HQ:[217,119,6]};
     const pltLabels={P1:'PLATOON 1',P2:'PLATOON 2',HQ:'HQ'};
     const colW=(W-margin*2-6)/2;
-    // Exactly one page per platoon
+    const pageH=297;
+    const headerH=22,subH=9,bottomMargin=10;
+    // Exactly one page per platoon — scale row height to always fit
     ['P1','P2','HQ'].forEach((plt,pltIdx)=>{
       if(pltIdx>0)doc.addPage();
       // Page header
-      doc.setFillColor(...pltColors[plt]);doc.rect(0,0,W,22,'F');
+      doc.setFillColor(...pltColors[plt]);doc.rect(0,0,W,headerH,'F');
       doc.setFont('helvetica','bold');doc.setFontSize(14);doc.setTextColor(255,255,255);
       doc.text('JRN BUDDY SYSTEM',W/2,10,{align:'center'});
       doc.setFontSize(9);doc.setFont('helvetica','normal');
       doc.text(`${pltLabels[plt]}  ·  ${dateStr}`,W/2,17,{align:'center'});
-      y=28;
+      y=headerH+2;
       const gs=groups[plt]||[];
       const pltCount=personnelOnDate(personnel,date).filter(p=>p.plt===plt).length;
       // Sub-header
-      doc.setFillColor(248,250,252);doc.rect(margin,y,W-margin*2,7,'F');
-      doc.setDrawColor(...pltColors[plt]);doc.rect(margin,y,W-margin*2,7,'S');
+      doc.setFillColor(248,250,252);doc.rect(margin,y,W-margin*2,subH,'F');
+      doc.setDrawColor(...pltColors[plt]);doc.rect(margin,y,W-margin*2,subH,'S');
       doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...pltColors[plt]);
-      doc.text(`${pltCount} personnel  |  ${gs.length} buddy group${gs.length!==1?'s':''}`,margin+3,y+4.8);
-      y+=10;
+      doc.text(`${pltCount} personnel  |  ${gs.length} buddy group${gs.length!==1?'s':''}`,margin+3,y+5.8);
+      y+=subH+2;
+      if(!gs.length)return;
+      // Calculate row height to fit all pairs on this page
+      const availH=pageH-y-bottomMargin;
+      const numRows=Math.ceil(gs.length/2);
+      const rowH=Math.min(20,availH/numRows);
+      const boxH=rowH-2;
       // Buddy pairs in 2 columns
       gs.forEach((grp,idx)=>{
         const col=idx%2;
         const x=margin+col*(colW+6);
-        const bY=y+Math.floor(idx/2)*19;
+        const bY=y+Math.floor(idx/2)*rowH;
         const isTrio=grp.length===3;
-        const boxH=isTrio?17:14;
         doc.setFillColor(248,250,252);doc.roundedRect(x,bY,colW,boxH,.5,.5,'F');
         doc.setDrawColor(...pltColors[plt]);doc.setLineWidth(.3);doc.roundedRect(x,bY,colW,boxH,.5,.5,'S');
-        doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...pltColors[plt]);
-        doc.text(`B${idx+1}${isTrio?' (TRIO)':''}`,x+2.5,bY+5);
-        doc.setFont('helvetica','normal');doc.setTextColor(15,23,42);doc.setFontSize(7.5);
-        grp.forEach((p,pi)=>{doc.text(`• ${dn(p)}`,x+2.5,bY+9+pi*4);});
+        doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.setTextColor(...pltColors[plt]);
+        doc.text(`B${idx+1}${isTrio?' (TRIO)':''}`,x+2,bY+boxH*0.33);
+        doc.setFont('helvetica','normal');doc.setTextColor(15,23,42);doc.setFontSize(7);
+        grp.forEach((p,pi)=>{doc.text(`• ${dn(p)}`,x+2,bY+boxH*0.33+4+pi*(boxH*0.28));});
       });
     });
     doc.save(`JRN_BuddySystem_${date}.pdf`);
