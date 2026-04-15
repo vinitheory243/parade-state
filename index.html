@@ -3137,6 +3137,7 @@ function NRGenerateScreen({date,eventName,records,personnel,toast_}){
 
 // ─── CUSTOM REPORT MODAL ────────────────────────────────────────
 function CustomReportModal({personnel,date,records,toast_,onClose}){
+  const[reportTitle,setReportTitle]=useState('JRN CUSTOM REPORT');
   const[fPlt,setFPlt]=useState('ALL');
   const[fPes,setFPes]=useState('ALL');
   const[fStatus,setFStatus]=useState('ALL');
@@ -3180,7 +3181,7 @@ function CustomReportModal({personnel,date,records,toast_,onClose}){
     if(fPes!=='ALL')fp.push(`PES: ${fPes}`);
     if(fStatus!=='ALL')fp.push(`Status: ${fStatus==='none'?'Not assigned':(SM[fStatus]?.l||fStatus)}`);
     if(fSiso!=='ALL')fp.push(fSiso==='so'?'S/O only':'S/I only');
-    const lines=[`JRN CUSTOM REPORT · ${ds}`];
+    const lines=[`${reportTitle||'JRN CUSTOM REPORT'} · ${ds}`];
     if(fp.length)lines.push(`[${fp.join(' | ')}]`);
     lines.push(`${filtered.length} personnel`,'');
     filtered.forEach((p,i)=>{const ex=rowExtras(p);lines.push(`${i+1}. ${dn(p)}${ex.length?' | '+ex.join(' | '):''}`);});
@@ -3194,7 +3195,7 @@ function CustomReportModal({personnel,date,records,toast_,onClose}){
     const ds=new Date(date+'T00:00:00').toLocaleDateString('en-SG',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase();
     doc.setFillColor(15,23,42);doc.rect(0,0,W,22,'F');
     doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(255,255,255);
-    doc.text('JRN CUSTOM REPORT',W/2,9,{align:'center'});
+    doc.text((reportTitle||'JRN CUSTOM REPORT').toUpperCase(),W/2,9,{align:'center'});
     doc.setFontSize(8);doc.setFont('helvetica','normal');doc.text(ds,W/2,16,{align:'center'});
     let y=26;
     const fp=[];
@@ -3243,7 +3244,8 @@ function CustomReportModal({personnel,date,records,toast_,onClose}){
       doc.setDrawColor(226,232,240);doc.setLineWidth(.2);doc.line(MG,y+rowH,MG+TW,y+rowH);
       y+=rowH;
     });
-    doc.save(`JRN_CustomReport_${date}.pdf`);
+    const slug=(reportTitle||'CustomReport').replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'');
+    doc.save(`${slug}_${date}.pdf`);
   }
   const pill=(active,col='#0d9488')=>({padding:'5px 11px',borderRadius:'20px',border:`1.5px solid ${active?col:'#e2e8f0'}`,background:active?col:'#fff',color:active?'#fff':'#64748b',fontSize:'12px',fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'});
   const chip=(active)=>({padding:'8px 10px',borderRadius:'8px',border:`1.5px solid ${active?'#0d9488':'#e2e8f0'}`,background:active?'#f0fdfa':'#f8fafc',color:active?'#0d9488':'#94a3b8',fontSize:'12px',fontWeight:700,cursor:'pointer',textAlign:'left'});
@@ -3257,6 +3259,8 @@ function CustomReportModal({personnel,date,records,toast_,onClose}){
           <button onClick={onClose} style={{background:'none',border:'none',fontSize:'20px',color:'#94a3b8',cursor:'pointer'}}>✕</button>
         </div>
         <div style={{overflowY:'auto',flex:1,paddingBottom:'4px'}}>
+          <div style={secLbl}>Report Title</div>
+          <input type="text" value={reportTitle} onChange={e=>setReportTitle(e.target.value.toUpperCase())} placeholder="JRN CUSTOM REPORT" style={{marginBottom:'14px',fontWeight:700}}/>
           <div style={secLbl}>Filters</div>
           <div style={{marginBottom:'10px'}}><div style={{fontSize:'12px',fontWeight:700,color:'#475569',marginBottom:'6px'}}>Platoon</div>
             <div style={{display:'flex',gap:'6px',flexWrap:'wrap'}}>
