@@ -3766,7 +3766,31 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<Root/>);
+class ErrorBoundary extends React.Component{
+  constructor(props){super(props);this.state={error:null,info:null};}
+  componentDidCatch(error,info){this.setState({error,info});}
+  render(){
+    if(this.state.error){
+      const msg=this.state.error&&this.state.error.message?this.state.error.message:'Unknown error';
+      return(
+        <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#fff7ed',padding:'24px'}}>
+          <div style={{maxWidth:'420px',width:'100%',background:'#fff',borderRadius:'18px',boxShadow:'0 8px 32px rgba(0,0,0,.12)',padding:'28px 24px',textAlign:'center'}}>
+            <div style={{fontSize:'40px',marginBottom:'12px'}}>⚠️</div>
+            <div style={{fontWeight:800,fontSize:'18px',color:'#0f172a',marginBottom:'8px'}}>Something went wrong</div>
+            <div style={{fontSize:'13px',color:'#64748b',marginBottom:'16px',lineHeight:1.5}}>The app ran into an unexpected error. Please contact <strong style={{color:'#0d9488'}}>Vinith</strong> for assistance.</div>
+            <div style={{background:'#f1f5f9',borderRadius:'10px',padding:'10px 14px',marginBottom:'20px',textAlign:'left'}}>
+              <div style={{fontSize:'10px',fontWeight:800,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'.6px',marginBottom:'4px'}}>Error details</div>
+              <div style={{fontFamily:'monospace',fontSize:'11px',color:'#dc2626',wordBreak:'break-all'}}>{msg}</div>
+            </div>
+            <button onClick={()=>window.location.reload()} style={{width:'100%',padding:'12px',background:'#0d9488',color:'#fff',border:'none',borderRadius:'12px',fontSize:'14px',fontWeight:800,cursor:'pointer'}}>🔄 Reload App</button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<ErrorBoundary><Root/></ErrorBoundary>);
 </script>
 </body>
 </html>
