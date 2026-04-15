@@ -2319,7 +2319,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       {pdfPreview&&<PDFPreviewModal date={pdfPreview.date} personnel={pdfPreview.personnelForDate||personnel} allTodRecs={pdfPreview.allTodRecs} total={pdfPreview.total} allTodMarkedBy={pdfPreview.allTodMarkedBy||{}} onClose={()=>setPdfPreview(null)} onDownloaded={onPdfDownloaded} isAdmin={isAdmin}/>}
       {showSearch&&<PersonnelSearchModal personnel={personnelOnDate(personnel,date)} records={records} tod={tod} onClose={()=>setShowSearch(false)} onGoTo={({id,plt})=>{setShowSearch(false);setScreen('attendance');setJumpTo({id,plt});}}/>}
       {showSO&&<SOListModal personnel={personnel} onClose={()=>setShowSO(false)}/>}
-      {showBuddy&&<BuddyModal personnel={personnel} date={date} onClose={()=>setShowBuddy(false)}/>}
+      {showBuddy&&<BuddyModal personnel={personnel} date={date} onClose={()=>setShowBuddy(false)} toast_={toast_}/>}
       {nrPreview&&<NominalRollPreviewModal date={date} eventName={eventName} personnel={personnelOnDate(personnel,date)} records={records} total={personnelOnDate(personnel,date).length} onClose={()=>setNrPreview(false)}/>}
     </div>
   );
@@ -2419,7 +2419,7 @@ function makeBuddyGroups(ppl){
   }
   return groups;
 }
-function BuddyModal({personnel,date,onClose}){
+function BuddyModal({personnel,date,onClose,toast_}){
   const PLT_COLOR={P1:'#0d9488',P2:'#16a34a',HQ:'#d97706'};
   const PLT_BG={P1:'#f0fdfa',P2:'#f0fdf4',HQ:'#fffbeb'};
   const dn=p=>`${p.rank} ${p.dn||p.name.split(' ')[0]}`;
