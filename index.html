@@ -2467,20 +2467,25 @@ function BuddyModal({personnel,date,onClose}){
       // Calculate row height to fit all pairs on this page
       const availH=pageH-y-bottomMargin;
       const numRows=Math.ceil(gs.length/2);
-      const rowH=Math.min(20,availH/numRows);
+      const hasTrio=gs.some(g=>g.length===3);
+      const minRowH=hasTrio?22:17;
+      const rowH=Math.max(minRowH,Math.min(25,availH/numRows));
       const boxH=rowH-2;
+      // Fixed text offsets (absolute mm within box)
+      const LABEL_OFF=4,NAME_START=9,NAME_STEP=4.5;
       // Buddy pairs in 2 columns
       gs.forEach((grp,idx)=>{
         const col=idx%2;
         const x=margin+col*(colW+6);
         const bY=y+Math.floor(idx/2)*rowH;
         const isTrio=grp.length===3;
-        doc.setFillColor(248,250,252);doc.roundedRect(x,bY,colW,boxH,.5,.5,'F');
-        doc.setDrawColor(...pltColors[plt]);doc.setLineWidth(.3);doc.roundedRect(x,bY,colW,boxH,.5,.5,'S');
+        const thisBoxH=isTrio?Math.max(boxH,20):boxH;
+        doc.setFillColor(248,250,252);doc.roundedRect(x,bY,colW,thisBoxH,.5,.5,'F');
+        doc.setDrawColor(...pltColors[plt]);doc.setLineWidth(.3);doc.roundedRect(x,bY,colW,thisBoxH,.5,.5,'S');
         doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.setTextColor(...pltColors[plt]);
-        doc.text(`B${idx+1}${isTrio?' (TRIO)':''}`,x+2,bY+boxH*0.33);
+        doc.text(`B${idx+1}${isTrio?' (TRIO)':''}`,x+2,bY+LABEL_OFF);
         doc.setFont('helvetica','normal');doc.setTextColor(15,23,42);doc.setFontSize(7);
-        grp.forEach((p,pi)=>{doc.text(`• ${dn(p)}`,x+2,bY+boxH*0.33+4+pi*(boxH*0.28));});
+        grp.forEach((p,pi)=>{doc.text(`• ${dn(p)}`,x+2,bY+NAME_START+pi*NAME_STEP);});
       });
     });
     doc.save(`JRN_BuddySystem_${date}.pdf`);
