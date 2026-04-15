@@ -3135,10 +3135,181 @@ function NRGenerateScreen({date,eventName,records,personnel,toast_}){
   );
 }
 
+// ─── CUSTOM REPORT MODAL ────────────────────────────────────────
+function CustomReportModal({personnel,date,records,toast_,onClose}){
+  const[fPlt,setFPlt]=useState('ALL');
+  const[fPes,setFPes]=useState('ALL');
+  const[fStatus,setFStatus]=useState('ALL');
+  const[fSiso,setFSiso]=useState('ALL');
+  const[fldRank,setFldRank]=useState(true);
+  const[fldPes,setFldPes]=useState(true);
+  const[fldSec,setFldSec]=useState(false);
+  const[fldStatus,setFldStatus]=useState(false);
+  const[fldSiso,setFldSiso]=useState(false);
+  const[fldPhone,setFldPhone]=useState(false);
+  const pesOptions=useMemo(()=>{
+    const vals=new Set(personnel.map(p=>p.pes||'').filter(Boolean));
+    return[...PES_LIST.slice(1).filter(p=>vals.has(p)),...[...vals].filter(v=>!PES_LIST.includes(v))];
+  },[personnel]);
+  const statusOptions=useMemo(()=>{
+    const keys=new Set();
+    personnel.forEach(p=>{const r=records[p.id];if(r&&r.s)keys.add(r.s);});
+    return[...[...keys].filter(s=>s!=='so')];
+  },[personnel,records]);
+  const filtered=useMemo(()=>personnel.filter(p=>{
+    if(fPlt!=='ALL'&&p.plt!==fPlt)return false;
+    if(fPes!=='ALL'&&(p.pes||'')!==fPes)return false;
+    if(fSiso!=='ALL'){const si=getSiso(p);const isSO=si.type==='so'||si.type==='so_till';if(fSiso==='so'&&!isSO)return false;if(fSiso==='si'&&isSO)return false;}
+    if(fStatus!=='ALL'){const rec=records[p.id];if(fStatus==='none'){if(rec&&rec.s)return false;}else{if(!rec||rec.s!==fStatus)return false;}}
+    return true;
+  }),[personnel,fPlt,fPes,fStatus,fSiso,records]);
+  const dn=p=>`${fldRank?p.rank+' ':''}${p.dn||p.name.split(' ')[0]}`;
+  function rowExtras(p){
+    const rec=records[p.id];const parts=[];
+    if(fldPes&&p.pes)parts.push(`PES ${p.pes}`);
+    if(fldSec)parts.push(p.sec);
+    if(fldStatus)parts.push(rec&&rec.s?(rec.s==='others'&&rec.det?`Others: ${rec.det}`:(SM.find(s=>s.k===rec.s)?.l||rec.s)):'Not assigned');
+    if(fldSiso)parts.push(sisoLabel(p));
+    if(fldPhone&&p.phone)parts.push(p.phone);
+    return parts;
+  }
+  function buildText(){
+    const ds=new Date(date+'T00:00:00').toLocaleDateString('en-SG',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase();
+    const fp=[];
+    if(fPlt!=='ALL')fp.push(`Platoon: ${P_LABEL[fPlt]||fPlt}`);
+    if(fPes!=='ALL')fp.push(`PES: ${fPes}`);
+    if(fStatus!=='ALL')fp.push(`Status: ${fStatus==='none'?'Not assigned':(SM.find(s=>s.k===fStatus)?.l||fStatus)}`);
+    if(fSiso!=='ALL')fp.push(fSiso==='so'?'S/O only':'S/I only');
+    const lines=[`JRN CUSTOM REPORT · ${ds}`];
+    if(fp.length)lines.push(`[${fp.join(' | ')}]`);
+    lines.push(`${filtered.length} personnel`,'');
+    filtered.forEach((p,i)=>{const ex=rowExtras(p);lines.push(`${i+1}. ${dn(p)}${ex.length?' | '+ex.join(' | '):''}`);});
+    return lines.join('\n');
+  }
+  function copyText(){navigator.clipboard.writeText(buildText()).then(()=>toast_('✓ Copied to clipboard')).catch(()=>{const ta=document.createElement('textarea');ta.value=buildText();document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast_('✓ Copied');});}
+  function downloadPDF(){
+    const{jsPDF}=window.jspdf;
+    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const W=210,MG=14;
+    const ds=new Date(date+'T00:00:00').toLocaleDateString('en-SG',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase();
+    doc.setFillColor(15,23,42);doc.rect(0,0,W,22,'F');
+    doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(255,255,255);
+    doc.text('JRN CUSTOM REPORT',W/2,9,{align:'center'});
+    doc.setFontSize(8);doc.setFont('helvetica','normal');doc.text(ds,W/2,16,{align:'center'});
+    let y=26;
+    const fp=[];
+    if(fPlt!=='ALL')fp.push(`Platoon: ${P_LABEL[fPlt]||fPlt}`);
+    if(fPes!=='ALL')fp.push(`PES: ${fPes}`);
+    if(fStatus!=='ALL')fp.push(`Status: ${fStatus==='none'?'Not assigned':(SM.find(s=>s.k===fStatus)?.l||fStatus)}`);
+    if(fSiso!=='ALL')fp.push(fSiso==='so'?'S/O only':'S/I only');
+    if(fp.length){doc.setFontSize(8);doc.setFont('helvetica','italic');doc.setTextColor(100,116,139);doc.text(`Filters: ${fp.join('  |  ')}`,MG,y);y+=5;}
+    doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(15,23,42);doc.text(`${filtered.length} personnel`,MG,y);y+=7;
+    // Build columns
+    const cols=[{k:'sn',l:'S/N',w:10}];
+    if(fldRank)cols.push({k:'rank',l:'RANK',w:14});
+    cols.push({k:'name',l:'NAME',w:0});
+    if(fldPes)cols.push({k:'pes',l:'PES',w:14});
+    if(fldSec)cols.push({k:'sec',l:'SECTION',w:28});
+    if(fldStatus)cols.push({k:'status',l:'STATUS',w:28});
+    if(fldSiso)cols.push({k:'siso',l:'S/I·S/O',w:18});
+    if(fldPhone)cols.push({k:'phone',l:'PHONE',w:24});
+    const TW=W-MG*2;const fixedW=cols.filter(c=>c.w).reduce((a,c)=>a+c.w,0);
+    cols.find(c=>c.k==='name').w=TW-fixedW;
+    // Header row
+    doc.setFillColor(30,41,59);doc.rect(MG,y,TW,7,'F');
+    doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.setTextColor(255,255,255);
+    let cx=MG;cols.forEach(c=>{doc.text(c.l,cx+2,y+4.8);cx+=c.w;});y+=7;
+    // Data rows
+    filtered.forEach((p,i)=>{
+      if(y>278){doc.addPage();y=MG;}
+      const rec=records[p.id];const rowH=6;
+      if(i%2===0){doc.setFillColor(248,250,252);doc.rect(MG,y,TW,rowH,'F');}
+      doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(15,23,42);
+      cx=MG;
+      cols.forEach(c=>{
+        let v='';
+        if(c.k==='sn')v=String(i+1);
+        else if(c.k==='rank')v=p.rank;
+        else if(c.k==='name')v=p.name;
+        else if(c.k==='pes')v=p.pes?`PES ${p.pes}`:'';
+        else if(c.k==='sec')v=p.sec;
+        else if(c.k==='status')v=rec&&rec.s?(rec.s==='others'&&rec.det?`Others: ${rec.det}`:(SM.find(s=>s.k===rec.s)?.l||rec.s)):'';
+        else if(c.k==='siso')v=sisoLabel(p);
+        else if(c.k==='phone')v=p.phone||'';
+        // Clip to column width
+        const maxW=c.w-3;const txt=doc.splitTextToSize(String(v),maxW)[0]||'';
+        doc.text(txt,cx+2,y+4);cx+=c.w;
+      });
+      doc.setDrawColor(226,232,240);doc.setLineWidth(.2);doc.line(MG,y+rowH,MG+TW,y+rowH);
+      y+=rowH;
+    });
+    doc.save(`JRN_CustomReport_${date}.pdf`);
+  }
+  const pill=(active,col='#0d9488')=>({padding:'5px 11px',borderRadius:'20px',border:`1.5px solid ${active?col:'#e2e8f0'}`,background:active?col:'#fff',color:active?'#fff':'#64748b',fontSize:'12px',fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'});
+  const chip=(active)=>({padding:'8px 10px',borderRadius:'8px',border:`1.5px solid ${active?'#0d9488':'#e2e8f0'}`,background:active?'#f0fdfa':'#f8fafc',color:active?'#0d9488':'#94a3b8',fontSize:'12px',fontWeight:700,cursor:'pointer',textAlign:'left'});
+  const secLbl={fontSize:'10px',fontWeight:800,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:'8px',marginTop:'4px'};
+  return(
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.55)',zIndex:9000,display:'flex',flexDirection:'column'}} onClick={onClose}>
+      <div style={{background:'#fff',borderRadius:'0 0 20px 20px',padding:'16px 14px 14px',boxShadow:'0 8px 32px rgba(0,0,0,.18)',maxHeight:'92vh',display:'flex',flexDirection:'column'}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'14px',flexShrink:0}}>
+          <span style={{fontSize:'20px'}}>🔍</span>
+          <div style={{flex:1}}><div style={{fontWeight:800,fontSize:'16px',color:'#0f172a'}}>Custom Report Builder</div><div style={{fontSize:'12px',color:'#64748b'}}>Filter personnel · choose fields · export</div></div>
+          <button onClick={onClose} style={{background:'none',border:'none',fontSize:'20px',color:'#94a3b8',cursor:'pointer'}}>✕</button>
+        </div>
+        <div style={{overflowY:'auto',flex:1,paddingBottom:'4px'}}>
+          <div style={secLbl}>Filters</div>
+          <div style={{marginBottom:'10px'}}><div style={{fontSize:'12px',fontWeight:700,color:'#475569',marginBottom:'6px'}}>Platoon</div>
+            <div style={{display:'flex',gap:'6px',flexWrap:'wrap'}}>
+              {['ALL','HQ','P1','P2'].map(v=><button key={v} style={pill(fPlt===v)} onClick={()=>setFPlt(v)}>{v==='ALL'?'All':v==='HQ'?'HQ':P_LABEL[v]}</button>)}
+            </div>
+          </div>
+          {pesOptions.length>0&&<div style={{marginBottom:'10px'}}><div style={{fontSize:'12px',fontWeight:700,color:'#475569',marginBottom:'6px'}}>PES Status</div>
+            <div style={{display:'flex',gap:'6px',flexWrap:'wrap'}}>
+              <button style={pill(fPes==='ALL')} onClick={()=>setFPes('ALL')}>All</button>
+              {pesOptions.map(v=><button key={v} style={pill(fPes===v,'#7c3aed')} onClick={()=>setFPes(v)}>{v}</button>)}
+            </div>
+          </div>}
+          <div style={{marginBottom:'10px'}}><div style={{fontSize:'12px',fontWeight:700,color:'#475569',marginBottom:'6px'}}>Current Status</div>
+            <div style={{display:'flex',gap:'6px',flexWrap:'wrap'}}>
+              <button style={pill(fStatus==='ALL')} onClick={()=>setFStatus('ALL')}>All</button>
+              <button style={pill(fStatus==='none','#dc2626')} onClick={()=>setFStatus('none')}>Not assigned</button>
+              {statusOptions.map(v=><button key={v} style={pill(fStatus===v,'#d97706')} onClick={()=>setFStatus(v)}>{SM.find(s=>s.k===v)?.l||v}</button>)}
+            </div>
+          </div>
+          <div style={{marginBottom:'14px'}}><div style={{fontSize:'12px',fontWeight:700,color:'#475569',marginBottom:'6px'}}>Strength Type</div>
+            <div style={{display:'flex',gap:'6px'}}>
+              {[['ALL','All'],['si','S/I only'],['so','S/O only']].map(([v,l])=><button key={v} style={pill(fSiso===v,'#334155')} onClick={()=>setFSiso(v)}>{l}</button>)}
+            </div>
+          </div>
+          <div style={secLbl}>Fields to include</div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px',marginBottom:'14px'}}>
+            <button style={{...chip(true),opacity:.6,cursor:'default'}}>✓ Name</button>
+            <button style={chip(fldRank)} onClick={()=>setFldRank(v=>!v)}>{fldRank?'✓ ':''} Rank</button>
+            <button style={chip(fldPes)} onClick={()=>setFldPes(v=>!v)}>{fldPes?'✓ ':''} PES Status</button>
+            <button style={chip(fldSec)} onClick={()=>setFldSec(v=>!v)}>{fldSec?'✓ ':''} Section</button>
+            <button style={chip(fldStatus)} onClick={()=>setFldStatus(v=>!v)}>{fldStatus?'✓ ':''} Att. Status</button>
+            <button style={chip(fldSiso)} onClick={()=>setFldSiso(v=>!v)}>{fldSiso?'✓ ':''} S/I · S/O</button>
+            <button style={chip(fldPhone)} onClick={()=>setFldPhone(v=>!v)}>{fldPhone?'✓ ':''} Phone No.</button>
+          </div>
+          <div style={{background:filtered.length?'#f0fdfa':'#fff7ed',border:`1.5px solid ${filtered.length?'#99f6e4':'#fed7aa'}`,borderRadius:'10px',padding:'10px 14px',textAlign:'center',marginBottom:'4px'}}>
+            <span style={{fontSize:'16px',fontWeight:800,color:filtered.length?'#0d9488':'#d97706'}}>{filtered.length}</span>
+            <span style={{fontSize:'13px',color:'#64748b',marginLeft:'6px'}}>personnel match</span>
+          </div>
+        </div>
+        <div style={{display:'flex',gap:'8px',paddingTop:'12px',borderTop:'1px solid #f1f5f9',flexShrink:0}}>
+          <button onClick={downloadPDF} disabled={!filtered.length} style={{flex:1,padding:'12px',background:filtered.length?'#0f172a':'#e2e8f0',color:filtered.length?'#fff':'#94a3b8',border:'none',borderRadius:'12px',fontSize:'13px',fontWeight:800,cursor:filtered.length?'pointer':'not-allowed'}}>⬇ PDF</button>
+          <button onClick={copyText} disabled={!filtered.length} style={{flex:1,padding:'12px',background:filtered.length?'#0d9488':'#e2e8f0',color:filtered.length?'#fff':'#94a3b8',border:'none',borderRadius:'12px',fontSize:'13px',fontWeight:800,cursor:filtered.length?'pointer':'not-allowed'}}>📋 Copy Text</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── GENERATE SCREEN ────────────────────────────────────────────
 function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal,extra,setExtra,toast_,date,tod,records,personnel,isAdmin}){
   const[tab,setTab]=useState('node');
   const[copied,setCopied]=useState(false);
+  const[showCustomReport,setShowCustomReport]=useState(false);
   const comdMsg=useMemo(()=>genComdMsg(date,tod,records,personnel),[date,tod,records,personnel]);
   const mcMsg=useMemo(()=>genMCMsg(date,records,personnel),[date,records,personnel]);
   const summaryMsg=useMemo(()=>genSummaryMsg(date,tod,records,personnel,total),[date,tod,records,personnel,total]);
@@ -3172,6 +3343,12 @@ function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal
           📊 Summary
         </button>
       </div>
+      <div style={{padding:'0 14px'}}>
+        <button onClick={()=>setShowCustomReport(true)} style={{width:'100%',marginTop:'12px',padding:'11px 8px',borderRadius:'10px',border:'2px solid #e2e8f0',background:'#fff',color:'#475569',fontWeight:800,fontSize:'13px',cursor:'pointer'}}>
+          🔍 Custom Report Builder
+        </button>
+      </div>
+      {showCustomReport&&<CustomReportModal personnel={personnel} date={date} records={records} toast_={toast_} onClose={()=>setShowCustomReport(false)}/>}
 
       {tab==='node'&&(
         <div className="card" style={{padding:'14px',marginTop:'12px'}}>
