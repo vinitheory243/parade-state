@@ -2530,16 +2530,19 @@ function BuddyModal({personnel,date,onClose,toast_}){
             const color=PLT_COLOR[plt];const bg=PLT_BG[plt];
             return(
               <div key={plt} style={{marginBottom:'16px'}}>
-                <div style={{fontSize:'11px',fontWeight:800,color,textTransform:'uppercase',letterSpacing:'.6px',marginBottom:'8px',paddingLeft:'2px'}}>
-                  {P_LABEL[plt]} — {personnelOnDate(personnel,date).filter(p=>p.plt===plt).length} pax
+                <div style={{fontSize:'11px',fontWeight:800,color,textTransform:'uppercase',letterSpacing:'.6px',marginBottom:'8px',paddingLeft:'2px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                  <span>{P_LABEL[plt]} — {personnelOnDate(personnel,date).filter(p=>p.plt===plt).length} pax</span>
+                  <span style={{fontWeight:600,fontSize:'10px',opacity:.7}}>{gs.length} groups</span>
                 </div>
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px'}}>
+                <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
                   {gs.map((grp,idx)=>(
-                    <div key={idx} style={{background:bg,border:`1.5px solid ${color}33`,borderRadius:'10px',padding:'10px 12px'}}>
-                      <div style={{fontSize:'10px',fontWeight:800,color,marginBottom:'6px'}}>B{idx+1}{grp.length===3?' (TRIO)':''}</div>
-                      {grp.map(p=>(
-                        <div key={p.id} style={{fontSize:'13px',fontWeight:600,color:'#0f172a',marginBottom:'2px'}}>• {p.rank} {p.name}</div>
-                      ))}
+                    <div key={idx} style={{background:bg,border:`1.5px solid ${color}33`,borderRadius:'10px',padding:'10px 14px',display:'flex',alignItems:'flex-start',gap:'12px'}}>
+                      <span style={{fontSize:'12px',fontWeight:800,color,minWidth:'32px',paddingTop:'1px'}}>B{idx+1}{grp.length===3?'*':''}</span>
+                      <div style={{flex:1}}>
+                        {grp.map(p=>(
+                          <div key={p.id} style={{fontSize:'13px',fontWeight:600,color:'#0f172a',lineHeight:1.5}}>• {p.rank} {p.name}</div>
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>
