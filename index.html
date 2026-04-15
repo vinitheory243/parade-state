@@ -250,7 +250,7 @@ const {useState, useEffect, useMemo, useRef} = React;
 
 // ─── RANKS ──────────────────────────────────────────────────────
 const RANKS = ['REC','PTE','LCP','CPL','CFC','SCT','3SG','2SG','1SG','SSG','MSG','ME1','ME2','ME3','ME4','ME5','3WO','2WO','1WO','MWO','SWO','CWO','2LT','LTA','CPT','MAJ','LTC','COL','DX12','BG'];
-const PES_LIST = ['','A','B1','B2','C2','C9','E1','E9','F'];
+const PES_LIST = ['','A','B1','B2','B3','B4','C2','C9','E1','E9','F'];
 
 // ─── PLATOONS & SECTIONS ────────────────────────────────────────
 const PLATOONS = ['P1','P2','HQ'];
@@ -3257,14 +3257,16 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
   function add(){
     if(!np.name.trim()){toast_('Enter a name');return}
     if(!np.sec||np.sec==='__new__'){toast_('Enter a section name');return}
-    const p={id:`p${Date.now()}`,rank:np.rank,name:np.name.toUpperCase().trim(),dn:np.dn.toUpperCase().trim()||np.name.toUpperCase().trim().split(' ')[0],plt:np.plt,sec:np.sec,siso:np.siso||{type:'si'},pes:np.pes||'',active:true,joinDate:todayStr()};
+    const rawPes=(np.pes||'').replace(/^OTHER:/,'').trim();
+    const p={id:`p${Date.now()}`,rank:np.rank,name:np.name.toUpperCase().trim(),dn:np.dn.toUpperCase().trim()||np.name.toUpperCase().trim().split(' ')[0],plt:np.plt,sec:np.sec,siso:np.siso||{type:'si'},pes:rawPes,active:true,joinDate:todayStr()};
     setPersonnel(prev=>[...prev,p]);setNp({rank:'PTE',name:'',dn:'',plt:'P1',sec:'BASE',siso:{type:'si'},pes:''});setNewSecInput('');setAddingNewSec(false);setShowAdd(false);toast_('✓ Personnel added');
   }
   function deactivate(id){setPersonnel(prev=>prev.map(p=>p.id===id?{...p,active:false,removedDate:todayStr()}:p));setConfirm(null);toast_('Removed from roster')}
   function restore(id){setPersonnel(prev=>prev.map(p=>p.id===id?{...p,active:true,removedDate:null}:p));toast_('✓ Restored')}
   function startEdit(p){setEditId(p.id);setEditData({rank:p.rank,name:p.name,dn:p.dn||'',plt:p.plt,sec:p.sec,siso:p.siso||{type:'si'},phone:p.phone||'',pes:p.pes||''});setAddingNewSecEdit(false);setEditSecInput('');}
   function saveEdit(id){
-    setPersonnel(prev=>prev.map(p=>p.id===id?{...p,...editData,name:editData.name.toUpperCase().trim(),dn:editData.dn.toUpperCase().trim()||editData.name.toUpperCase().trim().split(' ')[0]}:p));
+    const rawPes=(editData.pes||'').replace(/^OTHER:/,'').trim();
+    setPersonnel(prev=>prev.map(p=>p.id===id?{...p,...editData,name:editData.name.toUpperCase().trim(),dn:editData.dn.toUpperCase().trim()||editData.name.toUpperCase().trim().split(' ')[0],pes:rawPes}:p));
     setEditId(null);setEditSecInput('');setAddingNewSecEdit(false);toast_('✓ Updated');
   }
   // Group active by plt → sec
@@ -3332,9 +3334,11 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
               </div>
             </div>
             <div><div className="label">PES Status</div>
-              <select value={np.pes||''} onChange={e=>setNp({...np,pes:e.target.value})}>
+              <select value={PES_LIST.includes(np.pes||'')?np.pes||'':'__other__'} onChange={e=>{if(e.target.value==='__other__')setNp({...np,pes:'OTHER:'});else setNp({...np,pes:e.target.value});}}>
                 {PES_LIST.map(p=><option key={p} value={p}>{p||'— Not set —'}</option>)}
+                <option value="__other__">Others (custom)…</option>
               </select>
+              {!PES_LIST.includes(np.pes||'')&&<input type="text" placeholder="e.g. BP3" value={np.pes.replace(/^OTHER:/,'')} onChange={e=>setNp({...np,pes:e.target.value.toUpperCase().trim()||'OTHER:'})} style={{marginTop:'6px'}}/>}
             </div>
             <button className="sbtn" style={{margin:0}} onClick={add}>Add Personnel</button>
           </div>
@@ -3408,9 +3412,11 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
                           </div>
                         </div>
                         <div><div className="label">PES Status</div>
-                          <select value={editData.pes||''} onChange={e=>setEditData({...editData,pes:e.target.value})}>
+                          <select value={PES_LIST.includes(editData.pes||'')?editData.pes||'':'__other__'} onChange={e=>{if(e.target.value==='__other__')setEditData({...editData,pes:'OTHER:'});else setEditData({...editData,pes:e.target.value});}}>
                             {PES_LIST.map(p=><option key={p} value={p}>{p||'— Not set —'}</option>)}
+                            <option value="__other__">Others (custom)…</option>
                           </select>
+                          {!PES_LIST.includes(editData.pes||'')&&<input type="text" placeholder="e.g. BP3" value={editData.pes.replace(/^OTHER:/,'')} onChange={e=>setEditData({...editData,pes:e.target.value.toUpperCase().trim()||'OTHER:'})} style={{marginTop:'6px'}}/>}
                         </div>
                         <div className="btn-row">
                           <button className="btn-save" onClick={()=>saveEdit(person.id)}>Save</button>
