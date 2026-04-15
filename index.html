@@ -3168,7 +3168,7 @@ function CustomReportModal({personnel,date,records,toast_,onClose}){
     const rec=records[p.id];const parts=[];
     if(fldPes&&p.pes)parts.push(`PES ${p.pes}`);
     if(fldSec)parts.push(p.sec);
-    if(fldStatus)parts.push(rec&&rec.s?(rec.s==='others'&&rec.det?`Others: ${rec.det}`:(SM.find(s=>s.k===rec.s)?.l||rec.s)):'Not assigned');
+    if(fldStatus)parts.push(rec&&rec.s?(rec.s==='others'&&rec.det?`Others: ${rec.det}`:(SM[rec.s]?.l||rec.s)):'Not assigned');
     if(fldSiso)parts.push(sisoLabel(p));
     if(fldPhone&&p.phone)parts.push(p.phone);
     return parts;
@@ -3178,7 +3178,7 @@ function CustomReportModal({personnel,date,records,toast_,onClose}){
     const fp=[];
     if(fPlt!=='ALL')fp.push(`Platoon: ${P_LABEL[fPlt]||fPlt}`);
     if(fPes!=='ALL')fp.push(`PES: ${fPes}`);
-    if(fStatus!=='ALL')fp.push(`Status: ${fStatus==='none'?'Not assigned':(SM.find(s=>s.k===fStatus)?.l||fStatus)}`);
+    if(fStatus!=='ALL')fp.push(`Status: ${fStatus==='none'?'Not assigned':(SM[fStatus]?.l||fStatus)}`);
     if(fSiso!=='ALL')fp.push(fSiso==='so'?'S/O only':'S/I only');
     const lines=[`JRN CUSTOM REPORT · ${ds}`];
     if(fp.length)lines.push(`[${fp.join(' | ')}]`);
@@ -3200,7 +3200,7 @@ function CustomReportModal({personnel,date,records,toast_,onClose}){
     const fp=[];
     if(fPlt!=='ALL')fp.push(`Platoon: ${P_LABEL[fPlt]||fPlt}`);
     if(fPes!=='ALL')fp.push(`PES: ${fPes}`);
-    if(fStatus!=='ALL')fp.push(`Status: ${fStatus==='none'?'Not assigned':(SM.find(s=>s.k===fStatus)?.l||fStatus)}`);
+    if(fStatus!=='ALL')fp.push(`Status: ${fStatus==='none'?'Not assigned':(SM[fStatus]?.l||fStatus)}`);
     if(fSiso!=='ALL')fp.push(fSiso==='so'?'S/O only':'S/I only');
     if(fp.length){doc.setFontSize(8);doc.setFont('helvetica','italic');doc.setTextColor(100,116,139);doc.text(`Filters: ${fp.join('  |  ')}`,MG,y);y+=5;}
     doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(15,23,42);doc.text(`${filtered.length} personnel`,MG,y);y+=7;
@@ -3233,7 +3233,7 @@ function CustomReportModal({personnel,date,records,toast_,onClose}){
         else if(c.k==='name')v=p.name;
         else if(c.k==='pes')v=p.pes?`PES ${p.pes}`:'';
         else if(c.k==='sec')v=p.sec;
-        else if(c.k==='status')v=rec&&rec.s?(rec.s==='others'&&rec.det?`Others: ${rec.det}`:(SM.find(s=>s.k===rec.s)?.l||rec.s)):'';
+        else if(c.k==='status')v=rec&&rec.s?(rec.s==='others'&&rec.det?`Others: ${rec.det}`:(SM[rec.s]?.l||rec.s)):'';
         else if(c.k==='siso')v=sisoLabel(p);
         else if(c.k==='phone')v=p.phone||'';
         // Clip to column width
@@ -3273,7 +3273,7 @@ function CustomReportModal({personnel,date,records,toast_,onClose}){
             <div style={{display:'flex',gap:'6px',flexWrap:'wrap'}}>
               <button style={pill(fStatus==='ALL')} onClick={()=>setFStatus('ALL')}>All</button>
               <button style={pill(fStatus==='none','#dc2626')} onClick={()=>setFStatus('none')}>Not assigned</button>
-              {statusOptions.map(v=><button key={v} style={pill(fStatus===v,'#d97706')} onClick={()=>setFStatus(v)}>{SM.find(s=>s.k===v)?.l||v}</button>)}
+              {statusOptions.map(v=><button key={v} style={pill(fStatus===v,'#d97706')} onClick={()=>setFStatus(v)}>{SM[v]?.l||v}</button>)}
             </div>
           </div>
           <div style={{marginBottom:'14px'}}><div style={{fontSize:'12px',fontWeight:700,color:'#475569',marginBottom:'6px'}}>Strength Type</div>
