@@ -1786,6 +1786,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   const[otherReasons,setOtherReasons]=useState([]);
   const[showSearch,setShowSearch]=useState(false);
   const[showSO,setShowSO]=useState(false);
+  const[showBuddy,setShowBuddy]=useState(false);
   const[jumpTo,setJumpTo]=useState(null); // {id,plt} — navigate search result to person row
   const[nrPreview,setNrPreview]=useState(false);
   const[nrHistory,setNrHistory]=useState([]);
@@ -2274,6 +2275,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
             <div className="hdr-sub">Jurong Node &nbsp;·&nbsp; <span style={{color:online?'#4ade80':'#f87171',fontWeight:800}}>{online?'● Live':'● Offline'}</span></div>
           </div>
           <div style={{display:'flex',gap:'8px',alignItems:'center'}}>
+            <button onClick={()=>setShowBuddy(true)} title="Buddy System" style={{background:'rgba(255,255,255,.12)',border:'1px solid rgba(255,255,255,.2)',color:'#fff',borderRadius:'8px',padding:'6px 10px',fontSize:'16px',cursor:'pointer',flexShrink:0,lineHeight:1}}>👥</button>
             <button onClick={()=>setShowSO(true)} title="S/O List" style={{background:'rgba(255,255,255,.12)',border:'1px solid rgba(255,255,255,.2)',color:'#fff',borderRadius:'8px',padding:'6px 10px',fontSize:'16px',cursor:'pointer',flexShrink:0,lineHeight:1}}>🌙</button>
             <button onClick={()=>setShowSearch(true)} title="Find Personnel" style={{background:'rgba(255,255,255,.12)',border:'1px solid rgba(255,255,255,.2)',color:'#fff',borderRadius:'8px',padding:'6px 10px',fontSize:'16px',cursor:'pointer',flexShrink:0,lineHeight:1}}>🔍</button>
             <a href="/guide.html" target="_blank" style={{background:'rgba(255,255,255,.12)',border:'1px solid rgba(255,255,255,.2)',color:'#fff',borderRadius:'8px',padding:'6px 10px',fontSize:'16px',cursor:'pointer',flexShrink:0,lineHeight:1,textDecoration:'none'}} title="User Guide">📖</a>
@@ -2317,6 +2319,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       {pdfPreview&&<PDFPreviewModal date={pdfPreview.date} personnel={pdfPreview.personnelForDate||personnel} allTodRecs={pdfPreview.allTodRecs} total={pdfPreview.total} allTodMarkedBy={pdfPreview.allTodMarkedBy||{}} onClose={()=>setPdfPreview(null)} onDownloaded={onPdfDownloaded} isAdmin={isAdmin}/>}
       {showSearch&&<PersonnelSearchModal personnel={personnelOnDate(personnel,date)} records={records} tod={tod} onClose={()=>setShowSearch(false)} onGoTo={({id,plt})=>{setShowSearch(false);setScreen('attendance');setJumpTo({id,plt});}}/>}
       {showSO&&<SOListModal personnel={personnel} onClose={()=>setShowSO(false)}/>}
+      {showBuddy&&<BuddyModal personnel={personnel} date={date} onClose={()=>setShowBuddy(false)}/>}
       {nrPreview&&<NominalRollPreviewModal date={date} eventName={eventName} personnel={personnelOnDate(personnel,date)} records={records} total={personnelOnDate(personnel,date).length} onClose={()=>setNrPreview(false)}/>}
     </div>
   );
@@ -2399,6 +2402,133 @@ function PersonnelSearchModal({personnel,records,tod,onClose,onGoTo}){
 }
 
 // ─── S/O LIST MODAL ─────────────────────────────────────────────
+// ─── BUDDY SYSTEM ───────────────────────────────────────────────
+function makeBuddyGroups(ppl){
+  // Fisher-Yates shuffle
+  const arr=[...ppl];
+  for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}
+  const groups=[];
+  let i=0;
+  while(i<arr.length){
+    // If 3 left, make a trio; otherwise pair
+    if(arr.length-i===3){groups.push(arr.slice(i,i+3));i+=3;}
+    else{groups.push(arr.slice(i,i+2));i+=2;}
+  }
+  return groups;
+}
+function BuddyModal({personnel,date,onClose}){
+  const PLT_COLOR={P1:'#0d9488',P2:'#16a34a',HQ:'#d97706'};
+  const PLT_BG={P1:'#f0fdfa',P2:'#f0fdf4',HQ:'#fffbeb'};
+  const dn=p=>`${p.rank} ${p.dn||p.name.split(' ')[0]}`;
+  // Generate buddy groups per platoon, memoized so they don't re-shuffle on re-render
+  const[groups,setGroups]=React.useState(()=>{
+    const result={};
+    ['P1','P2','HQ'].forEach(plt=>{
+      const ppl=personnelOnDate(personnel,date).filter(p=>p.plt===plt);
+      result[plt]=makeBuddyGroups(ppl);
+    });
+    return result;
+  });
+  function regenerate(){
+    const result={};
+    ['P1','P2','HQ'].forEach(plt=>{
+      const ppl=personnelOnDate(personnel,date).filter(p=>p.plt===plt);
+      result[plt]=makeBuddyGroups(ppl);
+    });
+    setGroups(result);
+  }
+  function downloadPDF(){
+    const{jsPDF}=window.jspdf;
+    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const W=210,margin=14;
+    let y=margin;
+    const dateStr=new Date(date+'T00:00:00').toLocaleDateString('en-SG',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase();
+    // Header
+    doc.setFillColor(15,148,136);doc.rect(0,0,W,22,'F');
+    doc.setFont('helvetica','bold');doc.setFontSize(14);doc.setTextColor(255,255,255);
+    doc.text('JRN BUDDY SYSTEM',W/2,10,{align:'center'});
+    doc.setFontSize(9);doc.setFont('helvetica','normal');
+    doc.text(dateStr,W/2,17,{align:'center'});
+    y=28;
+    const pltColors={P1:[13,148,136],P2:[22,163,74],HQ:[217,119,6]};
+    const pltLabels={P1:'PLATOON 1',P2:'PLATOON 2',HQ:'HQ'};
+    ['P1','P2','HQ'].forEach(plt=>{
+      const gs=groups[plt];
+      if(!gs||!gs.length)return;
+      // Platoon header
+      doc.setFillColor(...pltColors[plt]);doc.rect(margin,y,W-margin*2,7,'F');
+      doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(255,255,255);
+      doc.text(`${pltLabels[plt]} — ${personnelOnDate(personnel,date).filter(p=>p.plt===plt).length} PAX`,margin+3,y+4.8);
+      y+=9;
+      // Buddy pairs in 2 columns
+      const colW=(W-margin*2-6)/2;
+      gs.forEach((grp,idx)=>{
+        const col=idx%2;const row=Math.floor(idx/2);
+        if(col===0&&idx>0)y+=0;
+        const x=margin+col*(colW+6);
+        const rowY=y+row*18;
+        // Check page break
+        if(rowY+18>285){doc.addPage();y=14;}
+        const bY=y+row*18;
+        const isTrio=grp.length===3;
+        doc.setFillColor(248,250,252);doc.roundedRect(x,bY,colW,isTrio?16:14,.5,.5,'F');
+        doc.setDrawColor(226,232,240);doc.roundedRect(x,bY,colW,isTrio?16:14,.5,.5,'S');
+        doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...pltColors[plt]);
+        doc.text(`B${idx+1}${isTrio?' (TRIO)':''}`,x+2,bY+4.5);
+        doc.setFont('helvetica','normal');doc.setTextColor(15,23,42);doc.setFontSize(7.5);
+        grp.forEach((p,pi)=>{doc.text(`• ${dn(p)}`,x+2,bY+8.5+pi*4);});
+      });
+      const rows=Math.ceil(gs.length/2);
+      y+=rows*18+6;
+    });
+    doc.save(`JRN_BuddySystem_${date}.pdf`);
+  }
+  return(
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.55)',zIndex:9000,display:'flex',flexDirection:'column'}} onClick={onClose}>
+      <div style={{background:'#fff',borderRadius:'0 0 18px 18px',padding:'16px 14px 16px',boxShadow:'0 8px 32px rgba(0,0,0,.18)',maxHeight:'88vh',display:'flex',flexDirection:'column'}} onClick={e=>e.stopPropagation()}>
+        {/* Header */}
+        <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'12px'}}>
+          <span style={{fontSize:'20px'}}>👥</span>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:800,fontSize:'16px',color:'#0f172a'}}>Buddy System</div>
+            <div style={{fontSize:'12px',color:'#64748b',marginTop:'1px'}}>Randomly paired per platoon</div>
+          </div>
+          <button onClick={regenerate} style={{background:'#f1f5f9',border:'1.5px solid #e2e8f0',borderRadius:'8px',padding:'6px 12px',fontSize:'12px',fontWeight:700,color:'#475569',cursor:'pointer'}}>🔀 Reshuffle</button>
+          <button onClick={onClose} style={{background:'none',border:'none',fontSize:'20px',color:'#94a3b8',cursor:'pointer',padding:'0 4px',lineHeight:1}}>✕</button>
+        </div>
+        {/* Platoon groups */}
+        <div style={{overflowY:'auto',flex:1,marginBottom:'12px'}}>
+          {['P1','P2','HQ'].map(plt=>{
+            const gs=groups[plt];
+            if(!gs||!gs.length)return null;
+            const color=PLT_COLOR[plt];const bg=PLT_BG[plt];
+            return(
+              <div key={plt} style={{marginBottom:'16px'}}>
+                <div style={{fontSize:'11px',fontWeight:800,color,textTransform:'uppercase',letterSpacing:'.6px',marginBottom:'8px',paddingLeft:'2px'}}>
+                  {P_LABEL[plt]} — {personnelOnDate(personnel,date).filter(p=>p.plt===plt).length} pax
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px'}}>
+                  {gs.map((grp,idx)=>(
+                    <div key={idx} style={{background:bg,border:`1.5px solid ${color}33`,borderRadius:'10px',padding:'10px 12px'}}>
+                      <div style={{fontSize:'10px',fontWeight:800,color,marginBottom:'6px'}}>B{idx+1}{grp.length===3?' (TRIO)':''}</div>
+                      {grp.map(p=>(
+                        <div key={p.id} style={{fontSize:'13px',fontWeight:600,color:'#0f172a',marginBottom:'2px'}}>• {p.rank} {p.dn||p.name.split(' ')[0]}</div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {/* Download */}
+        <button onClick={downloadPDF} style={{width:'100%',padding:'12px',background:'#0d9488',color:'#fff',border:'none',borderRadius:'12px',fontSize:'14px',fontWeight:800,cursor:'pointer'}}>
+          ⬇ Download PDF
+        </button>
+      </div>
+    </div>
+  );
+}
 function SOListModal({personnel,onClose}){
   const today=todayStr();
   const PLT_COLOR={P1:'#0d9488',P2:'#16a34a',HQ:'#d97706'};
