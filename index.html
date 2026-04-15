@@ -2404,15 +2404,18 @@ function PersonnelSearchModal({personnel,records,tod,onClose,onGoTo}){
 // ─── S/O LIST MODAL ─────────────────────────────────────────────
 // ─── BUDDY SYSTEM ───────────────────────────────────────────────
 function makeBuddyGroups(ppl){
-  // Fisher-Yates shuffle
-  const arr=[...ppl];
-  for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}
-  const groups=[];
-  let i=0;
-  while(i<arr.length){
-    // If 3 left, make a trio; otherwise pair
-    if(arr.length-i===3){groups.push(arr.slice(i,i+3));i+=3;}
-    else{groups.push(arr.slice(i,i+2));i+=2;}
+  // Pair sequentially top-to-bottom in parade state order (by section then person order)
+  // Group by section preserving order
+  const secMap={};const secOrder=[];
+  ppl.forEach(p=>{
+    if(!secMap[p.sec]){secMap[p.sec]=[];secOrder.push(p.sec);}
+    secMap[p.sec].push(p);
+  });
+  const ordered=secOrder.flatMap(s=>secMap[s]);
+  const groups=[];let i=0;
+  while(i<ordered.length){
+    if(ordered.length-i===3){groups.push(ordered.slice(i,i+3));i+=3;}
+    else{groups.push(ordered.slice(i,i+2));i+=2;}
   }
   return groups;
 }
@@ -2420,23 +2423,11 @@ function BuddyModal({personnel,date,onClose}){
   const PLT_COLOR={P1:'#0d9488',P2:'#16a34a',HQ:'#d97706'};
   const PLT_BG={P1:'#f0fdfa',P2:'#f0fdf4',HQ:'#fffbeb'};
   const dn=p=>`${p.rank} ${p.dn||p.name.split(' ')[0]}`;
-  // Generate buddy groups per platoon, memoized so they don't re-shuffle on re-render
-  const[groups,setGroups]=React.useState(()=>{
-    const result={};
-    ['P1','P2','HQ'].forEach(plt=>{
-      const ppl=personnelOnDate(personnel,date).filter(p=>p.plt===plt);
-      result[plt]=makeBuddyGroups(ppl);
-    });
-    return result;
+  const groups={};
+  ['P1','P2','HQ'].forEach(plt=>{
+    const ppl=personnelOnDate(personnel,date).filter(p=>p.plt===plt);
+    groups[plt]=makeBuddyGroups(ppl);
   });
-  function regenerate(){
-    const result={};
-    ['P1','P2','HQ'].forEach(plt=>{
-      const ppl=personnelOnDate(personnel,date).filter(p=>p.plt===plt);
-      result[plt]=makeBuddyGroups(ppl);
-    });
-    setGroups(result);
-  }
   function downloadPDF(){
     const{jsPDF}=window.jspdf;
     const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
@@ -2491,9 +2482,8 @@ function BuddyModal({personnel,date,onClose}){
           <span style={{fontSize:'20px'}}>👥</span>
           <div style={{flex:1}}>
             <div style={{fontWeight:800,fontSize:'16px',color:'#0f172a'}}>Buddy System</div>
-            <div style={{fontSize:'12px',color:'#64748b',marginTop:'1px'}}>Randomly paired per platoon</div>
+            <div style={{fontSize:'12px',color:'#64748b',marginTop:'1px'}}>Paired in parade state order</div>
           </div>
-          <button onClick={regenerate} style={{background:'#f1f5f9',border:'1.5px solid #e2e8f0',borderRadius:'8px',padding:'6px 12px',fontSize:'12px',fontWeight:700,color:'#475569',cursor:'pointer'}}>🔀 Reshuffle</button>
           <button onClick={onClose} style={{background:'none',border:'none',fontSize:'20px',color:'#94a3b8',cursor:'pointer',padding:'0 4px',lineHeight:1}}>✕</button>
         </div>
         {/* Platoon groups */}
