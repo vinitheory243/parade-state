@@ -2424,7 +2424,7 @@ function makeBuddyGroups(ppl){
 function BuddyModal({personnel,date,onClose,toast_}){
   const PLT_COLOR={P1:'#0d9488',P2:'#16a34a',HQ:'#d97706'};
   const PLT_BG={P1:'#f0fdfa',P2:'#f0fdf4',HQ:'#fffbeb'};
-  const dn=p=>`${p.rank} ${p.dn||p.name.split(' ')[0]}`;
+  const dn=p=>`${p.rank} ${p.name}`;
   const PLT_ORDER=['HQ','P1','P2'];
   const groups={};
   PLT_ORDER.forEach(plt=>{
@@ -2538,7 +2538,7 @@ function BuddyModal({personnel,date,onClose,toast_}){
                     <div key={idx} style={{background:bg,border:`1.5px solid ${color}33`,borderRadius:'10px',padding:'10px 12px'}}>
                       <div style={{fontSize:'10px',fontWeight:800,color,marginBottom:'6px'}}>B{idx+1}{grp.length===3?' (TRIO)':''}</div>
                       {grp.map(p=>(
-                        <div key={p.id} style={{fontSize:'13px',fontWeight:600,color:'#0f172a',marginBottom:'2px'}}>• {p.rank} {p.dn||p.name.split(' ')[0]}</div>
+                        <div key={p.id} style={{fontSize:'13px',fontWeight:600,color:'#0f172a',marginBottom:'2px'}}>• {p.rank} {p.name}</div>
                       ))}
                     </div>
                   ))}
