@@ -125,6 +125,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .prow-meta{display:flex;gap:5px;align-items:center}
 .prow-bd{font-size:10px;color:#94a3b8;padding:1px 6px;background:#f1f5f9;border-radius:8px;font-weight:600;white-space:nowrap}
 .prow-plt{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;white-space:nowrap}
+.prow-pes{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;white-space:nowrap;background:#f3e8ff;color:#7c3aed}
 .plt-p1{background:#dbeafe;color:#1e40af}.plt-p2{background:#d1fae5;color:#065f46}.plt-hq{background:#fef3c7;color:#92400e}
 .prow-cur{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .prow-cur-lbl{font-size:11px;color:#64748b;font-weight:600}
@@ -249,6 +250,7 @@ const {useState, useEffect, useMemo, useRef} = React;
 
 // ─── RANKS ──────────────────────────────────────────────────────
 const RANKS = ['REC','PTE','LCP','CPL','CFC','SCT','3SG','2SG','1SG','SSG','MSG','ME1','ME2','ME3','ME4','ME5','3WO','2WO','1WO','MWO','SWO','CWO','2LT','LTA','CPT','MAJ','LTC','COL','DX12','BG'];
+const PES_LIST = ['','A','B1','B2','C2','C9','E1','E9','F'];
 
 // ─── PLATOONS & SECTIONS ────────────────────────────────────────
 const PLATOONS = ['P1','P2','HQ'];
@@ -2999,6 +3001,7 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
       </div>
       <div className="prow-meta">
         <span className={`prow-plt ${pltClass}`}>{person.plt}</span>
+        {person.pes&&<span className="prow-pes">PES {person.pes}</span>}
       </div>
 
       {record.s?(
@@ -3219,7 +3222,7 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
   const[editId,setEditId]=useState(null);
   const[editData,setEditData]=useState({});
   const[filterPlt,setFilterPlt]=useState('ALL');
-  const[np,setNp]=useState({rank:'PTE',name:'',dn:'',plt:'P1',sec:'BASE',siso:{type:'si'}});
+  const[np,setNp]=useState({rank:'PTE',name:'',dn:'',plt:'P1',sec:'BASE',siso:{type:'si'},pes:''});
   const[newSecInput,setNewSecInput]=useState('');
   const[addingNewSec,setAddingNewSec]=useState(false);
   const[editSecInput,setEditSecInput]=useState('');
@@ -3254,12 +3257,12 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
   function add(){
     if(!np.name.trim()){toast_('Enter a name');return}
     if(!np.sec||np.sec==='__new__'){toast_('Enter a section name');return}
-    const p={id:`p${Date.now()}`,rank:np.rank,name:np.name.toUpperCase().trim(),dn:np.dn.toUpperCase().trim()||np.name.toUpperCase().trim().split(' ')[0],plt:np.plt,sec:np.sec,siso:np.siso||{type:'si'},active:true,joinDate:todayStr()};
-    setPersonnel(prev=>[...prev,p]);setNp({rank:'PTE',name:'',dn:'',plt:'P1',sec:'BASE',siso:{type:'si'}});setNewSecInput('');setAddingNewSec(false);setShowAdd(false);toast_('✓ Personnel added');
+    const p={id:`p${Date.now()}`,rank:np.rank,name:np.name.toUpperCase().trim(),dn:np.dn.toUpperCase().trim()||np.name.toUpperCase().trim().split(' ')[0],plt:np.plt,sec:np.sec,siso:np.siso||{type:'si'},pes:np.pes||'',active:true,joinDate:todayStr()};
+    setPersonnel(prev=>[...prev,p]);setNp({rank:'PTE',name:'',dn:'',plt:'P1',sec:'BASE',siso:{type:'si'},pes:''});setNewSecInput('');setAddingNewSec(false);setShowAdd(false);toast_('✓ Personnel added');
   }
   function deactivate(id){setPersonnel(prev=>prev.map(p=>p.id===id?{...p,active:false,removedDate:todayStr()}:p));setConfirm(null);toast_('Removed from roster')}
   function restore(id){setPersonnel(prev=>prev.map(p=>p.id===id?{...p,active:true,removedDate:null}:p));toast_('✓ Restored')}
-  function startEdit(p){setEditId(p.id);setEditData({rank:p.rank,name:p.name,dn:p.dn||'',plt:p.plt,sec:p.sec,siso:p.siso||{type:'si'},phone:p.phone||''});setAddingNewSecEdit(false);setEditSecInput('');}
+  function startEdit(p){setEditId(p.id);setEditData({rank:p.rank,name:p.name,dn:p.dn||'',plt:p.plt,sec:p.sec,siso:p.siso||{type:'si'},phone:p.phone||'',pes:p.pes||''});setAddingNewSecEdit(false);setEditSecInput('');}
   function saveEdit(id){
     setPersonnel(prev=>prev.map(p=>p.id===id?{...p,...editData,name:editData.name.toUpperCase().trim(),dn:editData.dn.toUpperCase().trim()||editData.name.toUpperCase().trim().split(' ')[0]}:p));
     setEditId(null);setEditSecInput('');setAddingNewSecEdit(false);toast_('✓ Updated');
@@ -3327,6 +3330,11 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
               <div><div className="label">Phone Number</div>
                 <input type="tel" placeholder="e.g. 91234567" value={np.phone||''} onChange={e=>setNp({...np,phone:e.target.value.trim()})}/>
               </div>
+            </div>
+            <div><div className="label">PES Status</div>
+              <select value={np.pes||''} onChange={e=>setNp({...np,pes:e.target.value})}>
+                {PES_LIST.map(p=><option key={p} value={p}>{p||'— Not set —'}</option>)}
+              </select>
             </div>
             <button className="sbtn" style={{margin:0}} onClick={add}>Add Personnel</button>
           </div>
@@ -3399,6 +3407,11 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
                             <input type="tel" placeholder="e.g. 91234567" value={editData.phone||''} onChange={e=>setEditData({...editData,phone:e.target.value.trim()})}/>
                           </div>
                         </div>
+                        <div><div className="label">PES Status</div>
+                          <select value={editData.pes||''} onChange={e=>setEditData({...editData,pes:e.target.value})}>
+                            {PES_LIST.map(p=><option key={p} value={p}>{p||'— Not set —'}</option>)}
+                          </select>
+                        </div>
                         <div className="btn-row">
                           <button className="btn-save" onClick={()=>saveEdit(person.id)}>Save</button>
                           <button className="btn-cancel" onClick={()=>setEditId(null)}>Cancel</button>
@@ -3407,7 +3420,7 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
                     ):(
                       <div className="mrow">
                         <div className="mrow-info">
-                          <div className="mrow-name">{person.rank} {person.name} <span className={sisoBadgeClass(person)} style={{marginLeft:'4px'}}>{sisoLabel(person)}</span></div>
+                          <div className="mrow-name">{person.rank} {person.name} <span className={sisoBadgeClass(person)} style={{marginLeft:'4px'}}>{sisoLabel(person)}</span>{person.pes&&<span className="prow-pes" style={{marginLeft:'4px',fontSize:'10px'}}>PES {person.pes}</span>}</div>
                           <div className="mrow-sub">Msg: {person.dn}</div>
                         </div>
                         <div style={{display:'flex',gap:'5px',flexShrink:0}}>
