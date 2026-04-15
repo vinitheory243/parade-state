@@ -241,10 +241,21 @@ const DB = firebase.database();
 <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7.23.3/babel.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+// Lazy-load heavy libraries only when first needed
+const _scriptCache={};
+function loadScript(src){
+  if(_scriptCache[src])return _scriptCache[src];
+  _scriptCache[src]=new Promise((resolve,reject)=>{
+    const s=document.createElement('script');s.src=src;s.onload=resolve;s.onerror=reject;document.head.appendChild(s);
+  });
+  return _scriptCache[src];
+}
+async function ensureJsPDF(){await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');}
+async function ensureCanvas(){await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');}
+async function ensureXLSX(){await loadScript('https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js');}
+async function ensureZip(){await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');}
+</script>
 <script type="text/babel">
 const {useState, useEffect, useMemo, useRef} = React;
 
@@ -1068,6 +1079,7 @@ function NominalRollPDFPage({plt,personnel,records,date,total,eventName}){
 }
 
 async function renderNominalRollPDF(dateStr,records,pAll,total,eventName){
+  await ensureJsPDF();await ensureCanvas();
   const{jsPDF}=window.jspdf;
   const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
   const pgW=210,pgH=297;
@@ -1147,7 +1159,8 @@ function NominalRollPreviewModal({date,eventName,personnel,records,total,onClose
 }
 
 // ─── FAST BULK PDF BUILDER (portrait A4, pure jsPDF) ─────────────
-function buildPDFForDate(dateStr,allTodRecs,pAll,total,allTodMarkedBy){
+async function buildPDFForDate(dateStr,allTodRecs,pAll,total,allTodMarkedBy){
+  await ensureJsPDF();
   const{jsPDF}=window.jspdf;
   const doc=new jsPDF({orientation:'portrait',unit:'pt',format:'a4'});
   const PW=595.28,PH=841.89,MG=18;
@@ -1241,6 +1254,7 @@ function buildPDFForDate(dateStr,allTodRecs,pAll,total,allTodMarkedBy){
 
 // ─── SHARED PDF RENDERER ─────────────────────────────────────────
 async function renderPDFFromData(dateStr,allTodRecs,pAll,total,allTodMarkedBy){
+  await ensureJsPDF();await ensureCanvas();
   const{jsPDF}=window.jspdf;
   const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
   const pgW=210,pgH=297;
@@ -1308,9 +1322,10 @@ function PDFPreviewModal({date,personnel,allTodRecs,total,allTodMarkedBy,onClose
       if(err.name!=='AbortError'){console.error(err);alert('Failed to generate PDF. Please try again.');}
     }finally{setDownloading(false);}
   }
-  function handleExcel(){
+  async function handleExcel(){
     setXlDownloading(true);
     try{
+      await ensureXLSX();
       const XLSX=window.XLSX;
       const wb=XLSX.utils.book_new();
       ['HQ','P1','P2'].forEach(plt=>{
@@ -2151,6 +2166,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   async function handleBulkDownload(type,setBulkLoading,setProgress){
     setBulkLoading(type);
     try{
+      await ensureZip();await ensureXLSX();
       const zip=new window.JSZip();
       const XLSX=window.XLSX;
       const ppl=personnelRef.current;
@@ -2431,7 +2447,8 @@ function BuddyModal({personnel,date,onClose,toast_}){
     const ppl=personnelOnDate(personnel,date).filter(p=>p.plt===plt);
     groups[plt]=makeBuddyGroups(ppl);
   });
-  function downloadPDF(){
+  async function downloadPDF(){
+    await ensureJsPDF();
     const{jsPDF}=window.jspdf;
     const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
     const W=210,margin=14;
@@ -3170,7 +3187,8 @@ function CustomReportModal({personnel,date,records,toast_,onClose}){
     return lines.join('\n');
   }
   function copyText(){navigator.clipboard.writeText(buildText()).then(()=>toast_('✓ Copied to clipboard')).catch(()=>{const ta=document.createElement('textarea');ta.value=buildText();document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast_('✓ Copied');});}
-  function downloadPDF(){
+  async function downloadPDF(){
+    await ensureJsPDF();
     const{jsPDF}=window.jspdf;
     const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
     const W=210,MG=14;
