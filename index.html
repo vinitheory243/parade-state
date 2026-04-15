@@ -3397,6 +3397,128 @@ function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal
 }
 
 // ─── MANAGE SCREEN ──────────────────────────────────────────────
+// ─── BULK PES IMPORT MODAL ──────────────────────────────────────
+function BulkPesModal({personnel,setPersonnel,toast_,onClose}){
+  const[raw,setRaw]=useState('');
+  const[preview,setPreview]=useState(null);
+  function normalize(s){return(s||'').toUpperCase().replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim();}
+  function score(a,b){
+    // Count how many words of b appear in a
+    const aw=a.split(' ');const bw=b.split(' ');
+    return bw.filter(w=>w.length>1&&aw.includes(w)).length;
+  }
+  function findMatch(name){
+    const n=normalize(name);
+    // Exact match first
+    let best=null,bestScore=0;
+    personnel.forEach(p=>{
+      const pn=normalize(p.name);
+      if(pn===n)return(best=p,bestScore=999);
+      const s=score(n,pn)+score(pn,n);
+      if(s>bestScore){bestScore=s;best=p;}
+    });
+    return bestScore>=2?{p:best,score:bestScore,exact:bestScore===999}:null;
+  }
+  function parse(){
+    const lines=raw.split('\n').map(l=>l.trim()).filter(Boolean);
+    const results=[];
+    const PES_PATTERN=/\b(A|B1|B2|B3|B4|C2|C9|E1|E9|F)\b/i;
+    lines.forEach(line=>{
+      // Try tab or comma separation first
+      const parts=line.split(/\t|,(?=\s*[A-F])/).map(p=>p.trim());
+      let name='',pes='';
+      if(parts.length>=2){
+        // Try each split to find which part is PES
+        for(let i=parts.length-1;i>=1;i--){
+          const m=parts[i].match(PES_PATTERN);
+          if(m){pes=m[1].toUpperCase();name=parts.slice(0,i).join(' ').trim();break;}
+        }
+        if(!pes){name=parts[0];pes='';}
+      } else {
+        // Single column — try to extract PES from end of line
+        const m=line.match(/\s+(A|B1|B2|B3|B4|C2|C9|E1|E9|F)\s*$/i);
+        if(m){pes=m[1].toUpperCase();name=line.slice(0,m.index).trim();}
+        else{name=line;pes='';}
+      }
+      if(!name)return;
+      const match=findMatch(name);
+      results.push({rawLine:line,name,pes,match});
+    });
+    setPreview(results);
+  }
+  function applyAll(){
+    const toUpdate=preview.filter(r=>r.match&&r.pes);
+    if(!toUpdate.length){toast_('Nothing to apply');return;}
+    setPersonnel(prev=>prev.map(p=>{
+      const hit=toUpdate.find(r=>r.match.p.id===p.id);
+      return hit?{...p,pes:hit.pes}:p;
+    }));
+    toast_(`✓ Updated PES for ${toUpdate.length} personnel`);
+    onClose();
+  }
+  const matched=preview?preview.filter(r=>r.match&&r.pes).length:0;
+  const unmatched=preview?preview.filter(r=>!r.match||!r.pes).length:0;
+  return(
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.55)',zIndex:9000,display:'flex',flexDirection:'column'}} onClick={onClose}>
+      <div style={{background:'#fff',borderRadius:'0 0 20px 20px',padding:'16px 14px 14px',boxShadow:'0 8px 32px rgba(0,0,0,.18)',maxHeight:'92vh',display:'flex',flexDirection:'column'}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'12px',flexShrink:0}}>
+          <span style={{fontSize:'20px'}}>📥</span>
+          <div style={{flex:1}}><div style={{fontWeight:800,fontSize:'16px',color:'#0f172a'}}>Bulk PES Import</div><div style={{fontSize:'12px',color:'#64748b'}}>Paste name + PES from spreadsheet</div></div>
+          <button onClick={onClose} style={{background:'none',border:'none',fontSize:'20px',color:'#94a3b8',cursor:'pointer'}}>✕</button>
+        </div>
+        <div style={{overflowY:'auto',flex:1}}>
+          {!preview?(
+            <>
+              <div style={{fontSize:'12px',color:'#64748b',marginBottom:'8px',lineHeight:1.5}}>
+                Paste two columns from your spreadsheet (Full Name + PES). Each row on a new line, tab or comma separated. Example:<br/>
+                <span style={{fontFamily:'monospace',fontSize:'11px',background:'#f1f5f9',padding:'4px 8px',borderRadius:'6px',display:'inline-block',marginTop:'4px'}}>TAN HONG YU MOSES	B1<br/>SHANMUGA SUNDARAM SAI VISHWA	A</span>
+              </div>
+              <textarea value={raw} onChange={e=>setRaw(e.target.value)} rows={12} placeholder="Paste here..." style={{resize:'vertical',fontFamily:'monospace',fontSize:'12px'}}/>
+              <button onClick={parse} disabled={!raw.trim()} style={{width:'100%',marginTop:'10px',padding:'12px',background:raw.trim()?'#7c3aed':'#e2e8f0',color:raw.trim()?'#fff':'#94a3b8',border:'none',borderRadius:'12px',fontSize:'14px',fontWeight:800,cursor:raw.trim()?'pointer':'not-allowed'}}>
+                Preview Matches →
+              </button>
+            </>
+          ):(
+            <>
+              <div style={{display:'flex',gap:'8px',marginBottom:'10px'}}>
+                <div style={{flex:1,background:'#f0fdf4',border:'1.5px solid #bbf7d0',borderRadius:'10px',padding:'8px 12px',textAlign:'center'}}>
+                  <div style={{fontSize:'18px',fontWeight:800,color:'#16a34a'}}>{matched}</div>
+                  <div style={{fontSize:'11px',color:'#15803d'}}>Ready to update</div>
+                </div>
+                <div style={{flex:1,background:'#fef2f2',border:'1.5px solid #fca5a5',borderRadius:'10px',padding:'8px 12px',textAlign:'center'}}>
+                  <div style={{fontSize:'18px',fontWeight:800,color:'#dc2626'}}>{unmatched}</div>
+                  <div style={{fontSize:'11px',color:'#b91c1c'}}>Not matched / no PES</div>
+                </div>
+              </div>
+              <div style={{maxHeight:'320px',overflowY:'auto',border:'1px solid #e2e8f0',borderRadius:'10px'}}>
+                {preview.map((r,i)=>(
+                  <div key={i} style={{padding:'8px 12px',borderBottom:'1px solid #f1f5f9',background:r.match&&r.pes?'#fff':'#fef9f9',display:'flex',alignItems:'center',gap:'8px'}}>
+                    <span style={{fontSize:'16px'}}>{r.match&&r.pes?'✅':'⚠️'}</span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:'12px',fontWeight:700,color:'#0f172a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.match?r.match.p.name:<span style={{color:'#dc2626'}}>{r.name}</span>}</div>
+                      <div style={{fontSize:'11px',color:'#64748b'}}>{r.match?`${r.match.p.rank} · ${r.match.p.plt}`:r.rawLine}</div>
+                    </div>
+                    {r.pes&&<span style={{background:'#f3e8ff',color:'#7c3aed',fontWeight:800,fontSize:'12px',padding:'2px 8px',borderRadius:'8px',flexShrink:0}}>PES {r.pes}</span>}
+                    {!r.pes&&<span style={{color:'#dc2626',fontSize:'11px',flexShrink:0}}>No PES</span>}
+                  </div>
+                ))}
+              </div>
+              <button onClick={()=>setPreview(null)} style={{width:'100%',marginTop:'10px',padding:'10px',background:'#f1f5f9',color:'#475569',border:'none',borderRadius:'10px',fontSize:'13px',fontWeight:700,cursor:'pointer'}}>← Back to edit</button>
+            </>
+          )}
+        </div>
+        {preview&&matched>0&&(
+          <div style={{paddingTop:'10px',borderTop:'1px solid #f1f5f9',flexShrink:0}}>
+            <button onClick={applyAll} style={{width:'100%',padding:'12px',background:'#7c3aed',color:'#fff',border:'none',borderRadius:'12px',fontSize:'14px',fontWeight:800,cursor:'pointer'}}>
+              ✓ Apply {matched} PES updates
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSection}){
   const[showAdd,setShowAdd]=useState(false);
   const[confirm,setConfirm]=useState(null);
@@ -3408,6 +3530,7 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
   const[addingNewSec,setAddingNewSec]=useState(false);
   const[editSecInput,setEditSecInput]=useState('');
   const[addingNewSecEdit,setAddingNewSecEdit]=useState(false);
+  const[showBulkPes,setShowBulkPes]=useState(false);
   // All known sections = hardcoded defaults + Firebase custom sections + any used in personnel
   function sectionsFor(plt){
     const base=P_SECTIONS[plt]||[];
@@ -3456,7 +3579,11 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
   const pltColors={P1:'#dbeafe',P2:'#d1fae5',HQ:'#fef3c7'};
   return(
     <div>
-      <button className="sbtn" onClick={()=>setShowAdd(v=>!v)}>{showAdd?'✕ Cancel':'+ Add New Personnel'}</button>
+      <div style={{display:'flex',gap:'8px',marginBottom:'4px'}}>
+        <button className="sbtn" style={{flex:1,margin:0}} onClick={()=>setShowAdd(v=>!v)}>{showAdd?'✕ Cancel':'+ Add New Personnel'}</button>
+        <button className="sbtn" style={{flex:1,margin:0,background:'#7c3aed'}} onClick={()=>setShowBulkPes(true)}>📥 Bulk PES Import</button>
+      </div>
+      {showBulkPes&&<BulkPesModal personnel={personnel} setPersonnel={setPersonnel} toast_={toast_} onClose={()=>setShowBulkPes(false)}/>}
       {showAdd&&(
         <div className="card" style={{marginBottom:'12px'}}>
           <div className="card-hdr">New Personnel</div>
