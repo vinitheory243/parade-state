@@ -2728,20 +2728,6 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setP
   },[jumpTo]);
   const active=personnelOnDate(personnel,date);
   const expiredSiso=active.filter(p=>sisoExpired(p));
-  // Leave expiry alerts: statuses with a till-date expiring today or tomorrow
-  const EXPIRY_STATUSES=new Set(['mc','hl','ol','ll','ul','fcl','off','birthday_off','oil','node_off','arf','ao_local','ao_overseas','hospitalised','cl','ccl','court','ca','civil','db_prison','do_gcm','awol','sol','suspended','rib','driving','cse','dcp','safer_upcat','so_till','amb_t1','amb_t2']);
-  const tomorrow=(()=>{const d=new Date(date+'T00:00:00');d.setDate(d.getDate()+1);return d.toISOString().slice(0,10);})();
-  const expiringToday=[], expiringTomorrow=[];
-  active.forEach(p=>{
-    const r=records[p.id];
-    if(!r||!r.s||!r.det)return;
-    if(!EXPIRY_STATUSES.has(r.s))return;
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(r.det))return;
-    const sisoType=(p.siso||{}).type||'si';
-    const pSO=sisoType==='so'||sisoType==='so_till';
-    if(r.det===date)expiringToday.push({p,rec:r,pSO});
-    else if(r.det===tomorrow)expiringTomorrow.push({p,rec:r,pSO});
-  });
   const filtered=active.filter(p=>{
     const q=search.toLowerCase();
     if(q){
@@ -2770,13 +2756,6 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setP
         <div className="alert-banner">
           <div className="alert-banner-title">⚠ {expiredSiso.length} S/O Till Date Reached — Update Required</div>
           {expiredSiso.map(p=><div key={p.id} className="alert-banner-item">• {dispName(p)} — {sisoLabel(p)}</div>)}
-        </div>
-      )}
-      {(expiringToday.length>0||expiringTomorrow.length>0)&&(
-        <div className="alert-banner-warn">
-          <div className="alert-banner-warn-title">📅 {expiringToday.length+expiringTomorrow.length} Leave/Status Expiring Soon</div>
-          {expiringToday.map(({p,rec,pSO})=>(<div key={p.id} className="alert-banner-warn-item">🔴 {dispName(p)} ({pSO?'S/O':'S/I'}) — {SM[rec.s]?.l||rec.s} ends tdy{pSO?', back tmr morning':', back tonight (Night Strength)'}</div>))}
-          {expiringTomorrow.map(({p,rec,pSO})=>(<div key={p.id} className="alert-banner-warn-item">🟡 {dispName(p)} ({pSO?'S/O':'S/I'}) — {SM[rec.s]?.l||rec.s} ends tmr{pSO?', back day after morning':', back tmr Night Strength'}</div>))}
         </div>
       )}
       <div className="stats-grid">
