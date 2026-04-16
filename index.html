@@ -1607,7 +1607,7 @@ function LoginScreen({onLogin}){
 
 // ─── LANDING SCREEN ─────────────────────────────────────────────
 const TOD_TIME = {'HLS':'Before 0745','0745':'0745 hrs','1300':'1300 hrs','1730':'1730 hrs','2030/2230':'2030 / 2230 hrs'};
-function LandingScreen({onPick,onLogout}){
+function LandingScreen({onPick,onLogout,isAdmin}){
   useEffect(()=>{window.scrollTo({top:0,left:0,behavior:'instant'});},[]);
   const today=todayStr();
   const d=new Date(today+'T00:00:00');
@@ -1651,7 +1651,10 @@ function LandingScreen({onPick,onLogout}){
           <div className="land-hdr-title">🪖 JRN Parade State</div>
           <div className="land-hdr-sub">Jurong Node — Select a Parade Time</div>
         </div>
-        <button className="land-signout" onClick={onLogout}>Sign Out</button>
+        <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+          {isAdmin&&<a href="slides.html" target="_blank" title="CO Presentation" style={{background:'rgba(255,255,255,.1)',border:'1px solid rgba(255,255,255,.18)',color:'rgba(255,255,255,.8)',borderRadius:'8px',padding:'6px 10px',fontSize:'15px',cursor:'pointer',lineHeight:1,textDecoration:'none'}} rel="noopener noreferrer">📊</a>}
+          <button className="land-signout" onClick={onLogout}>Sign Out</button>
+        </div>
       </div>
       <div className="land-date-box">
         <div className="land-date-icon">📅</div>
@@ -1770,7 +1773,7 @@ function Root(){
     }catch{}
   }
   if(!loggedIn)return <LoginScreen onLogin={handleLogin}/>;
-  if(!picked)return <LandingScreen onPick={(date,tod,eventName,eventKey)=>setPicked({date,tod,eventName,eventKey})} onLogout={handleLogout}/>;
+  if(!picked)return <LandingScreen onPick={(date,tod,eventName,eventKey)=>setPicked({date,tod,eventName,eventKey})} onLogout={handleLogout} isAdmin={isAdmin}/>;
   return <App initDate={picked.date} initTod={picked.tod} initEventName={picked.eventName||''} initEventKey={picked.eventKey||''} isAdmin={isAdmin} onHome={()=>setPicked(null)} onLogout={handleLogout}/>;
 }
 
