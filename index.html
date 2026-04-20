@@ -334,7 +334,7 @@ const SL = [
   {k:'rib',          l:'Rest In Bunk',               d:true,  datePick:true, dateRange:true, names:true},
   {k:'6ton_fam',     l:'6TON FAM (COE)',             d:false, names:true},
   {k:'gp_fam',       l:'GP FAM',                     d:false},
-  {k:'driving',      l:'Driving Course',             d:true,  datePick:true, dateRange:true, names:true},
+  {k:'driving',      l:'Driving Course',             d:true,  datePick:true, fromOnly:true, names:true},
   {k:'others',       l:'Others (specify)',            d:true,  dp:'Specify e.g. IPPT, DTO', names:true},
 ];
 const SM = Object.fromEntries(SL.map(s=>[s.k,s]));
@@ -1860,6 +1860,11 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         const dd=p.dailyDuty;
         if(dd&&dd.date===date&&WHOLE_DAY_DUTY.has(dd.s)){nr[p.id]={s:dd.s,det:'',from:''};return;}
         const al=p.activeLeave;
+        // Driving Course: no end date — carry every parade state including Night Strength until marked Present
+        if(al&&al.s==='driving'&&al.from&&date>=al.from){
+          nr[p.id]={s:'driving',from:al.from,det:''};
+          return;
+        }
         if(al&&al.det&&al.from){
           if(date>=al.from&&date<=al.det){
             if(date===al.det&&tod==='2030/2230'){
@@ -2017,6 +2022,9 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         const dd=p.dailyDuty;
         if(dd&&dd.date===date&&WHOLE_DAY_DUTY.has(dd.s)){nr[p.id]={s:dd.s,det:'',from:''};changed=true;return;}
         const al=p.activeLeave;
+        if(al&&al.s==='driving'&&al.from&&date>=al.from){
+          nr[p.id]={s:'driving',from:al.from,det:''};changed=true;return;
+        }
         if(al&&al.det&&al.from&&date>=al.from&&date<=al.det){
           if(date===al.det&&tod==='2030/2230'){
             const si=getSiso(p);
@@ -2252,7 +2260,8 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   }
   function setPersonLeave(id,s,from,till){
     // update personnel activeLeave for auto-carry
-    setPersonnelAndSync(prev=>prev.map(p=>p.id===id?{...p,activeLeave:till?{s,from:from||todayStr(),det:till}:null}:p));
+    const leave=s?{s,from:from||todayStr(),det:till||''}:null;
+    setPersonnelAndSync(prev=>prev.map(p=>p.id===id?{...p,activeLeave:leave}:p));
   }
   function setPersonDailyDuty(id,s,d){
     // update personnel dailyDuty for whole-day carry across TODs
@@ -2940,6 +2949,7 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
         if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
       } else {
         if(SM[s]&&!SM[s].datePick&&person.activeLeave)setPersonLeave(person.id,null,null,null);
+        if(SM[s]?.fromOnly)setPersonLeave(person.id,s,currentDate,null);
         if(WHOLE_DAY_DUTY.has(s))setPersonDailyDuty(person.id,s,currentDate);
         else if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
       }
@@ -2962,6 +2972,7 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
         if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
       } else {
         if(SM[newS]&&!SM[newS].datePick&&person.activeLeave)setPersonLeave(person.id,null,null,null);
+        if(SM[newS]?.fromOnly)setPersonLeave(person.id,newS,currentDate,null);
         if(WHOLE_DAY_DUTY.has(newS))setPersonDailyDuty(person.id,newS,currentDate);
         else if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
       }
@@ -2974,12 +2985,16 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
   }
   function handleFromDate(from){
     setRec(person.id,record.s,record.det||'',from);
-    if(!isNR&&record.det)setPersonLeave(person.id,record.s,from,record.det);
+    if(!isNR){
+      if(record.det)setPersonLeave(person.id,record.s,from,record.det);
+      else if(SM[record.s]?.fromOnly)setPersonLeave(person.id,record.s,from,null);
+    }
   }
 
   // Display summary for locked date-pick statuses
   function dateSummary(){
     if(!si?.datePick)return null;
+    if(si.fromOnly)return record.from?`From ${fmtDetDate(record.from)} — ongoing`:'Ongoing';
     const from=record.from;
     const till=record.det;
     if(!till)return null;
@@ -3045,19 +3060,26 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
           {/* Date picker for date-based statuses */}
           {si&&si.datePick&&(
             <div className="dpick-wrap">
-              {si.dateRange&&(
+              {(si.dateRange||si.fromOnly)&&(
                 <div className="dpick-row">
                   <span className="dpick-lbl">From</span>
                   <input type="date" className="dpick-inp" value={record.from||currentDate||''}
                     min={currentDate} onChange={e=>handleFromDate(e.target.value)}/>
                 </div>
               )}
-              <div className="dpick-row">
-                <span className="dpick-lbl">Till</span>
-                <input type="date" className="dpick-inp" value={record.det||''}
-                  min={record.from||currentDate} onChange={e=>handleTillDate(e.target.value)}/>
-              </div>
-              {record.det&&(
+              {!si.fromOnly&&(
+                <div className="dpick-row">
+                  <span className="dpick-lbl">Till</span>
+                  <input type="date" className="dpick-inp" value={record.det||''}
+                    min={record.from||currentDate} onChange={e=>handleTillDate(e.target.value)}/>
+                </div>
+              )}
+              {si.fromOnly&&record.from&&(
+                <div className="dpick-autocarry">
+                  ↻ Auto-carries every Parade State until marked Present
+                </div>
+              )}
+              {!si.fromOnly&&record.det&&(
                 <div className="dpick-autocarry">
                   ↻ Auto-carries daily until {fmtDetDate(record.det)}
                 </div>
