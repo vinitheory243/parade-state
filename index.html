@@ -2963,7 +2963,8 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
         if(person.activeLeave)setPersonLeave(person.id,null,null,null);
         if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
       } else {
-        if(SM[s]&&!SM[s].datePick&&person.activeLeave)setPersonLeave(person.id,null,null,null);
+        // Always clear old activeLeave when switching status — new carry set when till date is entered
+        if(person.activeLeave&&!SM[s]?.fromOnly)setPersonLeave(person.id,null,null,null);
         if(SM[s]?.fromOnly)setPersonLeave(person.id,s,currentDate,null);
         if(WHOLE_DAY_DUTY.has(s))setPersonDailyDuty(person.id,s,currentDate);
         else if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
@@ -2987,7 +2988,8 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
         if(person.activeLeave)setPersonLeave(person.id,null,null,null);
         if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
       } else {
-        if(SM[newS]&&!SM[newS].datePick&&person.activeLeave)setPersonLeave(person.id,null,null,null);
+        // Always clear old activeLeave when switching status — new carry set when till date is entered
+        if(person.activeLeave&&!SM[newS]?.fromOnly)setPersonLeave(person.id,null,null,null);
         if(SM[newS]?.fromOnly)setPersonLeave(person.id,newS,currentDate,null);
         if(WHOLE_DAY_DUTY.has(newS))setPersonDailyDuty(person.id,newS,currentDate);
         else if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
