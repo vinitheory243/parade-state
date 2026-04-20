@@ -1416,6 +1416,8 @@ function HistoryScreen({history,personnel,onPreview,onDelete,overrideUnlocked,se
   const[loading,setLoading]=useState(null);
   const[bulkLoading,setBulkLoading]=useState(null);
   const[bulkProgress,setBulkProgress]=useState(null);
+  const[rangeFrom,setRangeFrom]=useState(()=>{const n=new Date();return`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-01`;});
+  const[rangeTill,setRangeTill]=useState(()=>{const n=new Date();return`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;});
   const[editingId,setEditingId]=useState(null);  // date string of card showing password prompt
   const[passInput,setPassInput]=useState('');
   const[showPass,setShowPass]=useState(false);
@@ -1510,19 +1512,33 @@ function HistoryScreen({history,personnel,onPreview,onDelete,overrideUnlocked,se
         <h2>History</h2>
         <span className="hist-count">{history.length} records</span>
       </div>
-      {isAdmin&&onBulkDownload&&history.length>0&&(
-        <div style={{display:'flex',gap:'8px',marginBottom:'12px',padding:'10px 12px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:'10px'}}>
-          <div style={{fontSize:'12px',fontWeight:700,color:'#64748b',alignSelf:'center',flexShrink:0}}>Download All:</div>
-          <button disabled={!!bulkLoading} onClick={()=>onBulkDownload('pdf',setBulkLoading,setBulkProgress)}
-            style={{flex:1,padding:'8px',background:bulkLoading==='pdf'?'#94a3b8':'#dc2626',color:'#fff',border:'none',borderRadius:'8px',fontSize:'12px',fontWeight:700,cursor:bulkLoading?'not-allowed':'pointer'}}>
-            {bulkLoading==='pdf'?(bulkProgress?`Generating ${bulkProgress}…`:'Fetching data…'):'⬇ All PDF (ZIP)'}
-          </button>
-          <button disabled={!!bulkLoading} onClick={()=>onBulkDownload('excel',setBulkLoading,setBulkProgress)}
-            style={{flex:1,padding:'8px',background:bulkLoading==='excel'?'#94a3b8':'#16a34a',color:'#fff',border:'none',borderRadius:'8px',fontSize:'12px',fontWeight:700,cursor:bulkLoading?'not-allowed':'pointer'}}>
-            {bulkLoading==='excel'?(bulkProgress?`Generating ${bulkProgress}…`:'Fetching data…'):'⬇ All Excel (ZIP)'}
-          </button>
+      {isAdmin&&onBulkDownload&&history.length>0&&(()=>{
+        const rangeHistory=history.filter(e=>e.date>=rangeFrom&&e.date<=rangeTill);
+        return(
+        <div style={{marginBottom:'12px',padding:'10px 12px',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:'10px'}}>
+          <div style={{fontSize:'11px',fontWeight:700,color:'#64748b',marginBottom:'7px',textTransform:'uppercase',letterSpacing:'0.5px'}}>Download by Date Range</div>
+          <div style={{display:'flex',gap:'8px',alignItems:'center',marginBottom:'8px',flexWrap:'wrap'}}>
+            <label style={{fontSize:'12px',color:'#475569',fontWeight:600,flexShrink:0}}>From</label>
+            <input type="date" value={rangeFrom} onChange={e=>setRangeFrom(e.target.value)}
+              style={{flex:1,minWidth:'120px',padding:'5px 8px',border:'1px solid #cbd5e1',borderRadius:'6px',fontSize:'13px',background:'#fff'}}/>
+            <label style={{fontSize:'12px',color:'#475569',fontWeight:600,flexShrink:0}}>To</label>
+            <input type="date" value={rangeTill} onChange={e=>setRangeTill(e.target.value)}
+              style={{flex:1,minWidth:'120px',padding:'5px 8px',border:'1px solid #cbd5e1',borderRadius:'6px',fontSize:'13px',background:'#fff'}}/>
+            <span style={{fontSize:'11px',color:'#94a3b8',flexShrink:0}}>{rangeHistory.length} record{rangeHistory.length!==1?'s':''}</span>
+          </div>
+          <div style={{display:'flex',gap:'8px'}}>
+            <button disabled={!!bulkLoading||rangeHistory.length===0} onClick={()=>onBulkDownload('pdf',setBulkLoading,setBulkProgress,rangeHistory)}
+              style={{flex:1,padding:'8px',background:bulkLoading==='pdf'?'#94a3b8':rangeHistory.length===0?'#fca5a5':'#dc2626',color:'#fff',border:'none',borderRadius:'8px',fontSize:'12px',fontWeight:700,cursor:(bulkLoading||rangeHistory.length===0)?'not-allowed':'pointer'}}>
+              {bulkLoading==='pdf'?(bulkProgress?`Generating ${bulkProgress}…`:'Fetching data…'):'⬇ PDF (ZIP)'}
+            </button>
+            <button disabled={!!bulkLoading||rangeHistory.length===0} onClick={()=>onBulkDownload('excel',setBulkLoading,setBulkProgress,rangeHistory)}
+              style={{flex:1,padding:'8px',background:bulkLoading==='excel'?'#94a3b8':rangeHistory.length===0?'#6ee7b7':'#16a34a',color:'#fff',border:'none',borderRadius:'8px',fontSize:'12px',fontWeight:700,cursor:(bulkLoading||rangeHistory.length===0)?'not-allowed':'pointer'}}>
+              {bulkLoading==='excel'?(bulkProgress?`Generating ${bulkProgress}…`:'Fetching data…'):'⬇ Excel (ZIP)'}
+            </button>
+          </div>
         </div>
-      )}
+        );
+      })()}
       {years.map(y=>(
         <div key={y} className="hist-year-grp">
           <div className="hist-y-hdr" onClick={()=>toggleY(y)}>
@@ -2187,7 +2203,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
     toast_('✓ Saved to History');
   }
   function deleteHistory(dateStr){DB.ref(`jrn/history/${dateStr}`).set({date:dateStr,deleted:true,deletedAt:Date.now()});}
-  async function handleBulkDownload(type,setBulkLoading,setProgress){
+  async function handleBulkDownload(type,setBulkLoading,setProgress,filteredHistory){
     setBulkLoading(type);
     try{
       await ensureZip();await ensureXLSX();
@@ -2195,9 +2211,10 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       const XLSX=window.XLSX;
       const ppl=personnelRef.current;
       const defaultTotal=ppl.filter(p=>p.active).length;
-      const total=history.length;
+      const entries=filteredHistory||history;
+      const total=entries.length;
       // Fetch ALL dates in parallel
-      const fetched=await Promise.all(history.map(async entry=>{
+      const fetched=await Promise.all(entries.map(async entry=>{
         const ds=entry.date;
         const allTodRecs={};const allTodMarkedBy={};
         const pplForDate=personnelOnDate(ppl,ds);
@@ -2342,7 +2359,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         {isNR&&screen==='telegram'&&<NRGenerateScreen date={date} eventName={eventName} records={records} personnel={personnelOnDate(personnel,date)} toast_={toast_}/>}
         {!isNR&&screen==='telegram'&&<GenerateScreen msg={msg} total={total} setTotal={setTotal} totalManual={totalManual} setTotalManual={setTotalManual} autoTotal={personnelOnDate(personnel,date).length} extra={extra} setExtra={setExtra} toast_={toast_} date={date} tod={tod} records={records} personnel={personnelOnDate(personnel,date)} isAdmin={isAdmin}/>}
         {screen==='manage'&&<ManageScreen personnel={personnel} setPersonnel={setPersonnelAndSync} toast_={toast_} customSections={customSections} addCustomSection={addCustomSection} isAdmin={isAdmin}/>}
-        {!isNR&&screen==='history'&&<HistoryScreen history={history} personnel={personnel} onPreview={(e,setL)=>loadDayAndPreview(e.date,setL)} onDelete={deleteHistory} overrideUnlocked={isAdmin||overrideUnlocked} setOverrideUnlocked={setOverrideUnlocked} toast_={toast_} onEdit={dateStr=>{setDate(dateStr);setScreen('attendance');}} isAdmin={isAdmin} onBulkDownload={isAdmin?(type,setL,setP)=>handleBulkDownload(type,setL,setP):undefined}/>}
+        {!isNR&&screen==='history'&&<HistoryScreen history={history} personnel={personnel} onPreview={(e,setL)=>loadDayAndPreview(e.date,setL)} onDelete={deleteHistory} overrideUnlocked={isAdmin||overrideUnlocked} setOverrideUnlocked={setOverrideUnlocked} toast_={toast_} onEdit={dateStr=>{setDate(dateStr);setScreen('attendance');}} isAdmin={isAdmin} onBulkDownload={isAdmin?(type,setL,setP,filtered)=>handleBulkDownload(type,setL,setP,filtered):undefined}/>}
         {isNR&&screen==='history'&&<NRHistoryScreen nrHistory={nrHistory} personnel={personnelOnDate(personnel,date)} overrideUnlocked={isAdmin||overrideUnlocked} setOverrideUnlocked={setOverrideUnlocked} toast_={toast_} isAdmin={isAdmin} currentDate={date} currentEventKey={eventKey}/>}
       </div>
       <nav className="bnav">
