@@ -2943,7 +2943,8 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
 
   function quickSet(s){
     if(locked)return;
-    setRec(person.id,s,'','');
+    const autoFrom=s&&SM[s]?.datePick&&SM[s]?.dateRange?currentDate:'';
+    setRec(person.id,s,'',autoFrom);
     if(!isNR){
       if(!s){
         // Explicit clear — wipe carry sources so status doesn't snap back
@@ -2967,7 +2968,8 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
       setShowMore(false);
       return;
     }
-    setRec(person.id,newS,'','');
+    const autoFrom=newS&&SM[newS]?.datePick&&SM[newS]?.dateRange?currentDate:'';
+    setRec(person.id,newS,'',autoFrom);
     if(!isNR){
       if(!newS){
         if(person.activeLeave)setPersonLeave(person.id,null,null,null);
