@@ -535,9 +535,10 @@ function genMsg(date,tod,total,records,personnel,extra){
     if(!items.length)return'';
     return'\n'+items.map((x,i)=>{
       let line=`${i+1}. ${x.p.rank} ${x.p.dn||x.p.name.split(' ')[0]}`;
-      if(x.det){
-        const isDate=/^\d{4}-\d{2}-\d{2}$/.test(x.det);
-        const d=isDate?fmtTeleDate(x.det):x.det;
+      const dateVal=x.det||x.from||'';
+      if(dateVal){
+        const isDate=/^\d{4}-\d{2}-\d{2}$/.test(dateVal);
+        const d=isDate?fmtTeleDate(dateVal):dateVal;
         if(isDate)line+=` ${pre||'TILL '}${d}`;
         else if(pre)line+=` ${pre}${d}`;
         else line+=` (${d})`;
@@ -546,7 +547,7 @@ function genMsg(date,tod,total,records,personnel,extra){
     }).join('\n');
   };
   const line=(label,k,pre)=>`${label}: ${cnt(k)}${lst(k,pre)}`;
-  const lineMulti=(label,keys,pre)=>{const items=keys.flatMap(k=>grp[k]||[]);const n=items.length;if(!n)return`${label}: 0`;const names='\n'+items.map((x,i)=>{let l=`${i+1}. ${x.p.rank} ${x.p.dn||x.p.name.split(' ')[0]}`;if(x.det){const isDate=/^\d{4}-\d{2}-\d{2}$/.test(x.det);const d=isDate?fmtTeleDate(x.det):x.det;if(isDate)l+=` ${pre||'TILL '}${d}`;else if(pre)l+=` ${pre}${d}`;else l+=` (${d})`;}return l;}).join('\n');return`${label}: ${n}${names}`;};
+  const lineMulti=(label,keys,pre)=>{const items=keys.flatMap(k=>grp[k]||[]);const n=items.length;if(!n)return`${label}: 0`;const names='\n'+items.map((x,i)=>{let l=`${i+1}. ${x.p.rank} ${x.p.dn||x.p.name.split(' ')[0]}`;const dateVal=x.det||x.from||'';if(dateVal){const isDate=/^\d{4}-\d{2}-\d{2}$/.test(dateVal);const d=isDate?fmtTeleDate(dateVal):dateVal;if(isDate)l+=` ${pre||'TILL '}${d}`;else if(pre)l+=` ${pre}${d}`;else l+=` (${d})`;}return l;}).join('\n');return`${label}: ${n}${names}`;};
   // Duty Personnel: collect all with their status label
   const dutyItems=[...DUTY_STATUSES].flatMap(k=>(grp[k]||[]).map(x=>({x,label:(SM[k]?.l||k).toUpperCase()})));
   const dutyCount=dutyItems.length;
@@ -920,7 +921,7 @@ function getRemarkText(allTodRecs,pid){
     const till=rec.det?fmtDate(rec.det):'';
     if(si.dateRange&&from&&till&&from!==till){dateRemark=`${fullLabel} ${from} - ${till}`;}
     else if(till){dateRemark=`${fullLabel} TILL ${till}`;}
-    else if(from){dateRemark=`${fullLabel} FM ${from}`;}
+    else if(from){dateRemark=`${fullLabel} TILL ${from}`;}
     else{dateRemark=fullLabel;}
   }
   if(dateRemark&&othersRemark)return`${dateRemark} | ${othersRemark}`;
