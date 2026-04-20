@@ -941,8 +941,11 @@ function ParadeStatePDFPage({plt,personnel,allTodRecs,date,total,allTodMarkedBy}
   const sections=[...new Set([...(P_SECTIONS[plt]||[]),...customSecsFromPpl])];
   const NON_CMDR=new Set(['REC','PTE','LCP','CPL','CFC']);
   const commanders=personnel.filter(p=>!NON_CMDR.has(p.rank));
+  const hlsConducted=Object.keys(allTodRecs['HLS']||{}).length>0||
+    !!(allTodMarkedBy['HLS']&&Object.values(allTodMarkedBy['HLS']).some(v=>v));
   // Look up who signed off a given TOD for this platoon
   function markerLabel(tod){
+    if(tod==='HLS'&&!hlsConducted)return<span style={{fontWeight:700,fontSize:9,color:'#64748b'}}>NO HLS</span>;
     const mb=(allTodMarkedBy[tod]||{})[plt];
     if(!mb)return<span className="pdf-ft-line"/>;
     const c=commanders.find(x=>x.id===mb);
@@ -1231,14 +1234,21 @@ async function buildPDFForDate(dateStr,allTodRecs,pAll,total,allTodMarkedBy){
     doc.line(MG,fy,PW-MG,fy);doc.setLineWidth(0.5);
     const todLabels=[{k:'HLS',l:'HLS Marked By'},{k:'0745',l:'FP Marked By'},{k:'1300',l:'MP Marked By'},{k:'1730',l:'LP Marked By'}];
     const colW=(TW-80)/4;
+    const hlsConducted=Object.keys(allTodRecs['HLS']||{}).length>0||
+      !!(allTodMarkedBy&&allTodMarkedBy['HLS']&&Object.values(allTodMarkedBy['HLS']).some(v=>v));
     todLabels.forEach((tl,i)=>{
       const fx=MG+i*colW;
       doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.setTextColor(71,85,105);
       doc.text(tl.l.toUpperCase(),fx,fy+10);
-      const name=markerStr(plt,tl.k);
-      doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(15,23,42);
-      doc.text(name||'',fx,fy+22);
-      doc.setDrawColor(0,0,0);doc.line(fx,fy+32,fx+colW-6,fy+32);
+      if(tl.k==='HLS'&&!hlsConducted){
+        doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(100,116,139);
+        doc.text('NO HLS',fx,fy+22);
+      } else {
+        const name=markerStr(plt,tl.k);
+        doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(15,23,42);
+        doc.text(name||'',fx,fy+22);
+        doc.setDrawColor(0,0,0);doc.line(fx,fy+32,fx+colW-6,fy+32);
+      }
     });
     const rx=PW-MG-80;
     doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.setTextColor(71,85,105);
