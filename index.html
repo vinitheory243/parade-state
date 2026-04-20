@@ -915,6 +915,7 @@ function getRemarkText(allTodRecs,pid){
     const si=SM[rec.s];
     if(!si||!si.datePick||dateRemark)continue;
     const fullLabel=(si.l||rec.s).toUpperCase();
+    if(si.fromOnly){dateRemark=fullLabel;continue;}
     const from=rec.from?fmtDate(rec.from):'';
     const till=rec.det?fmtDate(rec.det):'';
     if(si.dateRange&&from&&till&&from!==till){dateRemark=`${fullLabel} ${from} - ${till}`;}
