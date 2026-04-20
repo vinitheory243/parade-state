@@ -2963,8 +2963,10 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
         if(person.activeLeave)setPersonLeave(person.id,null,null,null);
         if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
       } else {
-        // Always clear old activeLeave when switching status — new carry set when till date is entered
-        if(person.activeLeave&&!SM[s]?.fromOnly)setPersonLeave(person.id,null,null,null);
+        // At Night Strength, marking Present should not clear an ongoing activeLeave (e.g. ARF — person is in bunk but still on ARF tomorrow)
+        const alOngoing=person.activeLeave&&person.activeLeave.det&&person.activeLeave.det>currentDate;
+        const keepLeave=tod==='2030/2230'&&s==='present'&&alOngoing;
+        if(person.activeLeave&&!SM[s]?.fromOnly&&!keepLeave)setPersonLeave(person.id,null,null,null);
         if(SM[s]?.fromOnly)setPersonLeave(person.id,s,currentDate,null);
         if(WHOLE_DAY_DUTY.has(s))setPersonDailyDuty(person.id,s,currentDate);
         else if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
@@ -2989,7 +2991,9 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
         if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
       } else {
         // Always clear old activeLeave when switching status — new carry set when till date is entered
-        if(person.activeLeave&&!SM[newS]?.fromOnly)setPersonLeave(person.id,null,null,null);
+        const alOngoing=person.activeLeave&&person.activeLeave.det&&person.activeLeave.det>currentDate;
+        const keepLeave=tod==='2030/2230'&&newS==='present'&&alOngoing;
+        if(person.activeLeave&&!SM[newS]?.fromOnly&&!keepLeave)setPersonLeave(person.id,null,null,null);
         if(SM[newS]?.fromOnly)setPersonLeave(person.id,newS,currentDate,null);
         if(WHOLE_DAY_DUTY.has(newS))setPersonDailyDuty(person.id,newS,currentDate);
         else if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
