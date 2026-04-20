@@ -2160,7 +2160,8 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       await Promise.all(TODS.map(async tod=>{
         const snap=await DB.ref(fbAttPath(dateStr,tod)).once('value');
         const d=snap.val();
-        allTodRecs[tod]=d?(d.records||{}):{};
+        const anySubmitted=d&&d.submitted&&Object.values(d.submitted).some(v=>v);
+        allTodRecs[tod]=(tod==='HLS'?anySubmitted:d)?(d.records||{}):{};
         if(d){
           if(d.totalManual&&d.total){pTotal=d.total;pTotalManual=true;}
           if(d.markedBy)allTodMarkedBy[tod]=d.markedBy;
@@ -2194,7 +2195,8 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         await Promise.all(TODS.map(async t=>{
           const snap=await DB.ref(fbAttPath(ds,t)).once('value');
           const td=snap.val();
-          allTodRecs[t]=td?(td.records||{}):{};
+          const anySubmitted=td&&td.submitted&&Object.values(td.submitted).some(v=>v);
+          allTodRecs[t]=(t==='HLS'?anySubmitted:td)?(td.records||{}):{};
           if(td&&td.totalManual&&td.total)pTotal=td.total;
           if(td&&td.markedBy)allTodMarkedBy[t]=td.markedBy;
         }));
