@@ -1635,7 +1635,7 @@ function LoginScreen({onLogin}){
 
 // ─── LANDING SCREEN ─────────────────────────────────────────────
 const TOD_TIME = {'HLS':'Before 0745','0745':'0745 hrs','1300':'1300 hrs','1730':'1730 hrs','2030/2230':'2030 / 2230 hrs'};
-function LandingScreen({onPick,onLogout,isAdmin}){
+function LandingScreen({onPick,onLogout,isAdmin,currentUserLabel}){
   useEffect(()=>{window.scrollTo({top:0,left:0,behavior:'instant'});},[]);
   const today=todayStr();
   const d=new Date(today+'T00:00:00');
@@ -1646,6 +1646,37 @@ function LandingScreen({onPick,onLogout,isAdmin}){
   const[nrName,setNrName]=useState('');
   const nrInputRef=useRef(null);
   useEffect(()=>{if(nrModal==='new')setTimeout(()=>nrInputRef.current&&nrInputRef.current.focus(),80);},[nrModal]);
+  // Feedback / report states
+  const[fbOpen,setFbOpen]=useState(false);
+  const[fbList,setFbList]=useState([]);
+  const[fbText,setFbText]=useState('');
+  const[fbLoading,setFbLoading]=useState(false);
+  const[fbSubmitting,setFbSubmitting]=useState(false);
+  async function openFeedback(){
+    setFbOpen(true);setFbLoading(true);
+    try{
+      const snap=await DB.ref('jrn/feedback').once('value');
+      const raw=snap.val()||{};
+      const now=Date.now();const TEN=10*24*3600*1000;
+      await Promise.all(Object.entries(raw).filter(([,v])=>v.fixedAt&&now>v.fixedAt+TEN).map(([k])=>DB.ref(`jrn/feedback/${k}`).remove()));
+      const list=Object.entries(raw).filter(([,v])=>!(v.fixedAt&&now>v.fixedAt+TEN)).map(([k,v])=>({id:k,...v})).sort((a,b)=>b.submittedAt-a.submittedAt);
+      setFbList(list);
+    }catch{}
+    setFbLoading(false);
+  }
+  async function submitFeedback(){
+    const t=fbText.trim();if(!t)return;
+    setFbSubmitting(true);
+    const entry={text:t,submittedAt:Date.now(),submittedBy:currentUserLabel||'User',tag:'pending',fixedAt:null};
+    const ref=await DB.ref('jrn/feedback').push(entry);
+    setFbList(prev=>[{id:ref.key,...entry},...prev]);
+    setFbText('');setFbSubmitting(false);
+  }
+  async function setFbTag(id,tag){
+    const upd={tag,fixedAt:tag==='fixed'?Date.now():null};
+    await DB.ref(`jrn/feedback/${id}`).update(upd);
+    setFbList(prev=>prev.map(f=>f.id===id?{...f,...upd}:f));
+  }
 
   async function openNR(){
     setNrModal('loading');
@@ -1712,6 +1743,74 @@ function LandingScreen({onPick,onLogout,isAdmin}){
           <div className="land-slot-arrow">›</div>
         </div>
       </div>
+
+      {/* Report / Suggest button */}
+      <div style={{textAlign:'center',marginTop:'18px',marginBottom:'4px'}}>
+        <button onClick={openFeedback} style={{background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.18)',color:'rgba(255,255,255,.65)',borderRadius:'20px',padding:'7px 18px',fontSize:'12px',fontWeight:600,cursor:'pointer',letterSpacing:'0.3px'}}>
+          📝 Report a Fault / Suggest an Improvement
+        </button>
+      </div>
+
+      {/* Feedback modal */}
+      {fbOpen&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.6)',zIndex:9999,display:'flex',alignItems:'flex-end',justifyContent:'center',padding:'0'}} onClick={()=>setFbOpen(false)}>
+          <div style={{background:'#fff',borderRadius:'20px 20px 0 0',padding:'20px 16px 32px',width:'100%',maxWidth:'520px',maxHeight:'85vh',display:'flex',flexDirection:'column',boxShadow:'0 -4px 32px rgba(0,0,0,.25)'}} onClick={e=>e.stopPropagation()}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'14px'}}>
+              <div style={{fontWeight:800,fontSize:'16px',color:'#0f172a'}}>📝 Reports &amp; Suggestions</div>
+              <button onClick={()=>setFbOpen(false)} style={{background:'#f1f5f9',border:'none',borderRadius:'50%',width:'30px',height:'30px',fontSize:'16px',cursor:'pointer',color:'#64748b',lineHeight:1}}>✕</button>
+            </div>
+            {/* Submit area */}
+            <div style={{marginBottom:'14px'}}>
+              <textarea value={fbText} onChange={e=>setFbText(e.target.value)} placeholder="Describe the issue or your suggestion..." rows={3}
+                style={{width:'100%',padding:'10px 12px',border:'1.5px solid #cbd5e1',borderRadius:'10px',fontSize:'13px',resize:'none',outline:'none',boxSizing:'border-box',fontFamily:'inherit'}}/>
+              <button onClick={submitFeedback} disabled={fbSubmitting||!fbText.trim()}
+                style={{marginTop:'6px',width:'100%',padding:'10px',background:fbSubmitting||!fbText.trim()?'#94a3b8':'#0d9488',border:'none',borderRadius:'10px',fontSize:'13px',fontWeight:700,color:'#fff',cursor:fbSubmitting||!fbText.trim()?'not-allowed':'pointer'}}>
+                {fbSubmitting?'Submitting…':'Submit Report / Suggestion'}
+              </button>
+            </div>
+            {/* List */}
+            <div style={{overflowY:'auto',flex:1,display:'flex',flexDirection:'column',gap:'10px'}}>
+              {fbLoading?(
+                <div style={{textAlign:'center',color:'#94a3b8',padding:'20px',fontSize:'13px'}}>Loading…</div>
+              ):fbList.length===0?(
+                <div style={{textAlign:'center',color:'#94a3b8',padding:'20px',fontSize:'13px'}}>No reports yet. Be the first to submit one!</div>
+              ):fbList.map(f=>{
+                const dt=new Date(f.submittedAt).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'});
+                const isPending=f.tag!=='fixed';
+                return(
+                  <div key={f.id} style={{background:'#f8fafc',border:`1.5px solid ${isPending?'#fbbf24':'#6ee7b7'}`,borderRadius:'12px',padding:'11px 13px'}}>
+                    <div style={{fontSize:'13px',color:'#1e293b',marginBottom:'6px',lineHeight:1.5}}>{f.text}</div>
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:'6px'}}>
+                      <div style={{fontSize:'11px',color:'#94a3b8'}}>{f.submittedBy} · {dt}</div>
+                      {isAdmin?(
+                        <div style={{display:'flex',gap:'5px'}}>
+                          <button onClick={()=>setFbTag(f.id,'pending')}
+                            style={{padding:'4px 10px',borderRadius:'20px',border:'none',fontSize:'11px',fontWeight:700,cursor:'pointer',background:isPending?'#fbbf24':'#e2e8f0',color:isPending?'#78350f':'#64748b'}}>
+                            Pending
+                          </button>
+                          <button onClick={()=>setFbTag(f.id,'fixed')}
+                            style={{padding:'4px 10px',borderRadius:'20px',border:'none',fontSize:'11px',fontWeight:700,cursor:'pointer',background:!isPending?'#10b981':'#e2e8f0',color:!isPending?'#fff':'#64748b'}}>
+                            Fixed ✓
+                          </button>
+                        </div>
+                      ):(
+                        <span style={{padding:'3px 10px',borderRadius:'20px',fontSize:'11px',fontWeight:700,background:isPending?'#fef3c7':'#d1fae5',color:isPending?'#92400e':'#065f46'}}>
+                          {isPending?'Pending':'Fixed ✓'}
+                        </span>
+                      )}
+                    </div>
+                    {!isPending&&f.fixedAt&&(
+                      <div style={{fontSize:'10px',color:'#94a3b8',marginTop:'4px'}}>
+                        Fixed {new Date(f.fixedAt).toLocaleDateString('en-MY',{day:'numeric',month:'short'})} · Auto-removes in {Math.max(0,10-Math.floor((Date.now()-f.fixedAt)/(24*3600*1000)))} day{Math.max(0,10-Math.floor((Date.now()-f.fixedAt)/(24*3600*1000)))!==1?'s':''}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal backdrop */}
       {(nrModal==='pick'||nrModal==='new')&&(
@@ -1786,10 +1885,12 @@ function Root(){
     return false;
   });
   const[picked,setPicked]=useState(null); // {date, tod}
+  const[currentUserLabel,setCurrentUserLabel]=useState(()=>{try{const f=validateRemember();return f?.label||'User';}catch{return 'User';}});
   function handleLogin(u){
     setLoggedIn(true);
     const admin=!!(u&&u.isAdmin);
     setIsAdmin(admin);
+    setCurrentUserLabel(u?.label||'User');
     try{sessionStorage.setItem('jrn_auth','1');sessionStorage.setItem('jrn_admin',admin?'1':'0');}catch{}
   }
   function handleLogout(){
@@ -1801,7 +1902,7 @@ function Root(){
     }catch{}
   }
   if(!loggedIn)return <LoginScreen onLogin={handleLogin}/>;
-  if(!picked)return <LandingScreen onPick={(date,tod,eventName,eventKey)=>setPicked({date,tod,eventName,eventKey})} onLogout={handleLogout} isAdmin={isAdmin}/>;
+  if(!picked)return <LandingScreen onPick={(date,tod,eventName,eventKey)=>setPicked({date,tod,eventName,eventKey})} onLogout={handleLogout} isAdmin={isAdmin} currentUserLabel={currentUserLabel}/>;
   return <App initDate={picked.date} initTod={picked.tod} initEventName={picked.eventName||''} initEventKey={picked.eventKey||''} isAdmin={isAdmin} onHome={()=>setPicked(null)} onLogout={handleLogout}/>;
 }
 
