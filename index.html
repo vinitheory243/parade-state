@@ -647,7 +647,7 @@ function genMsg(date,tod,total,records,personnel,extra){
   L.push('');
   L.push(line('GP FAM','gp_fam'));
   L.push('');
-  L.push(line('Driving Course','driving'));
+  {const di=grp['driving']||[];L.push(`Driving Course: ${di.length}`+(di.length?'\n'+di.map((x,i)=>`${i+1}. ${x.p.rank} ${x.p.dn||x.p.name.split(' ')[0]}`).join('\n'):''));}
   if(cnt('others')){
     const othersItems=grp['others']||[];
     const byReason={};
