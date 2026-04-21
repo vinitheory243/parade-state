@@ -2473,13 +2473,18 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
     else{DB.ref(`${attPath}/records/${id}`).remove();}
   }
   function setPersonLeave(id,s,from,till){
-    // update personnel activeLeave for auto-carry
     const leave=s?{s,from:from||todayStr(),det:till||''}:null;
-    setPersonnelAndSync(prev=>prev.map(p=>p.id===id?{...p,activeLeave:leave}:p));
+    // Targeted write — avoids race condition from full-replace when multiple sgts write simultaneously
+    if(leave) DB.ref(`jrn/personnel/${id}/activeLeave`).set(leave);
+    else DB.ref(`jrn/personnel/${id}/activeLeave`).remove();
+    setPersonnel(prev=>{const next=prev.map(p=>p.id===id?{...p,activeLeave:leave}:p);personnelRef.current=next;return next;});
   }
   function setPersonDailyDuty(id,s,d){
-    // update personnel dailyDuty for whole-day carry across TODs
-    setPersonnelAndSync(prev=>prev.map(p=>p.id===id?{...p,dailyDuty:s?{s,date:d}:null}:p));
+    const duty=s?{s,date:d}:null;
+    // Targeted write — same race-condition fix as setPersonLeave
+    if(duty) DB.ref(`jrn/personnel/${id}/dailyDuty`).set(duty);
+    else DB.ref(`jrn/personnel/${id}/dailyDuty`).remove();
+    setPersonnel(prev=>{const next=prev.map(p=>p.id===id?{...p,dailyDuty:duty}:p);personnelRef.current=next;return next;});
   }
   function toast_(msg,dur=3000){setToast(msg);setToastKey(k=>k+1);setTimeout(()=>setToast(null),dur)}
   function setAllPresent(){
