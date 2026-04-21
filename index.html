@@ -1148,39 +1148,27 @@ function NominalRollPreviewModal({date,eventName,personnel,records,total,onClose
       await ensureXLSX();
       const XLSX=window.XLSX;
       const wb=XLSX.utils.book_new();
-      ['HQ','P1','P2'].forEach(plt=>{
-        const pltPpl=personnel.filter(p=>p.active&&p.plt===plt);
-        const rows=[
-          [title],
-          [`Date: ${fmtDate(date)}  |  ${P_LABEL[plt]}  |  Platoon Strength: ${pltPpl.length}  |  Node Strength: ${total}`],
-          [],
-          ['S/N','RANK','NAME','IN/OUT','STATUS','REMARK'],
-        ];
-        let sn=0;
-        const secs=[...new Set(pltPpl.map(p=>p.sec))];
-        secs.forEach(sec=>{
-          rows.push([`${P_LABEL[plt].toUpperCase()} TO (${sec.toUpperCase()})`]);
-          pltPpl.filter(p=>p.sec===sec).forEach(p=>{
-            sn++;
-            const rec=records[p.id];
-            const status=getStatusCell(rec)||'P';
-            const si=rec&&SM[rec.s];
-            let remark='';
-            if(rec&&rec.s==='others')remark=(rec.det||'').toUpperCase();
-            else if(si&&si.datePick){
-              if(si.fromOnly)remark=(si.l||rec.s).toUpperCase();
-              else if(rec.from&&rec.det)remark=`${(si.l||rec.s).toUpperCase()} ${fmtDate(rec.from)} – ${fmtDate(rec.det)}`;
-              else if(rec.from)remark=`${(si.l||rec.s).toUpperCase()} TILL ${fmtDate(rec.from)}`;
-            }
-            rows.push([sn,p.rank,p.name,sisoCell(p),status,remark]);
-          });
-        });
-        rows.push([]);
-        rows.push([`Total Node Strength: ${total}`]);
-        const ws=XLSX.utils.aoa_to_sheet(rows);
-        ws['!cols']=[{wch:5},{wch:8},{wch:28},{wch:8},{wch:10},{wch:35}];
-        XLSX.utils.book_append_sheet(wb,ws,plt);
+      const allPpl=['HQ','P1','P2'].flatMap(plt=>personnel.filter(p=>p.active&&p.plt===plt));
+      const rows=[[title],['S/N','RANK','NAME','STATUS','REMARK']];
+      allPpl.forEach((p,i)=>{
+        const rec=records[p.id];
+        const status=getStatusCell(rec)||'P';
+        const si=rec&&SM[rec.s];
+        let remark='';
+        if(rec&&rec.s==='others')remark=(rec.det||'').toUpperCase();
+        else if(si&&si.datePick){
+          if(si.fromOnly)remark=(si.l||rec.s).toUpperCase();
+          else if(rec.from&&rec.det)remark=`${(si.l||rec.s).toUpperCase()} ${fmtDate(rec.from)} – ${fmtDate(rec.det)}`;
+          else if(rec.from)remark=`${(si.l||rec.s).toUpperCase()} TILL ${fmtDate(rec.from)}`;
+        }
+        rows.push([i+1,p.rank,p.name,status,remark]);
       });
+      rows.push([],[`Total Node Strength: ${total}`]);
+      const ws=XLSX.utils.aoa_to_sheet(rows);
+      // Merge title row across all 5 columns
+      ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:4}}];
+      ws['!cols']=[{wch:5},{wch:8},{wch:30},{wch:10},{wch:35}];
+      XLSX.utils.book_append_sheet(wb,ws,'Nominal Roll');
       const safeTitle=title.replace(/[/\\?*[\]:]/g,'_');
       XLSX.writeFile(wb,`NR_${safeTitle}.xlsx`);
     }catch(e){console.error(e);alert('Failed to generate Excel.');}
