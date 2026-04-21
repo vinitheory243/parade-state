@@ -1389,7 +1389,7 @@ function PDFPreviewModal({date,personnel,allTodRecs,total,allTodMarkedBy,onClose
       const ws=XLSX.utils.aoa_to_sheet(rows);
       ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:8}}];
       ws['!cols']=[{wch:5},{wch:8},{wch:28},{wch:8},{wch:8},{wch:8},{wch:8},{wch:12},{wch:30}];
-      XLSX.utils.book_append_sheet(wb,ws,`PS ${fmtDate(date)}`);
+      XLSX.utils.book_append_sheet(wb,ws,'Parade State');
       XLSX.writeFile(wb,`ParadeState_JRN_${date}.xlsx`);
       if(onDownloaded)onDownloaded();
     }catch(e){console.error(e);alert('Failed to generate Excel.');}
@@ -2446,7 +2446,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
           const wsBulk=XLSX.utils.aoa_to_sheet(rowsBulk);
           wsBulk['!merges']=[{s:{r:0,c:0},e:{r:0,c:8}}];
           wsBulk['!cols']=[{wch:5},{wch:8},{wch:28},{wch:8},{wch:8},{wch:8},{wch:8},{wch:12},{wch:30}];
-          XLSX.utils.book_append_sheet(wb,wsBulk,`PS ${fmtDate(ds)}`);
+          XLSX.utils.book_append_sheet(wb,wsBulk,'Parade State');
           folder.file(`ParadeState_JRN_${ds}.xlsx`,XLSX.write(wb,{bookType:'xlsx',type:'array'}));
         }
       }
