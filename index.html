@@ -1111,6 +1111,7 @@ async function renderNominalRollPDF(dateStr,records,pAll,total,eventName){
 
 function NominalRollPreviewModal({date,eventName,personnel,records,total,onClose}){
   const[downloading,setDownloading]=useState(false);
+  const[xlDownloading,setXlDownloading]=useState(false);
   const pageRefs=useRef([null,null,null]);
   const title=eventName?`${eventName} CAA ${fmtTeleDate(date)}`:`Nominal Roll CAA ${fmtTeleDate(date)}`;
   useEffect(()=>{
@@ -1141,12 +1142,60 @@ function NominalRollPreviewModal({date,eventName,personnel,records,total,onClose
     }catch(err){if(err.name!=='AbortError'){console.error(err);alert('Failed to generate PDF.');}}
     finally{setDownloading(false);}
   }
+  async function handleExcelNR(){
+    setXlDownloading(true);
+    try{
+      await ensureXLSX();
+      const XLSX=window.XLSX;
+      const wb=XLSX.utils.book_new();
+      ['HQ','P1','P2'].forEach(plt=>{
+        const pltPpl=personnel.filter(p=>p.active&&p.plt===plt);
+        const rows=[
+          [title],
+          [`Date: ${fmtDate(date)}  |  ${P_LABEL[plt]}  |  Platoon Strength: ${pltPpl.length}  |  Node Strength: ${total}`],
+          [],
+          ['S/N','RANK','NAME','IN/OUT','STATUS','REMARK'],
+        ];
+        let sn=0;
+        const secs=[...new Set(pltPpl.map(p=>p.sec))];
+        secs.forEach(sec=>{
+          rows.push([`${P_LABEL[plt].toUpperCase()} TO (${sec.toUpperCase()})`]);
+          pltPpl.filter(p=>p.sec===sec).forEach(p=>{
+            sn++;
+            const rec=records[p.id];
+            const status=getStatusCell(rec)||'P';
+            const si=rec&&SM[rec.s];
+            let remark='';
+            if(rec&&rec.s==='others')remark=(rec.det||'').toUpperCase();
+            else if(si&&si.datePick){
+              if(si.fromOnly)remark=(si.l||rec.s).toUpperCase();
+              else if(rec.from&&rec.det)remark=`${(si.l||rec.s).toUpperCase()} ${fmtDate(rec.from)} – ${fmtDate(rec.det)}`;
+              else if(rec.from)remark=`${(si.l||rec.s).toUpperCase()} TILL ${fmtDate(rec.from)}`;
+            }
+            rows.push([sn,p.rank,p.name,sisoCell(p),status,remark]);
+          });
+        });
+        rows.push([]);
+        rows.push([`Total Node Strength: ${total}`]);
+        const ws=XLSX.utils.aoa_to_sheet(rows);
+        ws['!cols']=[{wch:5},{wch:8},{wch:28},{wch:8},{wch:10},{wch:35}];
+        XLSX.utils.book_append_sheet(wb,ws,plt);
+      });
+      const safeTitle=title.replace(/[/\\?*[\]:]/g,'_');
+      XLSX.writeFile(wb,`NR_${safeTitle}.xlsx`);
+    }catch(e){console.error(e);alert('Failed to generate Excel.');}
+    finally{setXlDownloading(false);}
+  }
   return(
     <div className="pdf-overlay">
       <div className="pdf-modal-bar">
         <span className="pdf-modal-title">📋 {title}</span>
         <button className="pdf-dl-btn" onClick={handleDownload} disabled={downloading}>
           {downloading?'Generating…':'⬇ PDF'}
+        </button>
+        <button onClick={handleExcelNR} disabled={xlDownloading}
+          style={{padding:'7px 13px',background:'#16a34a',color:'#fff',border:'none',borderRadius:'8px',fontSize:'13px',fontWeight:700,cursor:'pointer',flexShrink:0,opacity:xlDownloading?.6:1}}>
+          {xlDownloading?'Generating…':'⬇ Excel'}
         </button>
         <button className="pdf-close-btn" onClick={onClose}>✕</button>
       </div>
