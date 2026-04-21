@@ -2044,6 +2044,8 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         setRecords(nr);
         setSubmitted(d.submitted||{P1:false,P2:false,HQ:false});
         setMarkedBy(d.markedBy||{P1:'',P2:'',HQ:''});
+        // Persist eventName if missing (fixes NRs created before this was stored)
+        if(isNR&&eventName&&!d.eventName)DB.ref(`${attPath}/eventName`).set(eventName);
         // Async: fill anyone still unassigned from the most recent previous TOD
         if(!isNR&&tod!=='HLS'){
           const todIdx=TODS.indexOf(tod);
@@ -2087,7 +2089,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
             const nr={...seeded};
             personnelOnDate(personnelRef.current,date).forEach(p=>applyCarry(nr,p));
             setRecords(nr);setSubmitted({P1:false,P2:false,HQ:false});setMarkedBy({P1:'',P2:'',HQ:''});
-            DB.ref(`${attPath}/records`).set(nr);
+            DB.ref(attPath).update({records:nr,eventName:eventName||''});
           };
           seedNR();
         } else if(tod!=='HLS'){
