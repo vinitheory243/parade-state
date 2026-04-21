@@ -3652,11 +3652,13 @@ function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal
 // ─── MANAGE SCREEN ──────────────────────────────────────────────
 // ─── BULK IMPORT MODAL ──────────────────────────────────────────
 const BULK_FIELDS=[
-  {k:'pes',    l:'PES Status',   hint:'e.g. A, B1, B2, C9…'},
-  {k:'phone',  l:'Phone Number', hint:'e.g. 91234567'},
-  {k:'dn',     l:'Nickname',     hint:'e.g. AH KOW (used in Telegram)'},
-  {k:'rank',   l:'Rank',         hint:'e.g. PTE, CPL, 3SG…'},
-  {k:'sec',    l:'Section',      hint:'e.g. BASE, CS/CSS…'},
+  {k:'pes',         l:'PES Status',       hint:'e.g. A, B1, B2, C9…'},
+  {k:'phone',       l:'Phone Number',     hint:'e.g. 91234567'},
+  {k:'dn',          l:'Nickname',         hint:'e.g. AH KOW (used in Telegram)'},
+  {k:'rank',        l:'Rank',             hint:'e.g. PTE, CPL, 3SG…'},
+  {k:'sec',         l:'Section',          hint:'e.g. BASE, CS/CSS…'},
+  {k:'nokRelation', l:'NOK Relationship', hint:'e.g. Mother, Father, Spouse…'},
+  {k:'nokPhone',    l:'NOK Phone',        hint:'e.g. 91234567'},
 ];
 function BulkImportModal({personnel,setPersonnel,toast_,onClose}){
   const[field,setField]=useState('pes');
