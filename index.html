@@ -1377,39 +1377,19 @@ function PDFPreviewModal({date,personnel,allTodRecs,total,allTodMarkedBy,onClose
       await ensureXLSX();
       const XLSX=window.XLSX;
       const wb=XLSX.utils.book_new();
-      ['HQ','P1','P2'].forEach(plt=>{
-        const pltPpl=personnel.filter(p=>p.active&&p.plt===plt);
-        const headers=['S/N','RANK','NAME','IN/OUT','HLS','0745','1300','1730','2030/2230','REMARK'];
-        const rows=[
-          [`JURONG NODE — PARADE STATE`],
-          [`Date: ${fmtDate(date)}  |  ${P_LABEL[plt]}  |  Platoon Strength: ${pltPpl.length}  |  Node Strength: ${total}`],
-          [],
-          headers,
-        ];
-        let sn=0;
-        // group by section
-        const secs=[...new Set(pltPpl.map(p=>p.sec))];
-        secs.forEach(sec=>{
-          rows.push([`${P_LABEL[plt].toUpperCase()} TO (${sec.toUpperCase()})`]);
-          pltPpl.filter(p=>p.sec===sec).forEach(p=>{
-            sn++;
-            rows.push([
-              sn,
-              p.rank,
-              p.name,
-              sisoCell(p),
-              ...TODS.map(tod=>getStatusCell((allTodRecs[tod]||{})[p.id])||''),
-              getRemarkText(allTodRecs,p.id),
-            ]);
-          });
-        });
-        rows.push([]);
-        rows.push([`Total Node Strength: ${total}`]);
-        const ws=XLSX.utils.aoa_to_sheet(rows);
-        // column widths
-        ws['!cols']=[{wch:5},{wch:8},{wch:28},{wch:8},{wch:8},{wch:8},{wch:8},{wch:8},{wch:12},{wch:30}];
-        XLSX.utils.book_append_sheet(wb,ws,plt);
+      const allPpl=['HQ','P1','P2'].flatMap(plt=>personnel.filter(p=>p.active&&p.plt===plt));
+      const rows=[
+        ['JURONG NODE — PARADE STATE'],
+        ['S/N','RANK','NAME','HLS','0745','1300','1730','2030/2230','REMARK'],
+      ];
+      allPpl.forEach((p,i)=>{
+        rows.push([i+1,p.rank,p.name,...TODS.map(tod=>getStatusCell((allTodRecs[tod]||{})[p.id])||''),getRemarkText(allTodRecs,p.id)]);
       });
+      rows.push([],[`Total Node Strength: ${total}`]);
+      const ws=XLSX.utils.aoa_to_sheet(rows);
+      ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:8}}];
+      ws['!cols']=[{wch:5},{wch:8},{wch:28},{wch:8},{wch:8},{wch:8},{wch:8},{wch:12},{wch:30}];
+      XLSX.utils.book_append_sheet(wb,ws,`PS ${fmtDate(date)}`);
       XLSX.writeFile(wb,`ParadeState_JRN_${date}.xlsx`);
       if(onDownloaded)onDownloaded();
     }catch(e){console.error(e);alert('Failed to generate Excel.');}
@@ -2454,27 +2434,19 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
           folder.file(`ParadeState_JRN_${ds}.pdf`,pdf.output('blob'));
         } else {
           const wb=XLSX.utils.book_new();
-          ['HQ','P1','P2'].forEach(plt=>{
-            const pltPpl=pplForDate.filter(p=>p.plt===plt);
-            const rows=[
-              ['JURONG NODE — PARADE STATE'],
-              [`Date: ${fmtDate(ds)}  |  ${P_LABEL[plt]}  |  Platoon Strength: ${pltPpl.length}  |  Node Strength: ${pTotal}`],
-              [],
-              ['S/N','RANK','NAME','IN/OUT','HLS','0745','1300','1730','2030/2230','REMARK'],
-            ];
-            const secs=[...new Set(pltPpl.map(p=>p.sec))];let sn=0;
-            secs.forEach(sec=>{
-              rows.push([`${P_LABEL[plt].toUpperCase()} TO (${sec.toUpperCase()})`]);
-              pltPpl.filter(p=>p.sec===sec).forEach(p=>{
-                sn++;
-                rows.push([sn,p.rank,p.name,sisoCell(p),...TODS.map(t=>getStatusCell((allTodRecs[t]||{})[p.id])||''),getRemarkText(allTodRecs,p.id)]);
-              });
-            });
-            rows.push([]);rows.push([`Total Node Strength: ${pTotal}`]);
-            const ws=XLSX.utils.aoa_to_sheet(rows);
-            ws['!cols']=[{wch:5},{wch:8},{wch:28},{wch:8},{wch:8},{wch:8},{wch:8},{wch:8},{wch:12},{wch:30}];
-            XLSX.utils.book_append_sheet(wb,ws,plt);
+          const allPplDate=['HQ','P1','P2'].flatMap(plt=>pplForDate.filter(p=>p.plt===plt));
+          const rowsBulk=[
+            ['JURONG NODE — PARADE STATE'],
+            ['S/N','RANK','NAME','HLS','0745','1300','1730','2030/2230','REMARK'],
+          ];
+          allPplDate.forEach((p,i)=>{
+            rowsBulk.push([i+1,p.rank,p.name,...TODS.map(t=>getStatusCell((allTodRecs[t]||{})[p.id])||''),getRemarkText(allTodRecs,p.id)]);
           });
+          rowsBulk.push([],[`Total Node Strength: ${pTotal}`]);
+          const wsBulk=XLSX.utils.aoa_to_sheet(rowsBulk);
+          wsBulk['!merges']=[{s:{r:0,c:0},e:{r:0,c:8}}];
+          wsBulk['!cols']=[{wch:5},{wch:8},{wch:28},{wch:8},{wch:8},{wch:8},{wch:8},{wch:12},{wch:30}];
+          XLSX.utils.book_append_sheet(wb,wsBulk,`PS ${fmtDate(ds)}`);
           folder.file(`ParadeState_JRN_${ds}.xlsx`,XLSX.write(wb,{bookType:'xlsx',type:'array'}));
         }
       }
