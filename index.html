@@ -1627,7 +1627,7 @@ function LoginScreen({onLogin}){
   const[showPass,setShowPass]=useState(false);
   const[remember,setRemember]=useState(()=>{try{return localStorage.getItem('jrn_remember')==='1'}catch{return false}});
   function attempt(){
-    const found=USERS.find(u=>u.user===user.trim().toLowerCase()&&u.pass===pass.toLowerCase());
+    const found=USERS.find(u=>u.user===user.trim().toLowerCase()&&u.pass.toLowerCase()===pass.trim().toLowerCase());
     if(found){
       if(remember){
         try{localStorage.setItem('jrn_saved_user',user.trim());localStorage.setItem('jrn_saved_token',mkToken(found.user,found.pass));localStorage.setItem('jrn_remember','1');}catch{}
