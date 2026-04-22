@@ -2126,10 +2126,11 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
     });
     return()=>ref.off();
   },[isAdmin]);
-  function approvePending(entry,{plt,sec,dn,rank,joinDate}){
+  function approvePending(entry,{plt,sec,dn,rank,joinDate,siso}){
     const id=`p${Date.now()}`;
     const safeJoinDate=joinDate&&joinDate<=todayStr()?joinDate:todayStr();
-    const p={id,rank:rank||entry.rank||'PTE',name:(entry.name||'').toUpperCase().trim(),dn:(dn||entry.name||'').toUpperCase().trim().split(' ')[0],plt,sec,siso:{type:'si'},active:true,joinDate:safeJoinDate,...(entry.pes?{pes:entry.pes}:{}),...(entry.phone?{phone:entry.phone}:{}),...(entry.nokRelation?{nokRelation:entry.nokRelation}:{}),...(entry.nokPhone?{nokPhone:entry.nokPhone}:{})};
+    const safeSiso=siso||{type:'si'};
+    const p={id,rank:rank||entry.rank||'PTE',name:(entry.name||'').toUpperCase().trim(),dn:(dn||entry.name||'').toUpperCase().trim().split(' ')[0],plt,sec,siso:safeSiso,active:true,joinDate:safeJoinDate,...(entry.pes?{pes:entry.pes}:{}),...(entry.phone?{phone:entry.phone}:{}),...(entry.nokRelation?{nokRelation:entry.nokRelation}:{}),...(entry.nokPhone?{nokPhone:entry.nokPhone}:{})};
     setPersonnelAndSync(prev=>[...prev,p]);
     DB.ref(`${DB_ROOT}/pending_personnel/${entry._fbKey}`).remove();
     toast_('✓ Personnel approved and added');
@@ -3938,11 +3939,11 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
   // Pending approval helpers
   function openApprove(entry){
     const secs=sectionsFor('P1');
-    // Validate joinDate — reject future or unparseable dates and fall back to today
     let jd=entry.joinDate||'';
     if(!jd||jd>todayStr())jd=todayStr();
+    const siso=entry.siso||{type:'si'};
     setApproveEntry(entry);
-    setApproveData({plt:'P1',sec:secs[0]||'BASE',dn:(entry.name||'').split(' ')[0],rank:entry.rank||'PTE',joinDate:jd});
+    setApproveData({plt:'P1',sec:secs[0]||'BASE',dn:(entry.name||'').split(' ')[0],rank:entry.rank||'PTE',joinDate:jd,siso});
   }
   function confirmApprove(){
     if(!approveData.plt||!approveData.sec){toast_('Select platoon and section');return;}
@@ -4014,6 +4015,14 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
               </div>
               <div><div className="label">Post-in Date</div>
                 <input type="date" value={approveData.joinDate||todayStr()} onChange={e=>setApproveData({...approveData,joinDate:e.target.value})}/>
+              </div>
+              <div><div className="label">Strength Status {approveEntry?.siso?<span style={{fontSize:'11px',color:'#0d9488',fontWeight:600}}> (auto-detected from form)</span>:''}</div>
+                <select value={(approveData.siso||{}).type||'si'} onChange={e=>setApproveData({...approveData,siso:e.target.value==='so_till'?{type:'so_till',date:''}:{type:e.target.value}})}>
+                  <option value="si">S/I (Stay In)</option>
+                  <option value="so">S/O (Stay Out) — Permanent</option>
+                  <option value="so_till">S/O Till Date</option>
+                </select>
+                {(approveData.siso||{}).type==='so_till'&&<input type="date" value={(approveData.siso||{}).date||''} onChange={e=>setApproveData({...approveData,siso:{type:'so_till',date:e.target.value}})} style={{marginTop:'6px'}}/>}
               </div>
               <div style={{display:'flex',gap:'8px',marginTop:'4px'}}>
                 <button className="btn-save" style={{flex:1}} onClick={confirmApprove}>✓ Confirm & Add</button>
