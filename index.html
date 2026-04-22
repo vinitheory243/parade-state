@@ -3978,8 +3978,8 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
                   </div>
                 ):(
                   <div style={{display:'flex',gap:'8px'}}>
-                    <button className="btn-save" style={{flex:1}} onClick={()=>openApprove(entry)}>✓ Approve</button>
-                    <button className="btn-cancel" style={{flex:1}} onClick={()=>setConfirm({type:'reject',entry})}>✕ Reject</button>
+                    <button onClick={()=>openApprove(entry)} style={{flex:1,padding:'9px',background:'#16a34a',color:'#fff',border:'none',borderRadius:'8px',fontSize:'13px',fontWeight:700,cursor:'pointer'}}>✓ Approve</button>
+                    <button onClick={()=>setConfirm({type:'reject',entry})} style={{flex:1,padding:'9px',background:'#fee2e2',color:'#991b1b',border:'1.5px solid #fca5a5',borderRadius:'8px',fontSize:'13px',fontWeight:700,cursor:'pointer'}}>✕ Reject</button>
                   </div>
                 )}
               </div>
@@ -3990,9 +3990,17 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
       {/* Approve modal */}
       {approveEntry&&(
         <div className="modal-bg" onClick={()=>setApproveEntry(null)}>
-          <div className="modal-box" onClick={e=>e.stopPropagation()} style={{maxWidth:'360px'}}>
-            <div className="modal-title">Approve: {approveEntry.name}</div>
-            <div className="add-form" style={{padding:'0 0 12px'}}>
+          <div className="modal-box" onClick={e=>e.stopPropagation()} style={{maxWidth:'380px',borderRadius:'16px',overflow:'hidden',padding:0}}>
+            <div style={{background:'linear-gradient(135deg,#064e3b,#065f46)',padding:'16px 18px',color:'#fff'}}>
+              <div style={{fontSize:'11px',fontWeight:700,opacity:.7,letterSpacing:'.5px',marginBottom:'2px'}}>PENDING APPROVAL</div>
+              <div style={{fontSize:'16px',fontWeight:800}}>{approveEntry.rank} {approveEntry.name}</div>
+              <div style={{fontSize:'12px',opacity:.8,marginTop:'4px',display:'flex',gap:'12px'}}>
+                {approveEntry.pes&&<span>PES {approveEntry.pes}</span>}
+                {approveEntry.phone&&<span>📞 {approveEntry.phone}</span>}
+                {approveEntry.nokRelation&&<span>NOK: {approveEntry.nokRelation}</span>}
+              </div>
+            </div>
+            <div className="add-form" style={{padding:'16px 18px',gap:'12px'}}>
               <div className="add-2col">
                 <div><div className="label">Rank</div>
                   <select value={approveData.rank} onChange={e=>setApproveData({...approveData,rank:e.target.value})}>
@@ -4010,23 +4018,29 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
                   {sectionsFor(approveData.plt).map(s=><option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
-              <div><div className="label">Short name for Telegram</div>
+              <div><div className="label">Short Name (Telegram)</div>
                 <input type="text" value={approveData.dn} onChange={e=>setApproveData({...approveData,dn:e.target.value.toUpperCase()})} placeholder="e.g. AH KOW"/>
               </div>
-              <div><div className="label">Post-in Date</div>
-                <input type="date" value={approveData.joinDate||todayStr()} onChange={e=>setApproveData({...approveData,joinDate:e.target.value})}/>
+              <div className="add-2col">
+                <div><div className="label">Post-in Date</div>
+                  <input type="date" value={approveData.joinDate||todayStr()} onChange={e=>setApproveData({...approveData,joinDate:e.target.value})}/>
+                </div>
+                <div><div className="label">Strength Status{approveEntry?.siso&&<span style={{fontSize:'10px',color:'#0d9488',fontWeight:600}}> ✦ auto</span>}</div>
+                  <select value={(approveData.siso||{}).type||'si'} onChange={e=>setApproveData({...approveData,siso:e.target.value==='so_till'?{type:'so_till',date:''}:{type:e.target.value}})}>
+                    <option value="si">S/I</option>
+                    <option value="so">S/O Perm</option>
+                    <option value="so_till">S/O Till Date</option>
+                  </select>
+                </div>
               </div>
-              <div><div className="label">Strength Status {approveEntry?.siso?<span style={{fontSize:'11px',color:'#0d9488',fontWeight:600}}> (auto-detected from form)</span>:''}</div>
-                <select value={(approveData.siso||{}).type||'si'} onChange={e=>setApproveData({...approveData,siso:e.target.value==='so_till'?{type:'so_till',date:''}:{type:e.target.value}})}>
-                  <option value="si">S/I (Stay In)</option>
-                  <option value="so">S/O (Stay Out) — Permanent</option>
-                  <option value="so_till">S/O Till Date</option>
-                </select>
-                {(approveData.siso||{}).type==='so_till'&&<input type="date" value={(approveData.siso||{}).date||''} onChange={e=>setApproveData({...approveData,siso:{type:'so_till',date:e.target.value}})} style={{marginTop:'6px'}}/>}
-              </div>
+              {(approveData.siso||{}).type==='so_till'&&(
+                <div><div className="label">S/O End Date</div>
+                  <input type="date" value={(approveData.siso||{}).date||''} onChange={e=>setApproveData({...approveData,siso:{type:'so_till',date:e.target.value}})}/>
+                </div>
+              )}
               <div style={{display:'flex',gap:'8px',marginTop:'4px'}}>
-                <button className="btn-save" style={{flex:1}} onClick={confirmApprove}>✓ Confirm & Add</button>
-                <button className="btn-cancel" style={{flex:1}} onClick={()=>setApproveEntry(null)}>Cancel</button>
+                <button onClick={confirmApprove} style={{flex:2,padding:'10px',background:'#16a34a',color:'#fff',border:'none',borderRadius:'8px',fontSize:'14px',fontWeight:800,cursor:'pointer'}}>✓ Confirm & Add</button>
+                <button onClick={()=>setApproveEntry(null)} style={{flex:1,padding:'10px',background:'#f1f5f9',color:'#64748b',border:'none',borderRadius:'8px',fontSize:'14px',fontWeight:700,cursor:'pointer'}}>Cancel</button>
               </div>
             </div>
           </div>
