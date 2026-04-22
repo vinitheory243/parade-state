@@ -2094,6 +2094,17 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       const d=snap.val();
       if(d){
         const ppl=Object.values(d).sort((a,b)=>a.id>b.id?1:-1);
+        // Migrate NOK data from seed if Firebase record is missing it
+        const seedMap={};SEED.forEach(p=>{seedMap[p.id]=p;});
+        const nokUpdates={};
+        ppl.forEach(p=>{
+          const s=seedMap[p.id];
+          if(s){
+            if(!p.nokRelation&&s.nokRelation)nokUpdates[`${p.id}/nokRelation`]=s.nokRelation;
+            if(!p.nokPhone&&s.nokPhone)nokUpdates[`${p.id}/nokPhone`]=s.nokPhone;
+          }
+        });
+        if(Object.keys(nokUpdates).length)ref.update(nokUpdates);
         personnelRef.current=ppl; // sync immediately so attendance listener sees fresh siso/activeLeave
         setPersonnel(ppl);
         if(!totalManualRef.current)setTotal(personnelOnDate(ppl,todayStr()).length);
