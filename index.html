@@ -511,7 +511,8 @@ function fmtDate(s){const[y,m,d]=s.split('-');return`${d}/${m}/${y.slice(2)}`}
 function fmtTeleDate(s){if(!s)return'';if(/^\d{4}-\d{2}-\d{2}$/.test(s)){const[y,m,d]=s.split('-');return`${d}${m}${y.slice(2)}`;}return s;}
 function currentTod(){const h=new Date().getHours();if(h<8)return'HLS';if(h<13)return'0745';if(h<17)return'1300';if(h<20)return'1730';return'2030/2230'}
 function todKey(tod){return tod.replace(/\//g,'_')}
-function fbAttPath(date,tod){return`jrn/att/${date}/${todKey(tod)}`}
+let DB_ROOT='jrn'; // switched to 'demo' when demo user is logged in
+function fbAttPath(date,tod){return`${DB_ROOT}/att/${date}/${todKey(tod)}`}
 function dispName(p){return`${p.rank} ${p.dn||p.name.split(' ')[0]}`}
 function fmtDetDate(det){if(!det)return'';if(/^\d{4}-\d{2}-\d{2}$/.test(det))return fmtDate(det);return det;}
 function getSiso(p){return p.siso||{type:'si'}}
@@ -936,7 +937,7 @@ function sisoCell(p){
 
 // ─── PDF PAGE COMPONENT ─────────────────────────────────────────
 function ParadeStatePDFPage({plt,personnel,allTodRecs,date,total,allTodMarkedBy}){
-  const pltPpl=personnel.filter(p=>p.active&&p.plt===plt);
+  const pltPpl=personnel.filter(p=>p.plt===plt);
   const customSecsFromPpl=[...new Set(pltPpl.map(p=>p.sec).filter(Boolean))];
   const sections=[...new Set([...(P_SECTIONS[plt]||[]),...customSecsFromPpl])];
   const NON_CMDR=new Set(['REC','PTE','LCP','CPL','CFC']);
@@ -1030,7 +1031,7 @@ function nrAttLabel(rec){
 }
 
 function NominalRollPDFPage({plt,personnel,records,date,total,eventName}){
-  const pltPpl=personnel.filter(p=>p.active&&p.plt===plt);
+  const pltPpl=personnel.filter(p=>p.plt===plt);
   const customSecs=[...new Set(pltPpl.map(p=>p.sec).filter(Boolean))];
   const sections=[...new Set([...(P_SECTIONS[plt]||[]),...customSecs])];
   const pdfTitle=eventName?`${eventName} CAA ${fmtTeleDate(date)}`:`Nominal Roll CAA ${fmtTeleDate(date)}`;
@@ -1148,7 +1149,7 @@ function NominalRollPreviewModal({date,eventName,personnel,records,total,onClose
       await ensureXLSX();
       const XLSX=window.XLSX;
       const wb=XLSX.utils.book_new();
-      const allPpl=['HQ','P1','P2'].flatMap(plt=>personnel.filter(p=>p.active&&p.plt===plt));
+      const allPpl=['HQ','P1','P2'].flatMap(plt=>personnel.filter(p=>p.plt===plt));
       const rows=[[title],['S/N','RANK','NAME','STATUS','REMARK']];
       allPpl.forEach((p,i)=>{
         const rec=records[p.id];
@@ -1231,7 +1232,7 @@ async function buildPDFForDate(dateStr,allTodRecs,pAll,total,allTodMarkedBy){
   }
 
   function drawPage(plt){
-    const pltPpl=pAll.filter(p=>p.active&&p.plt===plt);
+    const pltPpl=pAll.filter(p=>p.plt===plt);
     const customSecs=[...new Set(pltPpl.map(p=>p.sec).filter(Boolean))];
     const sections=[...new Set([...(P_SECTIONS[plt]||[]),...customSecs])];
     let y=MG+14;
@@ -1377,7 +1378,7 @@ function PDFPreviewModal({date,personnel,allTodRecs,total,allTodMarkedBy,onClose
       await ensureXLSX();
       const XLSX=window.XLSX;
       const wb=XLSX.utils.book_new();
-      const allPpl=['HQ','P1','P2'].flatMap(plt=>personnel.filter(p=>p.active&&p.plt===plt));
+      const allPpl=['HQ','P1','P2'].flatMap(plt=>personnel.filter(p=>p.plt===plt));
       const rows=[
         ['JURONG NODE — PARADE STATE'],
         ['S/N','RANK','NAME','HLS','0745','1300','1730','2030/2230','REMARK'],
@@ -1590,7 +1591,30 @@ function HistoryScreen({history,personnel,onPreview,onDelete,overrideUnlocked,se
 }
 
 // ─── LOGIN ──────────────────────────────────────────────────────
-const USERS=[{user:'comd',pass:'comd123',label:'Commander'},{user:'admin',pass:'Transport1409$',label:'Admin',isAdmin:true}];
+const USERS=[{user:'comd',pass:'comd123',label:'Commander'},{user:'admin',pass:'Transport1409$',label:'Admin',isAdmin:true},{user:'demo',pass:'demo1234',label:'Demo User',isAdmin:true,isDemo:true}];
+// ─── DEMO PERSONNEL (fake names — seeded into demo/personnel on first use) ───
+const DEMO_IP=[
+  {id:'d01',plt:'HQ',rank:'CPT', name:'ALEX TAN WEI LIANG',     dn:'ALEX',    sec:'NODE CMD',   siso:{type:'si'},active:true},
+  {id:'d02',plt:'HQ',rank:'3SG', name:'MARCUS LEE JUN WEI',     dn:'MARCUS',  sec:'NODE CMD',   siso:{type:'so'},active:true},
+  {id:'d03',plt:'HQ',rank:'CPL', name:'RYAN ONG BOON HUAT',     dn:'RYAN',    sec:'HQ OPS',     siso:{type:'si'},active:true},
+  {id:'d04',plt:'HQ',rank:'PTE', name:'JAYDEN KOH ZI HAO',      dn:'JAYDEN',  sec:'HQ OPS',     siso:{type:'si'},active:true},
+  {id:'d05',plt:'HQ',rank:'PTE', name:'ETHAN LIM WEI XIANG',    dn:'ETHAN',   sec:'HQ OPS',     siso:{type:'so'},active:true},
+  {id:'d06',plt:'P1',rank:'2LT', name:'JORDAN NG KAH MENG',     dn:'JORDAN',  sec:'COMMANDERS', siso:{type:'si'},active:true},
+  {id:'d07',plt:'P1',rank:'3SG', name:'BRENDAN YEO ZHI WEI',    dn:'BRENDAN', sec:'COMMANDERS', siso:{type:'so'},active:true},
+  {id:'d08',plt:'P1',rank:'CPL', name:'DARREN CHAN SHENG JIE',   dn:'DARREN',  sec:'BASE',       siso:{type:'si'},active:true},
+  {id:'d09',plt:'P1',rank:'LCP', name:'CADEN GOH JIA EN',       dn:'CADEN',   sec:'BASE',       siso:{type:'si'},active:true},
+  {id:'d10',plt:'P1',rank:'PTE', name:'ISAAC SIM HONG WEI',     dn:'ISAAC',   sec:'BASE',       siso:{type:'si'},active:true},
+  {id:'d11',plt:'P1',rank:'PTE', name:'LUCAS TAN JING KAI',     dn:'LUCAS',   sec:'BASE',       siso:{type:'so'},active:true},
+  {id:'d12',plt:'P1',rank:'PTE', name:'NOAH LIM ZHAO YANG',     dn:'NOAH',    sec:'CS/CSS',     siso:{type:'si'},active:true},
+  {id:'d13',plt:'P2',rank:'2LT', name:'CALEB FOO JUN HAN',      dn:'CALEB',   sec:'COMMANDERS', siso:{type:'si'},active:true},
+  {id:'d14',plt:'P2',rank:'3SG', name:'TRISTAN WOO BENG HUAT',  dn:'TRISTAN', sec:'COMMANDERS', siso:{type:'so'},active:true},
+  {id:'d15',plt:'P2',rank:'CPL', name:'AIDEN SEAH KAI ZHE',     dn:'AIDEN',   sec:'BASE',       siso:{type:'si'},active:true},
+  {id:'d16',plt:'P2',rank:'LCP', name:'EVAN CHEW YI HAO',       dn:'EVAN',    sec:'BASE',       siso:{type:'si'},active:true},
+  {id:'d17',plt:'P2',rank:'PTE', name:'MASON TEO WEI JIE',      dn:'MASON',   sec:'BASE',       siso:{type:'so'},active:true},
+  {id:'d18',plt:'P2',rank:'PTE', name:'TYLER PHUA ZHI XUAN',    dn:'TYLER',   sec:'BASE',       siso:{type:'si'},active:true},
+  {id:'d19',plt:'P2',rank:'PTE', name:'LIAM KWAN JUN LONG',     dn:'LIAM',    sec:'CS/CSS',     siso:{type:'si'},active:true},
+  {id:'d20',plt:'P2',rank:'PTE', name:'OMAR BIN HASSAN',        dn:'OMAR',    sec:'CS/CSS',     siso:{type:'si'},active:true},
+];
 // Derive a stored token from credentials — never stores raw password
 function mkToken(u,p){return btoa(unescape(encodeURIComponent(`jrn:${u}:${p}:2026`)));}
 // Sanitize any string used as a Firebase path segment
@@ -1603,7 +1627,7 @@ function LoginScreen({onLogin}){
   const[showPass,setShowPass]=useState(false);
   const[remember,setRemember]=useState(()=>{try{return localStorage.getItem('jrn_remember')==='1'}catch{return false}});
   function attempt(){
-    const found=USERS.find(u=>u.user===user.trim()&&u.pass===pass);
+    const found=USERS.find(u=>u.user===user.trim().toLowerCase()&&u.pass===pass.toLowerCase());
     if(found){
       if(remember){
         try{localStorage.setItem('jrn_saved_user',user.trim());localStorage.setItem('jrn_saved_token',mkToken(found.user,found.pass));localStorage.setItem('jrn_remember','1');}catch{}
@@ -1652,7 +1676,7 @@ function LoginScreen({onLogin}){
 
 // ─── LANDING SCREEN ─────────────────────────────────────────────
 const TOD_TIME = {'HLS':'Before 0745','0745':'0745 hrs','1300':'1300 hrs','1730':'1730 hrs','2030/2230':'2030 / 2230 hrs'};
-function LandingScreen({onPick,onLogout,isAdmin,currentUserLabel}){
+function LandingScreen({onPick,onLogout,isAdmin,isDemo,currentUserLabel}){
   useEffect(()=>{window.scrollTo({top:0,left:0,behavior:'instant'});},[]);
   const today=todayStr();
   const d=new Date(today+'T00:00:00');
@@ -1673,7 +1697,7 @@ function LandingScreen({onPick,onLogout,isAdmin,currentUserLabel}){
     if(!planDate){planDateRef.current&&planDateRef.current.focus();return;}
     setPlanChecking(true);
     try{
-      const snap=await DB.ref(`jrn/nr/${planDate}`).once('value');
+      const snap=await DB.ref(`${DB_ROOT}/nr/${planDate}`).once('value');
       const d=snap.val();
       setForecastMode(true);
       if(d){
@@ -1696,10 +1720,10 @@ function LandingScreen({onPick,onLogout,isAdmin,currentUserLabel}){
   async function openFeedback(){
     setFbOpen(true);setFbLoading(true);
     try{
-      const snap=await DB.ref('jrn/feedback').once('value');
+      const snap=await DB.ref(`${DB_ROOT}/feedback`).once('value');
       const raw=snap.val()||{};
       const now=Date.now();const TEN=10*24*3600*1000;
-      await Promise.all(Object.entries(raw).filter(([,v])=>v.fixedAt&&now>v.fixedAt+TEN).map(([k])=>DB.ref(`jrn/feedback/${k}`).remove()));
+      await Promise.all(Object.entries(raw).filter(([,v])=>v.fixedAt&&now>v.fixedAt+TEN).map(([k])=>DB.ref(`${DB_ROOT}/feedback/${k}`).remove()));
       const list=Object.entries(raw).filter(([,v])=>!(v.fixedAt&&now>v.fixedAt+TEN)).map(([k,v])=>({id:k,...v})).sort((a,b)=>b.submittedAt-a.submittedAt);
       setFbList(list);
     }catch{}
@@ -1708,14 +1732,17 @@ function LandingScreen({onPick,onLogout,isAdmin,currentUserLabel}){
   async function submitFeedback(){
     const t=fbText.trim();if(!t)return;
     setFbSubmitting(true);
-    const entry={text:t,submittedAt:Date.now(),submittedBy:currentUserLabel||'User',tag:'pending',fixedAt:null};
-    const ref=await DB.ref('jrn/feedback').push(entry);
-    setFbList(prev=>[{id:ref.key,...entry},...prev]);
-    setFbText('');setFbSubmitting(false);
+    try{
+      const entry={text:t,submittedAt:Date.now(),submittedBy:currentUserLabel||'User',tag:'pending',fixedAt:null};
+      const ref=await DB.ref(`${DB_ROOT}/feedback`).push(entry);
+      setFbList(prev=>[{id:ref.key,...entry},...prev]);
+      setFbText('');
+    }catch{alert('Failed to submit. Check your connection.');}
+    finally{setFbSubmitting(false);}
   }
   async function setFbTag(id,tag){
     const upd={tag,fixedAt:tag==='fixed'?Date.now():null};
-    await DB.ref(`jrn/feedback/${id}`).update(upd);
+    await DB.ref(`${DB_ROOT}/feedback/${id}`).update(upd);
     setFbList(prev=>prev.map(f=>f.id===id?{...f,...upd}:f));
   }
 
@@ -1724,7 +1751,7 @@ function LandingScreen({onPick,onLogout,isAdmin,currentUserLabel}){
     setForecastMode(false);
     setNrModal('loading');
     try{
-      const snap=await DB.ref(`jrn/nr/${today}`).once('value');
+      const snap=await DB.ref(`${DB_ROOT}/nr/${today}`).once('value');
       const d=snap.val();
       if(d){
         const existing=Object.entries(d).map(([k,v])=>({eventKey:k,eventName:v.eventName||'Unnamed'}));
@@ -1749,6 +1776,7 @@ function LandingScreen({onPick,onLogout,isAdmin,currentUserLabel}){
 
   return(
     <div className="land-wrap">
+      {isDemo&&<div style={{background:'#f59e0b',color:'#000',textAlign:'center',fontSize:'12px',fontWeight:800,padding:'6px',letterSpacing:'.5px'}}>🧪 DEMO MODE — Data is isolated and does not affect the live system</div>}
       <div className="land-hdr">
         <div>
           <div className="land-hdr-title">🪖 JRN Parade State</div>
@@ -1857,9 +1885,16 @@ function LandingScreen({onPick,onLogout,isAdmin,currentUserLabel}){
       )}
 
       {/* Modal backdrop */}
-      {(nrModal==='choose'||nrModal==='pick'||nrModal==='new'||nrModal==='plan')&&(
-        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.55)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'}} onClick={closeNR}>
+      {(nrModal==='choose'||nrModal==='loading'||nrModal==='pick'||nrModal==='new'||nrModal==='plan')&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.55)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'}} onClick={nrModal==='loading'?undefined:closeNR}>
           <div style={{background:'#fff',borderRadius:'16px',padding:'24px',width:'100%',maxWidth:'380px',boxShadow:'0 8px 32px rgba(0,0,0,.2)'}} onClick={e=>e.stopPropagation()}>
+
+            {nrModal==='loading'&&(
+              <div style={{textAlign:'center',padding:'20px 0'}}>
+                <div style={{fontSize:'28px',marginBottom:'12px'}}>⏳</div>
+                <div style={{fontWeight:700,fontSize:'15px',color:'#0f172a'}}>Checking for existing NRs…</div>
+              </div>
+            )}
 
             {nrModal==='choose'&&(
               <>
@@ -1960,7 +1995,7 @@ function Root(){
       const su=localStorage.getItem('jrn_saved_user');
       const tok=localStorage.getItem('jrn_saved_token');
       if(!su||!tok)return null;
-      return USERS.find(u=>u.user===su&&mkToken(u.user,u.pass)===tok)||null;
+      return USERS.find(u=>u.user===su.toLowerCase()&&mkToken(u.user,u.pass)===tok)||null;
     }catch{return null;}
   }
   const[loggedIn,setLoggedIn]=useState(()=>{try{return sessionStorage.getItem('jrn_auth')==='1'||!!validateRemember()}catch{return false}});
@@ -1972,39 +2007,46 @@ function Root(){
     }catch{}
     return false;
   });
+  const[isDemo,setIsDemo]=useState(()=>{try{return sessionStorage.getItem('jrn_demo')==='1';}catch{return false;}});
   const[picked,setPicked]=useState(null); // {date, tod}
   const[currentUserLabel,setCurrentUserLabel]=useState(()=>{try{const f=validateRemember();return f?.label||'User';}catch{return 'User';}});
   function handleLogin(u){
     setLoggedIn(true);
     const admin=!!(u&&u.isAdmin);
+    const demo=!!(u&&u.isDemo);
     setIsAdmin(admin);
+    setIsDemo(demo);
     setCurrentUserLabel(u?.label||'User');
-    try{sessionStorage.setItem('jrn_auth','1');sessionStorage.setItem('jrn_admin',admin?'1':'0');}catch{}
+    DB_ROOT=demo?'demo':'jrn';
+    try{sessionStorage.setItem('jrn_auth','1');sessionStorage.setItem('jrn_admin',admin?'1':'0');sessionStorage.setItem('jrn_demo',demo?'1':'0');}catch{}
   }
   function handleLogout(){
-    setLoggedIn(false);setIsAdmin(false);setPicked(null);
+    setLoggedIn(false);setIsAdmin(false);setIsDemo(false);setPicked(null);
+    DB_ROOT='jrn';
     try{
-      sessionStorage.removeItem('jrn_auth');sessionStorage.removeItem('jrn_admin');
-      // Also clear any legacy jrn_saved_pass that may have been stored by older versions
+      sessionStorage.removeItem('jrn_auth');sessionStorage.removeItem('jrn_admin');sessionStorage.removeItem('jrn_demo');
       localStorage.removeItem('jrn_saved_pass');
     }catch{}
   }
+  // Restore DB_ROOT from session on page reload
+  React.useEffect(()=>{try{if(sessionStorage.getItem('jrn_demo')==='1')DB_ROOT='demo';}catch{}},[]);
   if(!loggedIn)return <LoginScreen onLogin={handleLogin}/>;
-  if(!picked)return <LandingScreen onPick={(date,tod,eventName,eventKey)=>setPicked({date,tod,eventName,eventKey})} onLogout={handleLogout} isAdmin={isAdmin} currentUserLabel={currentUserLabel}/>;
-  return <App initDate={picked.date} initTod={picked.tod} initEventName={picked.eventName||''} initEventKey={picked.eventKey||''} isAdmin={isAdmin} onHome={()=>setPicked(null)} onLogout={handleLogout}/>;
+  if(!picked)return <LandingScreen onPick={(date,tod,eventName,eventKey)=>setPicked({date,tod,eventName,eventKey})} onLogout={handleLogout} isAdmin={isAdmin} isDemo={isDemo} currentUserLabel={currentUserLabel}/>;
+  return <App initDate={picked.date} initTod={picked.tod} initEventName={picked.eventName||''} initEventKey={picked.eventKey||''} isAdmin={isAdmin} isDemo={isDemo} onHome={()=>setPicked(null)} onLogout={handleLogout}/>;
 }
 
 // ─── APP ────────────────────────────────────────────────────────
-function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmin}){
+function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmin,isDemo}){
   const isNR=initTod==='NR';
   const eventName=initEventName||'';
   const eventKey=initEventKey||'';
+  const SEED=isDemo?DEMO_IP:IP;
   const[screen,setScreen]=useState('attendance');
   const[date,setDate]=useState(()=>initDate||todayStr());
   // Scroll to top whenever tab or date changes
   useEffect(()=>{window.scrollTo({top:0,left:0,behavior:'instant'});},[screen,date]);
   const[tod,setTod]=useState(()=>initTod||currentTod());
-  const[total,setTotal]=useState(()=>IP.filter(p=>p.active).length||127);
+  const[total,setTotal]=useState(()=>SEED.filter(p=>p.active).length||20);
   const[totalManual,setTotalManual]=useState(false); // true = user overrode it
   const[duty,setDuty]=useState(0);
   const[extra,setExtra]=useState('');
@@ -2013,7 +2055,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   const[toast,setToast]=useState(null);
   const[toastKey,setToastKey]=useState(0);
   const[online,setOnline]=useState(true);
-  const[personnel,setPersonnel]=useState(IP);
+  const[personnel,setPersonnel]=useState(SEED);
   const[records,setRecords]=useState({});
   const[history,setHistory]=useState([]);
   const[pdfPreview,setPdfPreview]=useState(null);
@@ -2029,7 +2071,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   const[nrHistory,setNrHistory]=useState([]);
   // Compute current Firebase path
   const safeEventKey=safePath(eventKey||'nr_unknown');
-  const attPath=isNR?`jrn/nr/${date}/${safeEventKey}`:fbAttPath(date,tod);
+  const attPath=isNR?`${DB_ROOT}/nr/${date}/${safeEventKey}`:fbAttPath(date,tod);
   const skipRef=useRef(false);
   const forceWriteRef=useRef(false); // user-initiated changes bypass skipRef
   const attInitRef=useRef(false); // blocks write until first Firebase read completes
@@ -2047,7 +2089,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   },[]);
   // Personnel listener
   useEffect(()=>{
-    const ref=DB.ref('jrn/personnel');
+    const ref=DB.ref(`${DB_ROOT}/personnel`);
     ref.on('value',snap=>{
       const d=snap.val();
       if(d){
@@ -2056,7 +2098,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         setPersonnel(ppl);
         if(!totalManualRef.current)setTotal(personnelOnDate(ppl,todayStr()).length);
       } else {
-        const obj={};IP.forEach(p=>{obj[p.id]=p;});ref.set(obj);
+        const obj={};SEED.forEach(p=>{obj[p.id]=p;});ref.set(obj);
       }
     });
     return()=>ref.off();
@@ -2093,7 +2135,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
                 return;
               }
               // S/I returns tonight — clear status at Night Strength
-              DB.ref(`jrn/personnel/${p.id}/activeLeave`).remove();
+              DB.ref(`${DB_ROOT}/personnel/${p.id}/activeLeave`).remove();
               return;
             }
             nr[p.id]={s:al.s,det:al.det,from:al.from};
@@ -2101,7 +2143,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
           }
           if(date>al.det){
             // Leave period has passed — clean up stale activeLeave
-            DB.ref(`jrn/personnel/${p.id}/activeLeave`).remove();
+            DB.ref(`${DB_ROOT}/personnel/${p.id}/activeLeave`).remove();
           }
         }
         // Auto-mark S/O for 2030/2230
@@ -2176,8 +2218,15 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
             }
             const nr={...seeded};
             personnelOnDate(personnelRef.current,date).forEach(p=>applyCarry(nr,p));
-            setRecords(nr);setSubmitted({P1:false,P2:false,HQ:false});setMarkedBy({P1:'',P2:'',HQ:''});
-            DB.ref(attPath).update({records:nr,eventName:eventName||''});
+            // Merge-safe: don't overwrite records a sgt may have written while we were loading
+            setRecords(prev=>{const merged={...nr};Object.entries(prev).forEach(([id,r])=>{if(r?.s)merged[id]=r;});return merged;});
+            setSubmitted({P1:false,P2:false,HQ:false});setMarkedBy({P1:'',P2:'',HQ:''});
+            // Only write records not already in Firebase (sgt may have written while we loaded)
+            const nowSnap=await DB.ref(`${attPath}/records`).once('value');
+            const existing=nowSnap.val()||{};
+            const toWrite={};Object.entries(nr).forEach(([id,r])=>{if(!existing[id]?.s)toWrite[id]=r;});
+            if(Object.keys(toWrite).length)await DB.ref(`${attPath}/records`).update(toWrite);
+            DB.ref(attPath).update({eventName:eventName||''});
           };
           seedNR();
         } else if(tod!=='HLS'){
@@ -2205,8 +2254,14 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
               });
             }
             personnelOnDate(personnelRef.current,date).forEach(p=>applyCarry(nr,p));
-            setRecords(nr);setSubmitted({P1:false,P2:false,HQ:false});setMarkedBy({P1:'',P2:'',HQ:''});
-            DB.ref(`${attPath}/records`).set(nr);
+            // Merge-safe: don't overwrite records a sgt may have written while we were loading
+            setRecords(prev=>{const merged={...nr};Object.entries(prev).forEach(([id,r])=>{if(r?.s)merged[id]=r;});return merged;});
+            setSubmitted({P1:false,P2:false,HQ:false});setMarkedBy({P1:'',P2:'',HQ:''});
+            // Only write records not already in Firebase (sgt may have written while we loaded)
+            const nowSnap=await DB.ref(`${attPath}/records`).once('value');
+            const existing=nowSnap.val()||{};
+            const toWrite={};Object.entries(nr).forEach(([id,r])=>{if(!existing[id]?.s)toWrite[id]=r;});
+            if(Object.keys(toWrite).length)DB.ref(`${attPath}/records`).update(toWrite);
           };
           seedFromPrev();
         } else {
@@ -2262,7 +2317,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   },[personnel,date,tod]);
   // History listener
   useEffect(()=>{
-    const ref=DB.ref('jrn/history');
+    const ref=DB.ref(`${DB_ROOT}/history`);
     ref.on('value',snap=>{
       const d=snap.val();
       setHistory(d?Object.values(d).filter(v=>!v.deleted).sort((a,b)=>b.date.localeCompare(a.date)):[]);
@@ -2271,7 +2326,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   },[]);
   // NR history listener
   useEffect(()=>{
-    const ref=DB.ref('jrn/nr');
+    const ref=DB.ref(`${DB_ROOT}/nr`);
     ref.on('value',snap=>{
       const d=snap.val();
       if(!d){setNrHistory([]);return;}
@@ -2288,7 +2343,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   },[]);
   // Custom sections listener
   useEffect(()=>{
-    const ref=DB.ref('jrn/sections');
+    const ref=DB.ref(`${DB_ROOT}/sections`);
     ref.on('value',snap=>{
       const d=snap.val();
       setCustomSections(d||{P1:[],P2:[],HQ:[]});
@@ -2297,7 +2352,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   },[]);
   // Load saved other reasons once on mount
   useEffect(()=>{
-    DB.ref('jrn/otherReasons').once('value',snap=>{
+    DB.ref(`${DB_ROOT}/otherReasons`).once('value',snap=>{
       const d=snap.val();
       if(d)setOtherReasons(Object.values(d));
     });
@@ -2310,14 +2365,14 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       // Deduplicate: ignore if same after normalization
       if(prev.some(x=>x.replace(/\s+/g,' ').toUpperCase()===normalized))return prev;
       const key=safePath(normalized);
-      DB.ref(`jrn/otherReasons/${key}`).set(normalized);
+      DB.ref(`${DB_ROOT}/otherReasons/${key}`).set(normalized);
       return[...prev,normalized];
     });
     toast_('✓ "'+normalized+'" saved as quick-pick');
   }
   function deleteOtherReason(r){
     const key=safePath(r.replace(/\s+/g,' ').toUpperCase());
-    DB.ref(`jrn/otherReasons/${key}`).remove();
+    DB.ref(`${DB_ROOT}/otherReasons/${key}`).remove();
     setOtherReasons(prev=>prev.filter(x=>x!==r));
     toast_('Deleted "'+r+'"');
   }
@@ -2326,12 +2381,12 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
     const current=(customSections[plt]||[]);
     if(current.includes(sec))return;
     const updated={...customSections,[plt]:[...current,sec]};
-    DB.ref('jrn/sections').set(updated);
+    DB.ref(`${DB_ROOT}/sections`).set(updated);
   }
   // On mount: backfill history records for the last 30 days so every day appears in History
   useEffect(()=>{
     const today=todayStr();
-    const snap30=DB.ref('jrn/history').once('value').then(snap=>{
+    const snap30=DB.ref(`${DB_ROOT}/history`).once('value').then(snap=>{
       const existing=snap.val()||{};
       const writes={};
       for(let i=0;i<30;i++){
@@ -2343,14 +2398,14 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       }
       if(Object.keys(writes).length>0){
         Object.entries(writes).forEach(([ds,val])=>{
-          DB.ref(`jrn/history/${ds}`).set(val);
+          DB.ref(`${DB_ROOT}/history/${ds}`).set(val);
         });
       }
     });
   },[]);
   // Auto-create a blank history record for the current date if none exists
   useEffect(()=>{
-    const ref=DB.ref(`jrn/history/${date}`);
+    const ref=DB.ref(`${DB_ROOT}/history/${date}`);
     ref.once('value',snap=>{
       if(!snap.exists()){
         ref.set({date,savedAt:Date.now(),total});
@@ -2364,7 +2419,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       // Writing to attPath here would re-trigger the Firebase listener and reset submitted → skip.
       return;
     }
-    DB.ref(`jrn/history/${date}`).set({date,savedAt:Date.now(),total});
+    DB.ref(`${DB_ROOT}/history/${date}`).set({date,savedAt:Date.now(),total});
   }
   // Load all TODs for a date and show PDF preview
   async function loadDayAndPreview(dateStr,setLoadingFn){
@@ -2390,10 +2445,10 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
     finally{if(setLoadingFn)setLoadingFn(null); else setPdfLoading(false);}
   }
   function onPdfDownloaded(){
-    DB.ref(`jrn/history/${pdfPreview.date}`).set({date:pdfPreview.date,savedAt:Date.now(),total:pdfPreview.total});
+    DB.ref(`${DB_ROOT}/history/${pdfPreview.date}`).set({date:pdfPreview.date,savedAt:Date.now(),total:pdfPreview.total});
     toast_('✓ Saved to History');
   }
-  function deleteHistory(dateStr){DB.ref(`jrn/history/${dateStr}`).set({date:dateStr,deleted:true,deletedAt:Date.now()});}
+  function deleteHistory(dateStr){DB.ref(`${DB_ROOT}/history/${dateStr}`).set({date:dateStr,deleted:true,deletedAt:Date.now()});}
   async function handleBulkDownload(type,setBulkLoading,setProgress,filteredHistory){
     setBulkLoading(type);
     try{
@@ -2462,7 +2517,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       const next=typeof updater==='function'?updater(prev):updater;
       personnelRef.current=next; // sync immediately so attendance listener always has latest
       const obj={};next.forEach(p=>{obj[p.id]=p;});
-      DB.ref('jrn/personnel').set(obj);
+      DB.ref(`${DB_ROOT}/personnel`).set(obj);
       return next;
     });
   }
@@ -2475,21 +2530,21 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   function setPersonLeave(id,s,from,till){
     const leave=s?{s,from:from||todayStr(),det:till||''}:null;
     // Targeted write — avoids race condition from full-replace when multiple sgts write simultaneously
-    if(leave) DB.ref(`jrn/personnel/${id}/activeLeave`).set(leave);
-    else DB.ref(`jrn/personnel/${id}/activeLeave`).remove();
+    if(leave) DB.ref(`${DB_ROOT}/personnel/${id}/activeLeave`).set(leave);
+    else DB.ref(`${DB_ROOT}/personnel/${id}/activeLeave`).remove();
     setPersonnel(prev=>{const next=prev.map(p=>p.id===id?{...p,activeLeave:leave}:p);personnelRef.current=next;return next;});
   }
   function setPersonDailyDuty(id,s,d){
     const duty=s?{s,date:d}:null;
     // Targeted write — same race-condition fix as setPersonLeave
-    if(duty) DB.ref(`jrn/personnel/${id}/dailyDuty`).set(duty);
-    else DB.ref(`jrn/personnel/${id}/dailyDuty`).remove();
+    if(duty) DB.ref(`${DB_ROOT}/personnel/${id}/dailyDuty`).set(duty);
+    else DB.ref(`${DB_ROOT}/personnel/${id}/dailyDuty`).remove();
     setPersonnel(prev=>{const next=prev.map(p=>p.id===id?{...p,dailyDuty:duty}:p);personnelRef.current=next;return next;});
   }
   function toast_(msg,dur=3000){setToast(msg);setToastKey(k=>k+1);setTimeout(()=>setToast(null),dur)}
   function setAllPresent(){
     const nr={};
-    personnel.filter(p=>p.active).forEach(p=>{nr[p.id]={s:'present',det:'',from:''}});
+    personnelOnDate(personnel,date).forEach(p=>{nr[p.id]={s:'present',det:'',from:''}});
     setRecords(nr);
     DB.ref(`${attPath}/records`).set(nr);
     toast_('✓ All set to Present');
@@ -2532,6 +2587,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
           </div>
         </div>
       </div>
+      {isDemo&&<div style={{background:'#f59e0b',color:'#000',textAlign:'center',fontSize:'12px',fontWeight:800,padding:'5px',letterSpacing:'.5px'}}>🧪 DEMO MODE — Data is isolated and does not affect the live system</div>}
       <div className="datebar" style={{padding:'10px 14px 10px',display:'flex',alignItems:'center',gap:'10px'}}>
         <button onClick={onHome} style={{background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:'8px',padding:'6px 10px',fontSize:'12px',fontWeight:700,color:'#475569',cursor:'pointer',flexShrink:0}}>‹ Change</button>
         <div style={{flex:1,minWidth:0}}>
@@ -2892,14 +2948,14 @@ function NRHistoryScreen({nrHistory,personnel,overrideUnlocked,setOverrideUnlock
   async function handlePreview(entry){
     setLoadingKey(entry.eventKey);
     try{
-      const snap=await DB.ref(`jrn/nr/${entry.date}/${entry.eventKey}`).once('value');
+      const snap=await DB.ref(`${DB_ROOT}/nr/${entry.date}/${entry.eventKey}`).once('value');
       const d=snap.val()||{};
       setNrPreview({eventName:entry.eventName,date:entry.date,records:d.records||{},total:entry.total});
     }catch(e){alert('Failed to load.');}
     finally{setLoadingKey(null);}
   }
   function handleDelete(entry){
-    DB.ref(`jrn/nr/${entry.date}/${entry.eventKey}`).remove();
+    DB.ref(`${DB_ROOT}/nr/${entry.date}/${entry.eventKey}`).remove();
     toast_('Deleted');
   }
   function unlockOverride(){
@@ -2947,7 +3003,7 @@ function NRHistoryScreen({nrHistory,personnel,overrideUnlocked,setOverrideUnlock
           </div>
         );
       })}
-      {nrPreview&&<NominalRollPreviewModal date={nrPreview.date} eventName={nrPreview.eventName} personnel={personnel} records={nrPreview.records} total={nrPreview.total} onClose={()=>setNrPreview(null)}/>}
+      {nrPreview&&<NominalRollPreviewModal date={nrPreview.date} eventName={nrPreview.eventName} personnel={personnelOnDate(personnel,nrPreview.date)} records={nrPreview.records} total={nrPreview.total} onClose={()=>setNrPreview(null)}/>}
     </div>
   );
 }
@@ -3827,12 +3883,12 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
     if(!np.name.trim()){toast_('Enter a name');return}
     if(!np.sec||np.sec==='__new__'){toast_('Enter a section name');return}
     const rawPes=(np.pes||'').replace(/^OTHER:/,'').trim();
-    const p={id:`p${Date.now()}`,rank:np.rank,name:np.name.toUpperCase().trim(),dn:np.dn.toUpperCase().trim()||np.name.toUpperCase().trim().split(' ')[0],plt:np.plt,sec:np.sec,siso:np.siso||{type:'si'},pes:rawPes,active:true,joinDate:todayStr()};
+    const p={id:`p${Date.now()}`,rank:np.rank,name:np.name.toUpperCase().trim(),dn:np.dn.toUpperCase().trim()||np.name.toUpperCase().trim().split(' ')[0],plt:np.plt,sec:np.sec,siso:np.siso||{type:'si'},pes:rawPes,active:true,joinDate:todayStr(),...(np.nokRelation?{nokRelation:np.nokRelation}:{}),...(np.nokPhone?{nokPhone:np.nokPhone}:{})};
     setPersonnel(prev=>[...prev,p]);setNp({rank:'PTE',name:'',dn:'',plt:'P1',sec:'BASE',siso:{type:'si'},pes:''});setNewSecInput('');setAddingNewSec(false);setShowAdd(false);toast_('✓ Personnel added');
   }
   function deactivate(id){setPersonnel(prev=>prev.map(p=>p.id===id?{...p,active:false,removedDate:todayStr()}:p));setConfirm(null);toast_('Removed from roster')}
   function restore(id){setPersonnel(prev=>prev.map(p=>p.id===id?{...p,active:true,removedDate:null}:p));toast_('✓ Restored')}
-  function startEdit(p){setEditId(p.id);setEditData({rank:p.rank,name:p.name,dn:p.dn||'',plt:p.plt,sec:p.sec,siso:p.siso||{type:'si'},phone:p.phone||'',pes:p.pes||''});setAddingNewSecEdit(false);setEditSecInput('');}
+  function startEdit(p){setEditId(p.id);setEditData({rank:p.rank,name:p.name,dn:p.dn||'',plt:p.plt,sec:p.sec,siso:p.siso||{type:'si'},phone:p.phone||'',pes:p.pes||'',nokRelation:p.nokRelation||'',nokPhone:p.nokPhone||''});setAddingNewSecEdit(false);setEditSecInput('');}
   function saveEdit(id){
     const rawPes=(editData.pes||'').replace(/^OTHER:/,'').trim();
     setPersonnel(prev=>prev.map(p=>p.id===id?{...p,...editData,name:editData.name.toUpperCase().trim(),dn:editData.dn.toUpperCase().trim()||editData.name.toUpperCase().trim().split(' ')[0],pes:rawPes}:p));
