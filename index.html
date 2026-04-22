@@ -2114,6 +2114,29 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
     });
     return()=>ref.off();
   },[]);
+  // Pending personnel listener (form submissions awaiting admin approval)
+  const[pendingPersonnel,setPendingPersonnel]=useState([]);
+  useEffect(()=>{
+    if(!isAdmin)return;
+    const ref=DB.ref(`${DB_ROOT}/pending_personnel`);
+    ref.on('value',snap=>{
+      const d=snap.val();
+      if(d){const arr=Object.entries(d).map(([k,v])=>({...v,_fbKey:k})).sort((a,b)=>b.submittedAt-a.submittedAt);setPendingPersonnel(arr);}
+      else setPendingPersonnel([]);
+    });
+    return()=>ref.off();
+  },[isAdmin]);
+  function approvePending(entry,{plt,sec,dn,rank}){
+    const id=`p${Date.now()}`;
+    const p={id,rank:rank||entry.rank||'PTE',name:(entry.name||'').toUpperCase().trim(),dn:(dn||entry.name||'').toUpperCase().trim().split(' ')[0],plt,sec,siso:{type:'si'},active:true,joinDate:entry.joinDate||todayStr(),...(entry.pes?{pes:entry.pes}:{}),...(entry.phone?{phone:entry.phone}:{}),...(entry.nokRelation?{nokRelation:entry.nokRelation}:{}),...(entry.nokPhone?{nokPhone:entry.nokPhone}:{})};
+    setPersonnelAndSync(prev=>[...prev,p]);
+    DB.ref(`${DB_ROOT}/pending_personnel/${entry._fbKey}`).remove();
+    toast_('✓ Personnel approved and added');
+  }
+  function rejectPending(entry){
+    DB.ref(`${DB_ROOT}/pending_personnel/${entry._fbKey}`).remove();
+    toast_('Entry rejected and removed');
+  }
   // Attendance listener per date+tod (or NR event)
   useEffect(()=>{
     attInitRef.current=false; // reset — block writes until this listener responds
@@ -2613,7 +2636,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setPersonDailyDuty={setPersonDailyDuty} setAllPresent={setAllPresent} clearAll={clearAll} submitted={submitted} setSubmitted={setSubmitted} markedBy={markedBy} setMarkedBy={setMarkedBy} toast_={toast_} overrideUnlocked={isAdmin||overrideUnlocked} onPlatoonSubmit={saveToHistory} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={isAdmin?deleteOtherReason:undefined} jumpTo={jumpTo} onJumpDone={()=>setJumpTo(null)} isNR={isNR}/>}
         {isNR&&screen==='telegram'&&<NRGenerateScreen date={date} eventName={eventName} records={records} personnel={personnelOnDate(personnel,date)} toast_={toast_}/>}
         {!isNR&&screen==='telegram'&&<GenerateScreen msg={msg} total={total} setTotal={setTotal} totalManual={totalManual} setTotalManual={setTotalManual} autoTotal={personnelOnDate(personnel,date).length} extra={extra} setExtra={setExtra} toast_={toast_} date={date} tod={tod} records={records} personnel={personnelOnDate(personnel,date)} isAdmin={isAdmin}/>}
-        {screen==='manage'&&<ManageScreen personnel={personnel} setPersonnel={setPersonnelAndSync} toast_={toast_} customSections={customSections} addCustomSection={addCustomSection} isAdmin={isAdmin}/>}
+        {screen==='manage'&&<ManageScreen personnel={personnel} setPersonnel={setPersonnelAndSync} toast_={toast_} customSections={customSections} addCustomSection={addCustomSection} isAdmin={isAdmin} pendingPersonnel={pendingPersonnel} approvePending={approvePending} rejectPending={rejectPending}/>}
         {!isNR&&screen==='history'&&<HistoryScreen history={history} personnel={personnel} onPreview={(e,setL)=>loadDayAndPreview(e.date,setL)} onDelete={deleteHistory} overrideUnlocked={isAdmin||overrideUnlocked} setOverrideUnlocked={setOverrideUnlocked} toast_={toast_} onEdit={dateStr=>{setDate(dateStr);setScreen('attendance');}} isAdmin={isAdmin} onBulkDownload={isAdmin?(type,setL,setP,filtered)=>handleBulkDownload(type,setL,setP,filtered):undefined}/>}
         {isNR&&screen==='history'&&<NRHistoryScreen nrHistory={nrHistory} personnel={personnelOnDate(personnel,date)} overrideUnlocked={isAdmin||overrideUnlocked} setOverrideUnlocked={setOverrideUnlocked} toast_={toast_} isAdmin={isAdmin} currentDate={date} currentEventKey={eventKey}/>}
       </div>
@@ -2622,7 +2645,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
           {k:'attendance',icon:'📋',lbl:'Attendance',badge:unassigned>0?unassigned:null},
           {k:'telegram',icon:'📤',lbl:'Telegram'},
           {k:'history',icon:'🗂️',lbl:isNR?'NR History':'History'},
-          {k:'manage',icon:'👥',lbl:'Personnel',badge:sisoExpiredCnt>0?sisoExpiredCnt:null},
+          {k:'manage',icon:'👥',lbl:'Personnel',badge:(sisoExpiredCnt>0||pendingPersonnel.length>0)?(sisoExpiredCnt+pendingPersonnel.length):null},
         ].map(t=>(
           <button key={t.k} className={`ntab${screen===t.k?' on':''}`} onClick={()=>setScreen(t.k)}>
             {t.badge&&<span className="nbadge">{t.badge}</span>}
@@ -3851,10 +3874,12 @@ function BulkImportModal({personnel,setPersonnel,toast_,onClose}){
   );
 }
 
-function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSection,isAdmin}){
+function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSection,isAdmin,pendingPersonnel,approvePending,rejectPending}){
   const[showAdd,setShowAdd]=useState(false);
   const[confirm,setConfirm]=useState(null);
   const[editId,setEditId]=useState(null);
+  const[approveEntry,setApproveEntry]=useState(null);
+  const[approveData,setApproveData]=useState({plt:'P1',sec:'BASE',dn:'',rank:''});
   const[editData,setEditData]=useState({});
   const[filterPlt,setFilterPlt]=useState('ALL');
   const[np,setNp]=useState({rank:'PTE',name:'',dn:'',plt:'P1',sec:'BASE',siso:{type:'si'},pes:''});
@@ -3909,8 +3934,88 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
   const tree={};
   active.forEach(p=>{if(!tree[p.plt])tree[p.plt]={};if(!tree[p.plt][p.sec])tree[p.plt][p.sec]=[];tree[p.plt][p.sec].push(p)});
   const pltColors={P1:'#dbeafe',P2:'#d1fae5',HQ:'#fef3c7'};
+  // Pending approval helpers
+  function openApprove(entry){
+    const secs=sectionsFor('P1');
+    setApproveEntry(entry);
+    setApproveData({plt:'P1',sec:secs[0]||'BASE',dn:(entry.name||'').split(' ')[0],rank:entry.rank||'PTE'});
+  }
+  function confirmApprove(){
+    if(!approveData.plt||!approveData.sec){toast_('Select platoon and section');return;}
+    approvePending(approveEntry,approveData);
+    setApproveEntry(null);
+  }
   return(
     <div>
+      {/* Pending approvals section */}
+      {isAdmin&&pendingPersonnel&&pendingPersonnel.length>0&&(
+        <div className="card" style={{marginBottom:'12px',border:'2px solid #f59e0b'}}>
+          <div className="card-hdr" style={{background:'#fef3c7',color:'#92400e'}}>⏳ Pending Approvals ({pendingPersonnel.length})</div>
+          {pendingPersonnel.map(entry=>{
+            const dup=personnel.find(p=>p.active&&p.name.toUpperCase()===entry.name.toUpperCase());
+            return(
+              <div key={entry._fbKey} style={{padding:'10px 12px',borderBottom:'1px solid #e5e7eb'}}>
+                {dup&&<div style={{background:'#fee2e2',color:'#991b1b',borderRadius:'6px',padding:'6px 10px',fontSize:'12px',fontWeight:700,marginBottom:'8px'}}>⚠ Duplicate: {dup.rank} {dup.name} already in roster</div>}
+                <div style={{fontWeight:700,fontSize:'14px',marginBottom:'4px'}}>{entry.rank} {entry.name}</div>
+                <div style={{fontSize:'12px',color:'#374151',display:'grid',gridTemplateColumns:'1fr 1fr',gap:'2px 12px',marginBottom:'8px'}}>
+                  <span>PES: {entry.pes||'—'}</span>
+                  <span>Phone: {entry.phone||'—'}</span>
+                  <span>NOK: {entry.nokRelation||'—'}</span>
+                  <span>NOK Ph: {entry.nokPhone||'—'}</span>
+                  <span>Post-in: {entry.joinDate||'—'}</span>
+                  <span>Submitted: {entry.submittedAt?new Date(entry.submittedAt).toLocaleDateString('en-SG'):'-'}</span>
+                </div>
+                {confirm&&confirm.type==='reject'&&confirm.entry._fbKey===entry._fbKey?(
+                  <div style={{display:'flex',gap:'8px',alignItems:'center',background:'#fef2f2',borderRadius:'8px',padding:'8px'}}>
+                    <span style={{flex:1,fontSize:'12px',fontWeight:700,color:'#991b1b'}}>Reject and delete this entry?</span>
+                    <button className="conf-yes" onClick={()=>{rejectPending(entry);setConfirm(null);}}>Yes</button>
+                    <button className="conf-no" onClick={()=>setConfirm(null)}>No</button>
+                  </div>
+                ):(
+                  <div style={{display:'flex',gap:'8px'}}>
+                    <button className="btn-save" style={{flex:1}} onClick={()=>openApprove(entry)}>✓ Approve</button>
+                    <button className="btn-cancel" style={{flex:1}} onClick={()=>setConfirm({type:'reject',entry})}>✕ Reject</button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {/* Approve modal */}
+      {approveEntry&&(
+        <div className="modal-bg" onClick={()=>setApproveEntry(null)}>
+          <div className="modal-box" onClick={e=>e.stopPropagation()} style={{maxWidth:'360px'}}>
+            <div className="modal-title">Approve: {approveEntry.name}</div>
+            <div className="add-form" style={{padding:'0 0 12px'}}>
+              <div className="add-2col">
+                <div><div className="label">Rank</div>
+                  <select value={approveData.rank} onChange={e=>setApproveData({...approveData,rank:e.target.value})}>
+                    {RANKS.map(r=><option key={r} value={r}>{r}</option>)}
+                  </select>
+                </div>
+                <div><div className="label">Platoon</div>
+                  <select value={approveData.plt} onChange={e=>{const secs=sectionsFor(e.target.value);setApproveData({...approveData,plt:e.target.value,sec:secs[0]||''});}}>
+                    {PLATOONS.map(p=><option key={p} value={p}>{P_LABEL[p]}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div><div className="label">Section</div>
+                <select value={approveData.sec} onChange={e=>setApproveData({...approveData,sec:e.target.value})}>
+                  {sectionsFor(approveData.plt).map(s=><option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div><div className="label">Short name for Telegram</div>
+                <input type="text" value={approveData.dn} onChange={e=>setApproveData({...approveData,dn:e.target.value.toUpperCase()})} placeholder="e.g. AH KOW"/>
+              </div>
+              <div style={{display:'flex',gap:'8px',marginTop:'4px'}}>
+                <button className="btn-save" style={{flex:1}} onClick={confirmApprove}>✓ Confirm & Add</button>
+                <button className="btn-cancel" style={{flex:1}} onClick={()=>setApproveEntry(null)}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <div style={{display:'flex',gap:'8px',marginBottom:'4px'}}>
         <button className="sbtn" style={{flex:1,margin:0}} onClick={()=>setShowAdd(v=>!v)}>{showAdd?'✕ Cancel':'+ Add New Personnel'}</button>
         {isAdmin&&<button className="sbtn" style={{flex:1,margin:0,background:'#7c3aed'}} onClick={()=>setShowBulkPes(true)}>📥 Bulk Import</button>}
