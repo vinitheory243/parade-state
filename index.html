@@ -2290,9 +2290,12 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
     if(isNR)data.eventName=eventName;
     DB.ref(attPath).update(data);
   },[total,totalManual,duty,extra,date,tod,submitted,markedBy]);
-  // Re-apply carry when personnel/date/tod changes — local state only, never writes Firebase
+  // Re-apply carry when personnel/date/tod changes.
+  // Also writes newly filled carries to Firebase via transaction — fixes timing race where
+  // personnel activeLeave data arrives after seeding already ran without it.
   useEffect(()=>{
     if(!attInitRef.current)return;
+    const fills={};
     setRecords(prev=>{
       let changed=false;
       const nr={...prev};
@@ -2300,22 +2303,27 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         if(skipCarryPltRef.current===p.plt)return;
         if(nr[p.id]?.s)return;
         const dd=p.dailyDuty;
-        if(dd&&dd.date===date&&WHOLE_DAY_DUTY.has(dd.s)){nr[p.id]={s:dd.s,det:'',from:''};changed=true;return;}
+        if(dd&&dd.date===date&&WHOLE_DAY_DUTY.has(dd.s)){nr[p.id]={s:dd.s,det:'',from:''};fills[p.id]=nr[p.id];changed=true;return;}
         const al=p.activeLeave;
         if(al&&al.s==='driving'&&al.from&&date>=al.from){
-          nr[p.id]={s:'driving',from:al.from,det:''};changed=true;return;
+          nr[p.id]={s:'driving',from:al.from,det:''};fills[p.id]=nr[p.id];changed=true;return;
         }
         if(al&&CARRY_DATE_RANGE.has(al.s)&&al.from&&al.det&&date>=al.from&&date<=al.det){
           if(date===al.det&&tod==='2030/2230'){
             const si=getSiso(p);
-            if(si.type==='so'||si.type==='so_till'){nr[p.id]={s:al.s,det:al.det,from:al.from};changed=true;return;}
-            return; // S/I: back tonight, don't apply
+            if(si.type==='so'||si.type==='so_till'){nr[p.id]={s:al.s,det:al.det,from:al.from};fills[p.id]=nr[p.id];changed=true;return;}
+            return;
           }
-          nr[p.id]={s:al.s,det:al.det,from:al.from};changed=true;return;
+          nr[p.id]={s:al.s,det:al.det,from:al.from};fills[p.id]=nr[p.id];changed=true;return;
         }
       });
       return changed?nr:prev;
     });
+    if(Object.keys(fills).length){
+      Promise.all(Object.entries(fills).map(([id,r])=>
+        DB.ref(`${attPath}/records/${id}`).transaction(curr=>curr&&curr.s?undefined:r)
+      ));
+    }
   },[personnel,date,tod]);
   // History listener
   useEffect(()=>{
