@@ -589,15 +589,11 @@ function genMsg(date,tod,total,records,personnel,extra){
   L.push('');
   L.push(line('MA','ma'));
   L.push('');
-  L.push((()=>{
-    const mcItems=(grp['mc']||[]).map((x,i)=>{let l=`${x.p.rank} ${x.p.dn||x.p.name.split(' ')[0]}`;if(x.det&&/^\d{4}-\d{2}-\d{2}$/.test(x.det))l+=` TILL ${fmtTeleDate(x.det)}`;return l;});
-    const hospItems=(grp['hospitalised']||[]).map(x=>`${x.p.rank} ${x.p.dn||x.p.name.split(' ')[0]} (MC PENDING)`);
-    const all=[...mcItems,...hospItems];
-    if(!all.length)return'Medical Certificate: 0';
-    return`Medical Certificate: ${all.length}\n`+all.map((l,i)=>`${i+1}. ${l}`).join('\n');
-  })());
+  L.push(line('Medical Certificate','mc','TILL '));
   L.push('');
   L.push(line('Hospitalisation Leave','hl','TILL '));
+  L.push('');
+  L.push((()=>{const items=grp['hospitalised']||[];if(!items.length)return'Hospitalised: 0';return`Hospitalised: ${items.length}\n`+items.map((x,i)=>`${i+1}. ${x.p.rank} ${x.p.dn||x.p.name.split(' ')[0]}`).join('\n');})());
   L.push('');
   L.push(line('RSO','rso'));
   L.push('');
@@ -714,8 +710,9 @@ function genComdMsg(date,tod,records,personnel){
   const sections=[
     block('Detail',['detail'],true),
     block('MA',['ma'],false),
-    block('MC',['mc','hospitalised'],false),
+    block('MC',['mc'],false),
     block('Hospitalisation Leave',['hl'],false),
+    block('HOSPITALISED',['hospitalised'],false),
     block('OFF',['off','birthday_off','oil','node_off'],false),
     block('OVERSEAS LEAVE',['ol'],false),
     block('LOCAL LEAVE',['ll'],false),
@@ -805,7 +802,6 @@ function genMCMsg(date,records,personnel){
   });
   const pOrder={P1:0,P2:1,HQ:2};
   list.sort((a,b)=>(pOrder[a.p.plt]??3)-(pOrder[b.p.plt]??3)||a.p.name.localeCompare(b.p.name));
-  const statusLabel=s=>s==='mc'?'MC':'HL';
   const L=[];
   L.push('Node: JRN');
   L.push(`Date: ${fmtD(date)}`);
@@ -817,11 +813,15 @@ function genMCMsg(date,records,personnel){
     list.forEach(({p,r},i)=>{
       const plt=p.plt==='HQ'?'HQ':`PLT ${p.plt==='P1'?'1':'2'}`;
       const sec=p.sec?` TO ${p.sec.toUpperCase()}`:'';
-      const from=fmtD(r.from||date);
-      const till=fmtD(r.det||'');
-      const dur=till?`${from} - ${till}`:from;
       L.push(`${i+1}. ${p.rank} ${(p.dn||p.name.split(' ')[0]).toUpperCase()}, ${plt}${sec}`);
-      L.push(`${statusLabel(r.s)} ${dur}`);
+      if(r.s==='hospitalised'){
+        L.push('HL PENDING');
+      } else {
+        const from=fmtD(r.from||date);
+        const till=fmtD(r.det||'');
+        const dur=till?`${from} - ${till}`:from;
+        L.push(`${r.s==='mc'?'MC':'HL'} ${dur}`);
+      }
       L.push('');
     });
   }
