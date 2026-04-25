@@ -297,12 +297,12 @@ const SL = [
   {k:'so_till',      l:'Stay Out Till (S/O Till)',   d:true, datePick:true, dateRange:true, names:true, pre:'TILL '},
   {k:'late',         l:'Late',                      d:false, names:true},
   {k:'detail',       l:'Detail',                    d:true,  dp:'Detail info e.g. Guard Duty', names:true},
-  {k:'arf',          l:'ARF',                       d:true, datePick:true, dateRange:true, names:true},
+  {k:'arf',          l:'ARF',                       d:true, names:true},
   {k:'ddr',          l:'Duty/Detail Rest',          d:false, names:true},
   {k:'ma',           l:'MA (Medical Appt)',          d:false, names:true},
   {k:'mc',           l:'MC (Medical Certificate)',   d:true,  datePick:true, dateRange:true, names:true, pre:'TILL '},
   {k:'hl',           l:'Hospitalisation Leave',      d:true,  datePick:true, dateRange:true, names:true, pre:'TILL '},
-  {k:'hospitalised', l:'Hospitalised',               d:true,  datePick:true, dateRange:true, names:true},
+  {k:'hospitalised', l:'Hospitalised',               d:true, names:true},
   {k:'rso',          l:'RSO',                        d:false},
   {k:'rsi',          l:'RSI',                        d:false, names:true},
   {k:'off',          l:'OFF',                        d:true,  datePick:true, dateRange:true, names:true},
@@ -344,6 +344,12 @@ const SM = Object.fromEntries(SL.map(s=>[s.k,s]));
 const DUTY_STATUSES = new Set(['duty','dto','adtl','doo','dtl','amb_t1','amb_t2']);
 // Whole-day duty statuses: carried across all TODs on the same date
 const WHOLE_DAY_DUTY = new Set(['duty','dto','adtl','doo','dtl']);
+// Statuses that auto-carry across all TODs within their date range (from/det)
+const CARRY_DATE_RANGE = new Set([
+  'mc','ol','ll','birthday_off','oil','node_off',
+  'ao_local','ao_overseas','ul','fcl','cl','ccl',
+  'db_prison','sol','cse','suspended','dcp'
+]);
 
 // ─── ALL PERSONNEL (P1 + P2 + HQ) ──────────────────────────────
 const IP = [
@@ -583,11 +589,15 @@ function genMsg(date,tod,total,records,personnel,extra){
   L.push('');
   L.push(line('MA','ma'));
   L.push('');
-  L.push(line('Medical Certificate','mc','TILL '));
+  L.push((()=>{
+    const mcItems=(grp['mc']||[]).map((x,i)=>{let l=`${x.p.rank} ${x.p.dn||x.p.name.split(' ')[0]}`;if(x.det&&/^\d{4}-\d{2}-\d{2}$/.test(x.det))l+=` TILL ${fmtTeleDate(x.det)}`;return l;});
+    const hospItems=(grp['hospitalised']||[]).map(x=>`${x.p.rank} ${x.p.dn||x.p.name.split(' ')[0]} (MC PENDING)`);
+    const all=[...mcItems,...hospItems];
+    if(!all.length)return'Medical Certificate: 0';
+    return`Medical Certificate: ${all.length}\n`+all.map((l,i)=>`${i+1}. ${l}`).join('\n');
+  })());
   L.push('');
   L.push(line('Hospitalisation Leave','hl','TILL '));
-  L.push('');
-  L.push(line('Hospitalised','hospitalised'));
   L.push('');
   L.push(line('RSO','rso'));
   L.push('');
@@ -704,9 +714,8 @@ function genComdMsg(date,tod,records,personnel){
   const sections=[
     block('Detail',['detail'],true),
     block('MA',['ma'],false),
-    block('MC',['mc'],false),
+    block('MC',['mc','hospitalised'],false),
     block('Hospitalisation Leave',['hl'],false),
-    block('Hospitalised',['hospitalised'],false),
     block('OFF',['off','birthday_off','oil','node_off'],false),
     block('OVERSEAS LEAVE',['ol'],false),
     block('LOCAL LEAVE',['ll'],false),
@@ -2143,78 +2152,51 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   }
   // Attendance listener per date+tod (or NR event)
   useEffect(()=>{
-    attInitRef.current=false; // reset — block writes until this listener responds
+    attInitRef.current=false;
     const ref=DB.ref(attPath);
     ref.on('value',snap=>{
-      if(listenerPausedRef.current)return; // clearAll in progress — ignore incoming data
+      if(listenerPausedRef.current)return;
       const d=snap.val();
       skipRef.current=true;
-      attInitRef.current=true; // now safe to write
-      // Apply auto-carry for a person who has no status yet in nr
+      attInitRef.current=true;
+      // ── CARRY RULE ──────────────────────────────────────────────
+      // Applies a carry status to a person who has no record yet.
+      // Only two carry sources:
+      //   1. Driving course (fromOnly): carries indefinitely until SGT clears it
+      //   2. Date-range statuses (CARRY_DATE_RANGE): carries within from→det
+      // Night Strength: S/O personnel auto-marked S/O if no other status.
       function applyCarry(nr,p){
-        if(skipCarryPltRef.current===p.plt)return; // platoon was just cleared — don't re-add carry
-        if(nr[p.id]&&nr[p.id].s)return; // already assigned, skip
+        if(skipCarryPltRef.current===p.plt)return;
+        if(nr[p.id]&&nr[p.id].s)return;
         const dd=p.dailyDuty;
         if(dd&&dd.date===date&&WHOLE_DAY_DUTY.has(dd.s)){nr[p.id]={s:dd.s,det:'',from:''};return;}
         const al=p.activeLeave;
-        // Driving Course: no end date — carry every parade state including Night Strength until marked Present
         if(al&&al.s==='driving'&&al.from&&date>=al.from){
-          nr[p.id]={s:'driving',from:al.from,det:''};
-          return;
+          nr[p.id]={s:'driving',from:al.from,det:''};return;
         }
-        if(al&&al.det&&al.from){
+        if(al&&CARRY_DATE_RANGE.has(al.s)&&al.from&&al.det){
           if(date>=al.from&&date<=al.det){
             if(date===al.det&&tod==='2030/2230'){
               const si=getSiso(p);
-              const isSO=si.type==='so'||si.type==='so_till';
-              if(isSO){
-                // S/O returns next morning — keep status showing at Night Strength
-                nr[p.id]={s:al.s,det:al.det,from:al.from};
-                return;
-              }
-              // S/I returns tonight — clear status at Night Strength
-              DB.ref(`${DB_ROOT}/personnel/${p.id}/activeLeave`).remove();
-              return;
+              if(si.type==='so'||si.type==='so_till'){nr[p.id]={s:al.s,det:al.det,from:al.from};return;} // S/O: back tomorrow, keep showing
+              DB.ref(`${DB_ROOT}/personnel/${p.id}/activeLeave`).remove();return; // S/I: back tonight, clear
             }
-            nr[p.id]={s:al.s,det:al.det,from:al.from};
-            return; // skip S/O check
+            nr[p.id]={s:al.s,det:al.det,from:al.from};return;
           }
-          if(date>al.det){
-            // Leave period has passed — clean up stale activeLeave
-            DB.ref(`${DB_ROOT}/personnel/${p.id}/activeLeave`).remove();
-          }
-        }
-        // Auto-mark S/O for 2030/2230
-        if(tod==='2030/2230'){
-          const si=getSiso(p);
-          if(si.type==='so')nr[p.id]={s:'so',det:'',from:''};
-          else if(si.type==='so_till')nr[p.id]={s:'so_till',det:si.date||'',from:''};
+          if(date>al.det)DB.ref(`${DB_ROOT}/personnel/${p.id}/activeLeave`).remove();
         }
       }
       if(d){
+        // ── DATA EXISTS: load from Firebase, fill missing with carry ──
         const nr={...(d.records||{})};
-        // Night Strength: clear date-range statuses ending today for S/I (they're back tonight)
-        // S/O personnel keep their status — they return next morning
-        if(tod==='2030/2230'){
-          personnelOnDate(personnelRef.current,date).forEach(p=>{
-            const rec=nr[p.id];
-            if(rec&&rec.s&&rec.det===date&&SM[rec.s]?.datePick&&rec.s!=='so_till'){
-              const si=getSiso(p);
-              if(si.type==='so'||si.type==='so_till')return; // S/O: keep status, back tomorrow
-              delete nr[p.id];
-            }
-          });
-        }
         if(d.totalManual&&d.total){setTotal(d.total);setTotalManual(true);}
         setDuty(d.duty??0);setExtra(d.extra||'');
-        // Carry active leaves into anyone not yet assigned in this slot
         personnelOnDate(personnelRef.current,date).forEach(p=>applyCarry(nr,p));
         setRecords(nr);
         setSubmitted(d.submitted||{P1:false,P2:false,HQ:false});
         setMarkedBy(d.markedBy||{P1:'',P2:'',HQ:''});
-        // Persist eventName if missing (fixes NRs created before this was stored)
         if(isNR&&eventName&&!d.eventName)DB.ref(`${attPath}/eventName`).set(eventName);
-        // Async: fill anyone still unassigned from the most recent previous TOD
+        // For any person still unassigned, carry their status from the most recent previous TOD (except present)
         if(!isNR&&tod!=='HLS'){
           const todIdx=TODS.indexOf(tod);
           if(todIdx>0){(async()=>{
@@ -2234,16 +2216,18 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
               });
               return changed?next:prev;
             });
-            // Write newly filled records atomically — avoids race condition from full .set()
             if(Object.keys(fills).length){
-              Object.entries(fills).forEach(([id,rec])=>DB.ref(`${attPath}/records/${id}`).set(rec));
+              await Promise.all(Object.entries(fills).map(([id,rec])=>
+                DB.ref(`${attPath}/records/${id}`).transaction(curr=>curr&&curr.s?undefined:rec)
+              ));
             }
           })();}
         }
       } else {
+        // ── NO DATA: seed then carry ──────────────────────────────
         if(isNR){
-          // Seed NR from most recent parade state (Night Str → LP → MP → FP → HLS)
-          const seedNR=async()=>{
+          // NR: seed from most complete parade state today
+          (async()=>{
             let seeded={};
             const activePpl=personnelOnDate(personnelRef.current,date);
             const needed=activePpl.length;
@@ -2256,21 +2240,27 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
             }
             const nr={...seeded};
             personnelOnDate(personnelRef.current,date).forEach(p=>applyCarry(nr,p));
-            // Merge-safe: don't overwrite records a sgt may have written while we were loading
-            setRecords(prev=>{const merged={...nr};Object.entries(prev).forEach(([id,r])=>{if(r?.s)merged[id]=r;});return merged;});
+            setRecords(prev=>{const m={...nr};Object.entries(prev).forEach(([id,r])=>{if(r?.s)m[id]=r;});return m;});
             setSubmitted({P1:false,P2:false,HQ:false});setMarkedBy({P1:'',P2:'',HQ:''});
-            // Only write records not already in Firebase (sgt may have written while we loaded)
-            const nowSnap=await DB.ref(`${attPath}/records`).once('value');
-            const existing=nowSnap.val()||{};
-            const toWrite={};Object.entries(nr).forEach(([id,r])=>{if(!existing[id]?.s)toWrite[id]=r;});
-            if(Object.keys(toWrite).length)await DB.ref(`${attPath}/records`).update(toWrite);
+            await Promise.all(Object.entries(nr).map(([id,r])=>
+              DB.ref(`${attPath}/records/${id}`).transaction(curr=>curr&&curr.s?undefined:r)
+            ));
             DB.ref(attPath).update({eventName:eventName||''});
-          };
-          seedNR();
-        } else if(tod!=='HLS'){
-          // FP/MP/LP/Night Str with no data: seed from most recent previous TOD, then apply carry
-          const todIdx=TODS.indexOf(tod);
-          const seedFromPrev=async()=>{
+          })();
+        } else if(tod==='HLS'){
+          // HLS: fresh start — carry only, no seed from previous TOD
+          (async()=>{
+            const nr={};
+            personnelOnDate(personnelRef.current,date).forEach(p=>applyCarry(nr,p));
+            setRecords(nr);setSubmitted({P1:false,P2:false,HQ:false});setMarkedBy({P1:'',P2:'',HQ:''});
+            if(Object.keys(nr).length)await Promise.all(Object.entries(nr).map(([id,r])=>
+              DB.ref(`${attPath}/records/${id}`).transaction(curr=>curr&&curr.s?undefined:r)
+            ));
+          })();
+        } else {
+          // FP/MP/LP/NS: seed from most recent previous TOD, strip present, then carry
+          (async()=>{
+            const todIdx=TODS.indexOf(tod);
             let seeded={};
             for(let i=todIdx-1;i>=0;i--){
               const snap2=await DB.ref(fbAttPath(date,TODS[i])).once('value');
@@ -2278,36 +2268,14 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
               if(td&&td.records){seeded={...td.records};break;}
             }
             const nr={...seeded};
-            // Present does not carry — sgts must actively account for presence each TOD
             Object.keys(nr).forEach(id=>{if(nr[id]?.s==='present')delete nr[id];});
-            // Night Strength: clear date-range statuses ending today for S/I only
-            if(tod==='2030/2230'){
-              personnelOnDate(personnelRef.current,date).forEach(p=>{
-                const rec=nr[p.id];
-                if(rec&&rec.s&&rec.det===date&&SM[rec.s]?.datePick&&rec.s!=='so_till'){
-                  const si=getSiso(p);
-                  if(si.type==='so'||si.type==='so_till')return; // S/O: back tomorrow
-                  delete nr[p.id];
-                }
-              });
-            }
             personnelOnDate(personnelRef.current,date).forEach(p=>applyCarry(nr,p));
-            // Merge-safe: don't overwrite records a sgt may have written while we were loading
-            setRecords(prev=>{const merged={...nr};Object.entries(prev).forEach(([id,r])=>{if(r?.s)merged[id]=r;});return merged;});
+            setRecords(prev=>{const m={...nr};Object.entries(prev).forEach(([id,r])=>{if(r?.s)m[id]=r;});return m;});
             setSubmitted({P1:false,P2:false,HQ:false});setMarkedBy({P1:'',P2:'',HQ:''});
-            // Only write records not already in Firebase (sgt may have written while we loaded)
-            const nowSnap=await DB.ref(`${attPath}/records`).once('value');
-            const existing=nowSnap.val()||{};
-            const toWrite={};Object.entries(nr).forEach(([id,r])=>{if(!existing[id]?.s)toWrite[id]=r;});
-            if(Object.keys(toWrite).length)DB.ref(`${attPath}/records`).update(toWrite);
-          };
-          seedFromPrev();
-        } else {
-          // HLS: apply carry only (fresh start for the day)
-          const nr={};
-          personnelOnDate(personnelRef.current,date).forEach(p=>applyCarry(nr,p));
-          setRecords(nr);setSubmitted({P1:false,P2:false,HQ:false});setMarkedBy({P1:'',P2:'',HQ:''});
-          if(Object.keys(nr).length)DB.ref(`${attPath}/records`).set(nr);
+            await Promise.all(Object.entries(nr).map(([id,r])=>
+              DB.ref(`${attPath}/records/${id}`).transaction(curr=>curr&&curr.s?undefined:r)
+            ));
+          })();
         }
       }
       setTimeout(()=>{skipRef.current=false;},400);
@@ -2322,32 +2290,28 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
     if(isNR)data.eventName=eventName;
     DB.ref(attPath).update(data);
   },[total,totalManual,duty,extra,date,tod,submitted,markedBy]);
-  // Re-apply carry whenever personnel activeLeave changes (catches race where listener fired before personnelRef updated)
+  // Re-apply carry when personnel/date/tod changes — local state only, never writes Firebase
   useEffect(()=>{
     if(!attInitRef.current)return;
     setRecords(prev=>{
       let changed=false;
       const nr={...prev};
       personnelOnDate(personnel,date).forEach(p=>{
-        if(skipCarryPltRef.current===p.plt)return; // platoon just cleared — skip
-        if(nr[p.id]?.s)return; // already has a status
+        if(skipCarryPltRef.current===p.plt)return;
+        if(nr[p.id]?.s)return;
         const dd=p.dailyDuty;
         if(dd&&dd.date===date&&WHOLE_DAY_DUTY.has(dd.s)){nr[p.id]={s:dd.s,det:'',from:''};changed=true;return;}
         const al=p.activeLeave;
         if(al&&al.s==='driving'&&al.from&&date>=al.from){
           nr[p.id]={s:'driving',from:al.from,det:''};changed=true;return;
         }
-        if(al&&al.det&&al.from&&date>=al.from&&date<=al.det){
+        if(al&&CARRY_DATE_RANGE.has(al.s)&&al.from&&al.det&&date>=al.from&&date<=al.det){
           if(date===al.det&&tod==='2030/2230'){
             const si=getSiso(p);
-            if(si.type!=='so'&&si.type!=='so_till')return; // S/I: don't re-apply at Night Strength
+            if(si.type==='so'||si.type==='so_till'){nr[p.id]={s:al.s,det:al.det,from:al.from};changed=true;return;}
+            return; // S/I: back tonight, don't apply
           }
           nr[p.id]={s:al.s,det:al.det,from:al.from};changed=true;return;
-        }
-        if(tod==='2030/2230'){
-          const si=getSiso(p);
-          if(si.type==='so'){nr[p.id]={s:'so',det:'',from:''};changed=true;}
-          else if(si.type==='so_till'){nr[p.id]={s:'so_till',det:si.date||'',from:''};changed=true;}
         }
       });
       return changed?nr:prev;
@@ -3252,24 +3216,29 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
   const isSO=record.s==='so'||record.s==='so_till';
   const showSO=tod==='2030/2230';
 
+  function nsLeaveWarn(s){
+    // Returns true (ok to proceed) if no NS leave warning needed, or user confirms
+    if(tod!=='2030/2230'||s!=='present'||isNR||!person.activeLeave)return true;
+    const al=person.activeLeave;
+    const isOngoing=al.s==='driving'||(al.det&&al.det>=currentDate);
+    if(!isOngoing)return true;
+    const label=SM[al.s]?.l||al.s;
+    const tillStr=al.s==='driving'?'(no end date)':al.det?`till ${fmtDetDate(al.det)}`:'';
+    return window.confirm(`${dispName(person)} is currently on ${label} ${tillStr}.\n\nMarking present will clear this leave. Proceed?`);
+  }
   function quickSet(s){
     if(locked)return;
+    if(!nsLeaveWarn(s))return;
     const autoFrom=s&&SM[s]?.datePick&&SM[s]?.dateRange?currentDate:'';
     setRec(person.id,s,'',autoFrom);
     if(!isNR){
-      if(!s){
-        // Explicit clear — wipe carry sources so status doesn't snap back
-        if(person.activeLeave)setPersonLeave(person.id,null,null,null);
-        if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
+      if(SM[s]?.fromOnly){
+        setPersonLeave(person.id,s,currentDate,null);
       } else {
-        // At Night Strength, marking Present should not clear an ongoing activeLeave (e.g. ARF — person is in bunk but still on ARF tomorrow)
-        const alOngoing=person.activeLeave&&person.activeLeave.det&&person.activeLeave.det>currentDate;
-        const keepLeave=tod==='2030/2230'&&s==='present'&&alOngoing;
-        if(person.activeLeave&&!SM[s]?.fromOnly&&!keepLeave)setPersonLeave(person.id,null,null,null);
-        if(SM[s]?.fromOnly)setPersonLeave(person.id,s,currentDate,null);
-        if(WHOLE_DAY_DUTY.has(s))setPersonDailyDuty(person.id,s,currentDate);
-        else if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
+        if(person.activeLeave)setPersonLeave(person.id,null,null,null);
       }
+      if(WHOLE_DAY_DUTY.has(s))setPersonDailyDuty(person.id,s,currentDate);
+      else if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
     }
     setShowMore(false);
   }
@@ -3278,36 +3247,33 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
     if(newS.startsWith('__or__')){
       const reason=newS.slice(6);
       setRec(person.id,'others',reason,'');
-      if(!isNR&&person.dailyDuty)setPersonDailyDuty(person.id,null,null);
+      if(!isNR&&person.activeLeave)setPersonLeave(person.id,null,null,null);
       setShowMore(false);
       return;
     }
+    if(!nsLeaveWarn(newS))return;
     const autoFrom=newS&&SM[newS]?.datePick&&SM[newS]?.dateRange?currentDate:'';
     setRec(person.id,newS,'',autoFrom);
     if(!isNR){
-      if(!newS){
-        if(person.activeLeave)setPersonLeave(person.id,null,null,null);
-        if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
+      if(SM[newS]?.fromOnly){
+        setPersonLeave(person.id,newS,currentDate,null);
       } else {
-        // Always clear old activeLeave when switching status — new carry set when till date is entered
-        const alOngoing=person.activeLeave&&person.activeLeave.det&&person.activeLeave.det>currentDate;
-        const keepLeave=tod==='2030/2230'&&newS==='present'&&alOngoing;
-        if(person.activeLeave&&!SM[newS]?.fromOnly&&!keepLeave)setPersonLeave(person.id,null,null,null);
-        if(SM[newS]?.fromOnly)setPersonLeave(person.id,newS,currentDate,null);
-        if(WHOLE_DAY_DUTY.has(newS))setPersonDailyDuty(person.id,newS,currentDate);
-        else if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
+        if(person.activeLeave)setPersonLeave(person.id,null,null,null);
       }
+      if(WHOLE_DAY_DUTY.has(newS))setPersonDailyDuty(person.id,newS,currentDate);
+      else if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
     }
     if(newS)setShowMore(false);
   }
   function handleTillDate(till){
     setRec(person.id,record.s,till,record.from||currentDate);
-    if(!isNR)setPersonLeave(person.id,record.s,record.from||currentDate,till);
+    // Only set activeLeave (carry) for statuses that are in the carry date-range set
+    if(!isNR&&CARRY_DATE_RANGE.has(record.s))setPersonLeave(person.id,record.s,record.from||currentDate,till);
   }
   function handleFromDate(from){
     setRec(person.id,record.s,record.det||'',from);
     if(!isNR){
-      if(record.det)setPersonLeave(person.id,record.s,from,record.det);
+      if(record.det&&CARRY_DATE_RANGE.has(record.s))setPersonLeave(person.id,record.s,from,record.det);
       else if(SM[record.s]?.fromOnly)setPersonLeave(person.id,record.s,from,null);
     }
   }
