@@ -668,7 +668,8 @@ function genMsg(date,tod,total,records,personnel,extra){
       L.push('');
       L.push(`${reason}: ${items.length}\n`+items.map((x,i)=>{
         let name=`${i+1}. ${x.p.rank} ${x.p.dn||x.p.name.split(' ')[0]}`;
-        if(x.det&&/^\d{4}-\d{2}-\d{2}$/.test(x.det))name+=` TILL ${fmtTeleDate(x.det)}`;
+        const tillDate=x.det||x.from||'';
+        if(tillDate&&/^\d{4}-\d{2}-\d{2}$/.test(tillDate))name+=` TILL ${fmtTeleDate(tillDate)}`;
         return name;
       }).join('\n'));
     });
@@ -753,7 +754,8 @@ function genComdMsg(date,tod,records,personnel){
     Object.entries(byReason).forEach(([reason,items])=>{
       const names=items.map((x,i)=>{
         let line=`${i+1}. ${name(x)}`;
-        if(x.det&&/^\d{4}-\d{2}-\d{2}$/.test(x.det))line+=` TILL ${fmtTeleDate(x.det)}`;
+        const tillDate=x.det||x.from||'';
+        if(tillDate&&/^\d{4}-\d{2}-\d{2}$/.test(tillDate))line+=` TILL ${fmtTeleDate(tillDate)}`;
         return line;
       }).join('\n');
       L.push(`${reason}: ${items.length}\n${names}`);
