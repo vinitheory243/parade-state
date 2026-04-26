@@ -344,12 +344,9 @@ const SM = Object.fromEntries(SL.map(s=>[s.k,s]));
 const DUTY_STATUSES = new Set(['duty','dto','adtl','doo','dtl','amb_t1','amb_t2']);
 // Whole-day duty statuses: carried across all TODs on the same date
 const WHOLE_DAY_DUTY = new Set(['duty','dto','adtl','doo','dtl']);
-// Statuses that auto-carry across all TODs within their date range (from/det)
-const CARRY_DATE_RANGE = new Set([
-  'mc','hl','ol','ll','birthday_off','oil','node_off',
-  'ao_local','ao_overseas','ul','fcl','cl','ccl',
-  'db_prison','sol','cse','suspended','dcp'
-]);
+// All statuses with dateRange:true auto-carry across TODs within their from→det range.
+// Exceptions (arf, hospitalised) are handled by not having dateRange in SL.
+const CARRY_DATE_RANGE = new Set(SL.filter(s=>s.dateRange).map(s=>s.k));
 
 // ─── ALL PERSONNEL (P1 + P2 + HQ) ──────────────────────────────
 const IP = [
