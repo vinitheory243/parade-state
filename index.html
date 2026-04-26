@@ -3330,7 +3330,7 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
       {record.s?(
         <div className="prow-cur">
           <div style={{display:'flex',flexDirection:'column',flex:1,gap:'2px'}}>
-            <span className="prow-cur-chip">{si?.l||record.s}</span>
+            <span className="prow-cur-chip">{record.s==='others'&&record.label?`Others (specify) → ${record.label}`:si?.l||record.s}</span>
             {dateSummary()&&<span style={{fontSize:'11px',color:'#0f766e',fontWeight:600,paddingLeft:'2px'}}>{dateSummary()}</span>}
           </div>
           {!locked&&<button className="prow-clear-btn" onClick={()=>quickSet('')}>✕</button>}
@@ -3393,36 +3393,35 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
             </div>
           )}
 
-          {/* Text input for non-date detail statuses */}
-          {si&&si.d&&(!si.datePick||record.s==='others')&&(
-            <div>
-              <div style={{display:'flex',gap:'6px',alignItems:'center'}}>
-                <input type="text" placeholder={si.dp||'Enter details...'} value={record.s==='others'?(record.label||''):(record.det||'')}
-                  onChange={e=>record.s==='others'?setRec(person.id,record.s,record.det||'',record.from||currentDate,e.target.value):setRec(person.id,record.s,e.target.value,record.from||'')}
-                  style={{flex:1}}/>
-                {record.s==='others'&&(record.label||record.det)&&(record.label||record.det).trim()&&(
-                  <button
-                    onClick={()=>addOtherReason&&addOtherReason((record.label||record.det).trim())}
-                    title="Save as quick-pick"
-                    style={{padding:'6px 12px',background:'#0d9488',color:'#fff',border:'none',borderRadius:'8px',fontSize:'13px',fontWeight:800,cursor:'pointer',flexShrink:0}}>
-                    ✓
-                  </button>
-                )}
-              </div>
-              {deleteOtherReason&&record.s==='others'&&otherReasons&&otherReasons.length>0&&(
-                <div style={{marginTop:'8px',padding:'8px 10px',background:'#fef2f2',border:'1px solid #fecaca',borderRadius:'8px'}}>
-                  <div style={{fontSize:'11px',fontWeight:700,color:'#dc2626',marginBottom:'6px'}}>🗑 Admin — Delete quick-picks</div>
-                  <div style={{display:'flex',flexWrap:'wrap',gap:'5px'}}>
-                    {otherReasons.map(r=>(
-                      <div key={r} style={{display:'flex',alignItems:'center',gap:'4px',background:'#fff',border:'1px solid #fca5a5',borderRadius:'16px',padding:'2px 4px 2px 10px'}}>
-                        <span style={{fontSize:'12px',fontWeight:600,color:'#1e293b'}}>{r}</span>
-                        <button onClick={()=>deleteOtherReason(r)}
-                          style={{background:'#dc2626',color:'#fff',border:'none',borderRadius:'50%',width:'18px',height:'18px',fontSize:'12px',fontWeight:800,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,lineHeight:1}}>×</button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+          {/* Text input: only for non-datePick detail statuses, or others with no label yet */}
+          {si&&si.d&&(!si.datePick||(record.s==='others'&&!record.label))&&(
+            <div style={{display:'flex',gap:'6px',alignItems:'center'}}>
+              <input type="text" placeholder={si.dp||'Enter details...'} value={record.s==='others'?(record.label||''):(record.det||'')}
+                onChange={e=>record.s==='others'?setRec(person.id,record.s,record.det||'',record.from||currentDate,e.target.value):setRec(person.id,record.s,e.target.value,record.from||'')}
+                style={{flex:1}}/>
+              {record.s==='others'&&(record.label||record.det)&&(record.label||record.det).trim()&&(
+                <button
+                  onClick={()=>addOtherReason&&addOtherReason((record.label||record.det).trim())}
+                  title="Save as quick-pick"
+                  style={{padding:'6px 12px',background:'#0d9488',color:'#fff',border:'none',borderRadius:'8px',fontSize:'13px',fontWeight:800,cursor:'pointer',flexShrink:0}}>
+                  ✓
+                </button>
               )}
+            </div>
+          )}
+          {/* Admin delete quick-picks — always visible for admins when others is selected */}
+          {deleteOtherReason&&record.s==='others'&&otherReasons&&otherReasons.length>0&&(
+            <div style={{marginTop:'8px',padding:'8px 10px',background:'#fef2f2',border:'1px solid #fecaca',borderRadius:'8px'}}>
+              <div style={{fontSize:'11px',fontWeight:700,color:'#dc2626',marginBottom:'6px'}}>🗑 Admin — Delete quick-picks</div>
+              <div style={{display:'flex',flexWrap:'wrap',gap:'5px'}}>
+                {otherReasons.map(r=>(
+                  <div key={r} style={{display:'flex',alignItems:'center',gap:'4px',background:'#fff',border:'1px solid #fca5a5',borderRadius:'16px',padding:'2px 4px 2px 10px'}}>
+                    <span style={{fontSize:'12px',fontWeight:600,color:'#1e293b'}}>{r}</span>
+                    <button onClick={()=>deleteOtherReason(r)}
+                      style={{background:'#dc2626',color:'#fff',border:'none',borderRadius:'50%',width:'18px',height:'18px',fontSize:'12px',fontWeight:800,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,lineHeight:1}}>×</button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </>
