@@ -337,7 +337,7 @@ const SL = [
   {k:'6ton_fam',     l:'6TON FAM (COE)',             d:false, names:true},
   {k:'gp_fam',       l:'GP FAM',                     d:false},
   {k:'driving',      l:'Driving Course',             d:true,  datePick:true, fromOnly:true, names:true},
-  {k:'others',       l:'Others (specify)',            d:true,  dp:'Specify e.g. IPPT, DTO', names:true},
+  {k:'others',       l:'Others (specify)',            d:true,  dp:'Specify e.g. IPPT, DTO', names:true, datePick:true, dateRange:true},
 ];
 const SM = Object.fromEntries(SL.map(s=>[s.k,s]));
 // Statuses counted as "Duty Personnel" in the telegram message (no names shown)
@@ -843,7 +843,7 @@ function genNRMsg(date,eventName,records,active){
   active.forEach(p=>{
     const r=records[p.id];
     if(!r||!r.s||r.s==='present')return;
-    const key=r.s==='others'?`__or__${(r.det||'').trim().toUpperCase()||'OTHERS'}`:r.s;
+    const key=r.s==='others'?`__or__${(r.label||r.det||'').trim().toUpperCase()||'OTHERS'}`:r.s;
     if(!grp[key])grp[key]=[];
     grp[key].push(p);
   });
@@ -919,8 +919,8 @@ function getRemarkText(allTodRecs,pid){
   for(const tod of TODS){
     const rec=(allTodRecs[tod]||{})[pid];
     if(!rec||!rec.s)continue;
-    if(rec.s==='others'&&rec.det&&!othersRemark){
-      othersRemark=(rec.det).toUpperCase();
+    if(rec.s==='others'&&(rec.label||rec.det)&&!othersRemark){
+      othersRemark=(rec.label||rec.det).toUpperCase();
     }
     const si=SM[rec.s];
     if(!si||!si.datePick||dateRemark)continue;
@@ -1032,7 +1032,7 @@ function nrAttLabel(rec){
   if(rec.s==='present')return'PRESENT';
   const si=SM[rec.s];
   if(!si)return rec.s.toUpperCase();
-  if(rec.s==='others')return(rec.det||'OTHERS').toUpperCase();
+  if(rec.s==='others')return(rec.label||rec.det||'OTHERS').toUpperCase();
   // Strip parenthetical explanation e.g. "MC (Medical Certificate)" → "MC"
   const l=si.l.replace(/\s*\([^)]*\)/g,'').trim().toUpperCase();
   return l||rec.s.toUpperCase();
@@ -1164,7 +1164,7 @@ function NominalRollPreviewModal({date,eventName,personnel,records,total,onClose
         const status=getStatusCell(rec)||'P';
         const si=rec&&SM[rec.s];
         let remark='';
-        if(rec&&rec.s==='others')remark=(rec.det||'').toUpperCase();
+        if(rec&&rec.s==='others')remark=(rec.label||rec.det||'').toUpperCase();
         else if(si&&si.datePick){
           if(si.fromOnly)remark=(si.l||rec.s).toUpperCase();
           else if(rec.from&&rec.det)remark=`${(si.l||rec.s).toUpperCase()} ${fmtDate(rec.from)} – ${fmtDate(rec.det)}`;
@@ -2175,10 +2175,10 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
           if(date>=al.from&&date<=al.det){
             if(date===al.det&&tod==='2030/2230'){
               const si=getSiso(p);
-              if(si.type==='so'||si.type==='so_till'){nr[p.id]={s:al.s,det:al.det,from:al.from};return;} // S/O: back tomorrow, keep showing
+              if(si.type==='so'||si.type==='so_till'){nr[p.id]={s:al.s,det:al.det,from:al.from,...(al.label?{label:al.label}:{})};return;} // S/O: back tomorrow, keep showing
               DB.ref(`${DB_ROOT}/personnel/${p.id}/activeLeave`).remove();return; // S/I: back tonight, clear
             }
-            nr[p.id]={s:al.s,det:al.det,from:al.from};return;
+            nr[p.id]={s:al.s,det:al.det,from:al.from,...(al.label?{label:al.label}:{})};return;
           }
           if(date>al.det)DB.ref(`${DB_ROOT}/personnel/${p.id}/activeLeave`).remove();
         }
@@ -2308,10 +2308,10 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         if(al&&CARRY_DATE_RANGE.has(al.s)&&al.from&&al.det&&date>=al.from&&date<=al.det){
           if(date===al.det&&tod==='2030/2230'){
             const si=getSiso(p);
-            if(si.type==='so'||si.type==='so_till'){nr[p.id]={s:al.s,det:al.det,from:al.from};fills[p.id]=nr[p.id];changed=true;return;}
+            if(si.type==='so'||si.type==='so_till'){nr[p.id]={s:al.s,det:al.det,from:al.from,...(al.label?{label:al.label}:{})};fills[p.id]=nr[p.id];changed=true;return;}
             return;
           }
-          nr[p.id]={s:al.s,det:al.det,from:al.from};fills[p.id]=nr[p.id];changed=true;return;
+          nr[p.id]={s:al.s,det:al.det,from:al.from,...(al.label?{label:al.label}:{})};fills[p.id]=nr[p.id];changed=true;return;
         }
       });
       return changed?nr:prev;
@@ -2528,14 +2528,16 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       return next;
     });
   }
-  function setRec(id,s,det,from){
-    setRecords(p=>({...p,[id]:{s,det:det||'',from:from||''}}));
+  function setRec(id,s,det,from,label){
+    const rec={s,det:det||'',from:from||''};
+    if(label!==undefined)rec.label=label||'';
+    setRecords(p=>({...p,[id]:rec}));
     // Atomic per-record write — prevents concurrent sgts from overwriting each other's marks
-    if(s){DB.ref(`${attPath}/records/${id}`).set({s,det:det||'',from:from||''});}
+    if(s){DB.ref(`${attPath}/records/${id}`).set(rec);}
     else{DB.ref(`${attPath}/records/${id}`).remove();}
   }
-  function setPersonLeave(id,s,from,till){
-    const leave=s?{s,from:from||todayStr(),det:till||''}:null;
+  function setPersonLeave(id,s,from,till,label){
+    const leave=s?{s,from:from||todayStr(),det:till||'',...(label?{label}:{})}:null;
     // Targeted write — avoids race condition from full-replace when multiple sgts write simultaneously
     if(leave) DB.ref(`${DB_ROOT}/personnel/${id}/activeLeave`).set(leave);
     else DB.ref(`${DB_ROOT}/personnel/${id}/activeLeave`).remove();
@@ -3251,7 +3253,7 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
     if(locked)return;
     if(newS.startsWith('__or__')){
       const reason=newS.slice(6);
-      setRec(person.id,'others',reason,'');
+      setRec(person.id,'others','',currentDate,reason);
       if(!isNR&&person.activeLeave)setPersonLeave(person.id,null,null,null);
       setShowMore(false);
       return;
@@ -3271,14 +3273,14 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
     if(newS)setShowMore(false);
   }
   function handleTillDate(till){
-    setRec(person.id,record.s,till,record.from||currentDate);
+    setRec(person.id,record.s,till,record.from||currentDate,record.label);
     // Only set activeLeave (carry) for statuses that are in the carry date-range set
-    if(!isNR&&CARRY_DATE_RANGE.has(record.s))setPersonLeave(person.id,record.s,record.from||currentDate,till);
+    if(!isNR&&CARRY_DATE_RANGE.has(record.s))setPersonLeave(person.id,record.s,record.from||currentDate,till,record.label);
   }
   function handleFromDate(from){
-    setRec(person.id,record.s,record.det||'',from);
+    setRec(person.id,record.s,record.det||'',from,record.label);
     if(!isNR){
-      if(record.det&&CARRY_DATE_RANGE.has(record.s))setPersonLeave(person.id,record.s,from,record.det);
+      if(record.det&&CARRY_DATE_RANGE.has(record.s))setPersonLeave(person.id,record.s,from,record.det,record.label);
       else if(SM[record.s]?.fromOnly)setPersonLeave(person.id,record.s,from,null);
     }
   }
@@ -3347,7 +3349,7 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
             </button>
           </div>
           {showMore&&(
-            <select value={record.s==='others'&&record.det&&otherReasons&&otherReasons.includes(record.det)?`__or__${record.det}`:record.s||''} onChange={e=>handleStatusChange(e.target.value)}>
+            <select value={record.s==='others'&&(record.label||record.det)&&otherReasons&&otherReasons.includes(record.label||record.det)?`__or__${record.label||record.det}`:record.s||''} onChange={e=>handleStatusChange(e.target.value)}>
               <option value="">— Select a status —</option>
               {SL.filter(s=>s.k!=='so'&&s.k!=='so_till').map(s=><option key={s.k} value={s.k}>{s.l}</option>)}
               {otherReasons&&otherReasons.length>0&&<option disabled>──────────────</option>}
@@ -3386,15 +3388,15 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
           )}
 
           {/* Text input for non-date detail statuses */}
-          {si&&si.d&&!si.datePick&&(
+          {si&&si.d&&(!si.datePick||record.s==='others')&&(
             <div>
               <div style={{display:'flex',gap:'6px',alignItems:'center'}}>
-                <input type="text" placeholder={si.dp||'Enter details...'} value={record.det||''}
-                  onChange={e=>setRec(person.id,record.s,e.target.value,record.from||'')}
+                <input type="text" placeholder={si.dp||'Enter details...'} value={record.s==='others'?(record.label||''):(record.det||'')}
+                  onChange={e=>record.s==='others'?setRec(person.id,record.s,record.det||'',record.from||currentDate,e.target.value):setRec(person.id,record.s,e.target.value,record.from||'')}
                   style={{flex:1}}/>
-                {record.s==='others'&&record.det&&record.det.trim()&&(
+                {record.s==='others'&&(record.label||record.det)&&(record.label||record.det).trim()&&(
                   <button
-                    onClick={()=>addOtherReason&&addOtherReason(record.det.trim())}
+                    onClick={()=>addOtherReason&&addOtherReason((record.label||record.det).trim())}
                     title="Save as quick-pick"
                     style={{padding:'6px 12px',background:'#0d9488',color:'#fff',border:'none',borderRadius:'8px',fontSize:'13px',fontWeight:800,cursor:'pointer',flexShrink:0}}>
                     ✓
@@ -3491,7 +3493,7 @@ function CustomReportModal({personnel,date,records,toast_,onClose}){
     const rec=records[p.id];const parts=[];
     if(fldPes&&p.pes)parts.push(`PES ${p.pes}`);
     if(fldSec)parts.push(p.sec);
-    if(fldStatus)parts.push(rec&&rec.s?(rec.s==='others'&&rec.det?`Others: ${rec.det}`:(SM[rec.s]?.l||rec.s)):'Not assigned');
+    if(fldStatus)parts.push(rec&&rec.s?(rec.s==='others'&&(rec.label||rec.det)?`Others: ${rec.label||rec.det}`:(SM[rec.s]?.l||rec.s)):'Not assigned');
     if(fldSiso)parts.push(sisoLabel(p));
     if(fldPhone&&p.phone)parts.push(p.phone);
     return parts;
@@ -3557,7 +3559,7 @@ function CustomReportModal({personnel,date,records,toast_,onClose}){
         else if(c.k==='name')v=p.name;
         else if(c.k==='pes')v=p.pes?`PES ${p.pes}`:'';
         else if(c.k==='sec')v=p.sec;
-        else if(c.k==='status')v=rec&&rec.s?(rec.s==='others'&&rec.det?`Others: ${rec.det}`:(SM[rec.s]?.l||rec.s)):'';
+        else if(c.k==='status')v=rec&&rec.s?(rec.s==='others'&&(rec.label||rec.det)?`Others: ${rec.label||rec.det}`:(SM[rec.s]?.l||rec.s)):'';
         else if(c.k==='siso')v=sisoLabel(p);
         else if(c.k==='phone')v=p.phone||'';
         // Clip to column width
