@@ -2171,16 +2171,13 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         if(al&&al.s==='driving'&&al.from&&date>=al.from){
           nr[p.id]={s:'driving',from:al.from,det:''};return;
         }
-        if(al&&CARRY_DATE_RANGE.has(al.s)&&al.from&&al.det){
-          if(date>=al.from&&date<=al.det){
-            if(date===al.det&&tod==='2030/2230'){
-              const si=getSiso(p);
-              if(si.type==='so'||si.type==='so_till'){nr[p.id]={s:al.s,det:al.det,from:al.from,...(al.label?{label:al.label}:{})};return;} // S/O: back tomorrow, keep showing
-              DB.ref(`${DB_ROOT}/personnel/${p.id}/activeLeave`).remove();return; // S/I: back tonight, clear
-            }
-            nr[p.id]={s:al.s,det:al.det,from:al.from,...(al.label?{label:al.label}:{})};return;
+        if(al&&CARRY_DATE_RANGE.has(al.s)&&al.from&&al.det&&date>=al.from&&date<=al.det){
+          if(date===al.det&&tod==='2030/2230'){
+            const si=getSiso(p);
+            if(si.type==='so'||si.type==='so_till'){nr[p.id]={s:al.s,det:al.det,from:al.from,...(al.label?{label:al.label}:{})};return;} // S/O: back tomorrow, keep showing
+            return; // S/I: back tonight — do not carry, but do NOT remove activeLeave here (race condition risk)
           }
-          if(date>al.det)DB.ref(`${DB_ROOT}/personnel/${p.id}/activeLeave`).remove();
+          nr[p.id]={s:al.s,det:al.det,from:al.from,...(al.label?{label:al.label}:{})};return;
         }
       }
       if(d){
