@@ -3393,8 +3393,8 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
             </div>
           )}
 
-          {/* Text input: only for non-datePick detail statuses, or others with no label yet */}
-          {si&&si.d&&(!si.datePick||(record.s==='others'&&!record.label))&&(
+          {/* Text input: only for non-datePick detail statuses, or others whose label isn't a saved quick-pick */}
+          {si&&si.d&&(!si.datePick||(record.s==='others'&&!(record.label&&otherReasons?.includes(record.label))))&&(
             <div style={{display:'flex',gap:'6px',alignItems:'center'}}>
               <input type="text" placeholder={si.dp||'Enter details...'} value={record.s==='others'?(record.label||''):(record.det||'')}
                 onChange={e=>record.s==='others'?setRec(person.id,record.s,record.det||'',record.from||currentDate,e.target.value):setRec(person.id,record.s,e.target.value,record.from||'')}
