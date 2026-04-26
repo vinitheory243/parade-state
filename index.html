@@ -532,7 +532,7 @@ function genMsg(date,tod,total,records,personnel,extra){
   SL.forEach(s=>{grp[s.k]=[]});
   active.forEach(p=>{
     const r=records[p.id];
-    if(r&&r.s){grp[r.s]=grp[r.s]||[];grp[r.s].push({p,det:r.det||'',from:r.from||''});}
+    if(r&&r.s){grp[r.s]=grp[r.s]||[];grp[r.s].push({p,det:r.det||'',from:r.from||'',label:r.label||''});}
   });
   const cnt=k=>(grp[k]||[]).length;
   // All non-duty statuses show rank + name (and date if applicable)
@@ -659,14 +659,18 @@ function genMsg(date,tod,total,records,personnel,extra){
     const othersItems=grp['others']||[];
     const byReason={};
     othersItems.forEach(x=>{
-      const reason=(x.det&&x.det.trim()?x.det.trim():'Unspecified').toUpperCase();
+      const reason=(x.label&&x.label.trim()?x.label.trim():x.det&&!/^\d{4}-\d{2}-\d{2}$/.test(x.det)&&x.det.trim()?x.det.trim():'Unspecified').toUpperCase();
       if(!byReason[reason])byReason[reason]=[];
       byReason[reason].push(x);
     });
     L.push('');L.push('----');L.push('');L.push('Others');
     Object.entries(byReason).forEach(([reason,items])=>{
       L.push('');
-      L.push(`${reason}: ${items.length}\n`+items.map((x,i)=>`${i+1}. ${x.p.rank} ${x.p.dn||x.p.name.split(' ')[0]}`).join('\n'));
+      L.push(`${reason}: ${items.length}\n`+items.map((x,i)=>{
+        let name=`${i+1}. ${x.p.rank} ${x.p.dn||x.p.name.split(' ')[0]}`;
+        if(x.det&&/^\d{4}-\d{2}-\d{2}$/.test(x.det))name+=` TILL ${fmtTeleDate(x.det)}`;
+        return name;
+      }).join('\n'));
     });
   }
   if(extra&&extra.trim()){L.push('');L.push(extra.trim());}
@@ -682,7 +686,7 @@ function genComdMsg(date,tod,records,personnel){
   const grp={};
   cmdrs.forEach(p=>{
     const r=records[p.id];
-    if(r&&r.s){grp[r.s]=grp[r.s]||[];grp[r.s].push({p,det:r.det||''});}
+    if(r&&r.s){grp[r.s]=grp[r.s]||[];grp[r.s].push({p,det:r.det||'',label:r.label||''});}
   });
   const cnt=k=>(grp[k]||[]).length;
   function name(x){return`${x.p.rank} ${x.p.dn||x.p.name.split(' ')[0]}`;}
@@ -737,17 +741,22 @@ function genComdMsg(date,tod,records,personnel){
     block('Driving Course',['driving'],false),
   ];
   sections.filter(s=>s).forEach(s=>{L.push(s);L.push('');});
-  // Others: group by reason
+  // Others: group by reason label
   const othersItems=grp['others']||[];
   if(othersItems.length){
     const byReason={};
     othersItems.forEach(x=>{
-      const reason=(x.det&&x.det.trim()?x.det.trim():'Unspecified').toUpperCase();
+      const reason=(x.label&&x.label.trim()?x.label.trim():x.det&&!/^\d{4}-\d{2}-\d{2}$/.test(x.det)&&x.det.trim()?x.det.trim():'Unspecified').toUpperCase();
       if(!byReason[reason])byReason[reason]=[];
       byReason[reason].push(x);
     });
     Object.entries(byReason).forEach(([reason,items])=>{
-      L.push(`${reason}: ${items.length}\n${lst(items,false)}`);
+      const names=items.map((x,i)=>{
+        let line=`${i+1}. ${name(x)}`;
+        if(x.det&&/^\d{4}-\d{2}-\d{2}$/.test(x.det))line+=` TILL ${fmtTeleDate(x.det)}`;
+        return line;
+      }).join('\n');
+      L.push(`${reason}: ${items.length}\n${names}`);
       L.push('');
     });
   }
