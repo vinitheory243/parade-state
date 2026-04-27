@@ -3714,7 +3714,7 @@ function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal
     const nextDayStr=`${nextDay.getFullYear()}-${String(nextDay.getMonth()+1).padStart(2,'0')}-${String(nextDay.getDate()).padStart(2,'0')}`;
     const nextDayFmt=fmtTeleDate(nextDayStr);
     const personMap=Object.fromEntries(personnel.map(p=>[p.id,p]));
-    const roles=[{k:'dtl',l:'DTL'},{k:'adtl',l:'ADTL'},{k:'doo',l:'DOO'},{k:'t1',l:'T1'},{k:'t2',l:'T2'}];
+    const roles=[{k:'dtl',l:'DTL'},{k:'adtl',l:'ADTL'},{k:'doo',l:'DTO'},{k:'t1',l:'T1'},{k:'t2',l:'T2'}];
     const dutyLines=roles.map(r=>{
       const p=personMap[nextDayDuty[r.k]];
       if(!p)return`${r.l}: -`;
@@ -3800,7 +3800,7 @@ function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal
       {tab==='doo'&&(
         <div style={{background:'#fffbeb',border:'1.5px solid #fde68a',borderRadius:'14px',padding:'16px',marginTop:'12px'}}>
           <div style={{fontSize:'13px',color:'#b45309',fontWeight:800,marginBottom:'14px',letterSpacing:'0.3px'}}>🌙 Next Day Duty Personnel</div>
-          {[{k:'dtl',l:'DTL'},{k:'adtl',l:'ADTL'},{k:'doo',l:'DOO'},{k:'t1',l:'T1'},{k:'t2',l:'T2'}].map(r=>(
+          {[{k:'dtl',l:'DTL'},{k:'adtl',l:'ADTL'},{k:'doo',l:'DTO'},{k:'t1',l:'T1'},{k:'t2',l:'T2'}].map(r=>(
             <div key={r.k} style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'10px'}}>
               <span style={{fontSize:'12px',fontWeight:900,color:'#92400e',background:'#fef3c7',border:'1.5px solid #fbbf24',borderRadius:'6px',padding:'4px 0',width:'52px',textAlign:'center',flexShrink:0,display:'inline-block'}}>{r.l}</span>
               <div style={{flex:1,position:'relative'}}>
