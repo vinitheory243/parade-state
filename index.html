@@ -3796,7 +3796,7 @@ function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal
           <div style={{fontSize:'13px',color:'#b45309',fontWeight:800,marginBottom:'14px',letterSpacing:'0.3px'}}>🌙 Next Day Duty Personnel</div>
           {[{k:'dtl',l:'DTL'},{k:'adtl',l:'ADTL'},{k:'doo',l:'DOO'},{k:'t1',l:'T1'},{k:'t2',l:'T2'}].map(r=>(
             <div key={r.k} style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'10px'}}>
-              <span style={{fontSize:'12px',fontWeight:900,color:'#92400e',background:'#fef3c7',border:'1.5px solid #fbbf24',borderRadius:'6px',padding:'4px 8px',width:'42px',textAlign:'center',flexShrink:0}}>{r.l}</span>
+              <span style={{fontSize:'12px',fontWeight:900,color:'#92400e',background:'#fef3c7',border:'1.5px solid #fbbf24',borderRadius:'6px',padding:'4px 0',width:'52px',textAlign:'center',flexShrink:0,display:'inline-block'}}>{r.l}</span>
               <div style={{flex:1,position:'relative'}}>
                 <PersonSearch value={nextDayDuty[r.k]||''} onChange={id=>setDutyRole(r.k,id)}
                   personnel={personnel.filter(p=>p.active)} placeholder={`Search ${r.l}...`}
