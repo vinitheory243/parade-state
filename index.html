@@ -3658,7 +3658,7 @@ function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal
   const comdMsg=useMemo(()=>genComdMsg(date,tod,records,personnel),[date,tod,records,personnel]);
   const mcMsg=useMemo(()=>genMCMsg(date,records,personnel),[date,records,personnel]);
   const summaryMsg=useMemo(()=>genSummaryMsg(date,tod,records,personnel,total),[date,tod,records,personnel,total]);
-  const activeMsg=tab==='node'?msg:tab==='comd'?comdMsg:tab==='mc'?mcMsg:summaryMsg;
+  const activeMsg=tab==='node'?msg:tab==='comd'?comdMsg:tab==='mc'?mcMsg:tab==='doo'?msg:summaryMsg;
   function copy(){
     const go=text=>{
       if(navigator.clipboard&&navigator.clipboard.writeText){
@@ -3686,6 +3686,11 @@ function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal
         </button>
         <button onClick={()=>{setTab('summary');setCopied(false);}} style={{padding:'11px 8px',borderRadius:'10px',border:'2px solid',borderColor:tab==='summary'?'#0369a1':'#e2e8f0',background:tab==='summary'?'#0369a1':'#fff',color:tab==='summary'?'#fff':'#475569',fontWeight:800,fontSize:'13px',cursor:'pointer'}}>
           📊 Summary
+        </button>
+      </div>
+      <div style={{padding:'0 14px'}}>
+        <button onClick={()=>{setTab('doo');setCopied(false);}} style={{width:'100%',marginTop:'12px',padding:'11px 8px',borderRadius:'10px',border:'2px solid',borderColor:tab==='doo'?'#b45309':'#e2e8f0',background:tab==='doo'?'#b45309':'#fff',color:tab==='doo'?'#fff':'#475569',fontWeight:800,fontSize:'13px',cursor:'pointer'}}>
+          🌙 DOO Night Msg
         </button>
       </div>
       <div style={{padding:'0 14px'}}>
@@ -3727,9 +3732,9 @@ function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal
       )}
 
       <div className="card" style={{padding:'14px'}}>
-        <div className="label" style={{marginBottom:'8px'}}>{tab==='node'?'Node Message':tab==='comd'?'Comd Message':tab==='mc'?'MC List':'Quick Summary'} Preview</div>
+        <div className="label" style={{marginBottom:'8px'}}>{tab==='node'?'Node Message':tab==='comd'?'Comd Message':tab==='mc'?'MC List':tab==='doo'?'DOO Night Message':'Quick Summary'} Preview</div>
         <div className="msg-box">{activeMsg}</div>
-        <button className="copy-btn" onClick={copy} style={{background:copied?'#16a34a':tab==='comd'?'#7c3aed':tab==='mc'?'#dc2626':tab==='summary'?'#0369a1':undefined}}>
+        <button className="copy-btn" onClick={copy} style={{background:copied?'#16a34a':tab==='comd'?'#7c3aed':tab==='mc'?'#dc2626':tab==='summary'?'#0369a1':tab==='doo'?'#b45309':undefined}}>
           {copied?'✓ Copied!':'📋 Copy Message for Telegram'}
         </button>
       </div>
