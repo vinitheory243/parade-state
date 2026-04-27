@@ -3676,7 +3676,6 @@ function PersonSearch({value,onChange,personnel,placeholder,selected}){
               onMouseEnter={e=>e.currentTarget.style.background='#f0fdfa'}
               onMouseLeave={e=>e.currentTarget.style.background='#fff'}>
               <span>{p.rank} {p.dn||p.name.split(' ')[0]}</span>
-              {p.phone&&<span style={{color:'#0d9488',fontWeight:600,fontSize:'12px',background:'#f0fdfa',padding:'2px 6px',borderRadius:'4px'}}>{p.phone}</span>}
             </div>
           ))}
         </div>
