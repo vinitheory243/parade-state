@@ -2565,6 +2565,22 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
     if(leave) DB.ref(`${DB_ROOT}/personnel/${id}/activeLeave`).set(leave);
     else DB.ref(`${DB_ROOT}/personnel/${id}/activeLeave`).remove();
     setPersonnel(prev=>{const next=prev.map(p=>p.id===id?{...p,activeLeave:leave}:p);personnelRef.current=next;return next;});
+    // Night strength: pre-write date-range statuses to next day HLS+0745 so SGTs don't need to know which is first parade
+    if(tod==='2030/2230'&&!isNR){
+      const nd=new Date(date+'T00:00:00');nd.setDate(nd.getDate()+1);
+      const ndStr=`${nd.getFullYear()}-${String(nd.getMonth()+1).padStart(2,'0')}-${String(nd.getDate()).padStart(2,'0')}`;
+      for(const t of['HLS','0745']){
+        const tRef=DB.ref(`${DB_ROOT}/att/${ndStr}/${todKey(t)}/records/${id}`);
+        if(leave&&CARRY_DATE_RANGE.has(leave.s)){
+          const rec={s:leave.s,det:leave.det||'',from:leave.from||'',...(leave.label?{label:leave.label}:{})};
+          tRef.transaction(curr=>curr&&curr.s?undefined:rec);
+        }else{
+          tRef.once('value').then(snap=>{
+            if(snap.val()&&CARRY_DATE_RANGE.has(snap.val().s))tRef.remove();
+          });
+        }
+      }
+    }
   }
   function setPersonDailyDuty(id,s,d){
     const duty=s?{s,date:d}:null;
