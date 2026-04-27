@@ -41,7 +41,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .ftab.on{background:#0d9488;color:#fff;border-color:#0d9488;box-shadow:0 2px 6px rgba(13,148,136,.3)}
 .unset-tag{font-size:11px;color:#f59e0b;font-weight:700}
 .sc-present{background:#f0fdf4}
-.sc-mc,.sc-hl,.sc-hospitalised{background:#fef9c3}
+.sc-mc,.sc-hl,.sc-hospitalised,.sc-mtl{background:#fef9c3}
 .sc-duty,.sc-dto,.sc-adtl,.sc-doo,.sc-dtl,.sc-amb_t1,.sc-amb_t2,.sc-late,.sc-off,.sc-birthday_off,.sc-oil,.sc-node_off,.sc-ol,.sc-ll,.sc-ul,.sc-fcl,.sc-ddr,.sc-dto_r,.sc-adtl_r,.sc-so,.sc-so_till,.sc-arf,.sc-rsi,.sc-rso,.sc-detail,.sc-ma,.sc-safer_upcat,.sc-cse,.sc-6ton_fam,.sc-attached_out,.sc-ao_local,.sc-ao_overseas,.sc-awol,.sc-sol,.sc-suspended,.sc-db_prison,.sc-others,.sc-cl,.sc-ccl,.sc-court,.sc-ca,.sc-civil,.sc-do_gcm,.sc-rib,.sc-driving,.sc-dcp{background:#fef9c3}
 .msg-box{font-family:'Courier New',monospace;font-size:12px;line-height:1.55;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:14px;white-space:pre;overflow-x:auto;-webkit-overflow-scrolling:touch;max-height:60vh}
 .copy-btn{width:100%;padding:14px;background:#0d9488;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;margin-top:12px}
@@ -303,6 +303,7 @@ const SL = [
   {k:'mc',           l:'MC (Medical Certificate)',   d:true,  datePick:true, dateRange:true, names:true, pre:'TILL '},
   {k:'hl',           l:'Hospitalisation Leave',      d:true,  datePick:true, dateRange:true, names:true, pre:'TILL '},
   {k:'hospitalised', l:'Hospitalised',               d:true, names:true},
+  {k:'mtl',          l:'MTL',                        d:false, names:true},
   {k:'rso',          l:'RSO',                        d:false},
   {k:'rsi',          l:'RSI',                        d:false, names:true},
   {k:'off',          l:'OFF',                        d:true,  datePick:true, dateRange:true, names:true},
@@ -592,6 +593,8 @@ function genMsg(date,tod,total,records,personnel,extra){
   L.push('');
   L.push((()=>{const items=grp['hospitalised']||[];if(!items.length)return'Hospitalised: 0';return`Hospitalised: ${items.length}\n`+items.map((x,i)=>`${i+1}. ${x.p.rank} ${x.p.dn||x.p.name.split(' ')[0]}`).join('\n');})());
   L.push('');
+  L.push(line('MTL','mtl'));
+  L.push('');
   L.push(line('RSO','rso'));
   L.push('');
   L.push(line('RSI','rsi'));
@@ -715,6 +718,7 @@ function genComdMsg(date,tod,records,personnel){
     block('MC',['mc'],false),
     block('Hospitalisation Leave',['hl'],false),
     block('HOSPITALISED',['hospitalised'],false),
+    block('MTL',['mtl'],false),
     block('OFF',['off','birthday_off','oil','node_off'],false),
     block('OVERSEAS LEAVE',['ol'],false),
     block('LOCAL LEAVE',['ll'],false),
