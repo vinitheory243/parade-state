@@ -585,6 +585,8 @@ function genMsg(date,tod,total,records,personnel,extra){
   L.push('');
   L.push(lineMulti('Duty/Detail Rest',['ddr','dto_r','adtl_r']));
   L.push('');
+  L.push(line('MTL','mtl'));
+  L.push('');
   L.push(line('MA','ma'));
   L.push('');
   L.push(line('Medical Certificate','mc','TILL '));
@@ -592,8 +594,6 @@ function genMsg(date,tod,total,records,personnel,extra){
   L.push(line('Hospitalisation Leave','hl','TILL '));
   L.push('');
   L.push((()=>{const items=grp['hospitalised']||[];if(!items.length)return'Hospitalised: 0';return`Hospitalised: ${items.length}\n`+items.map((x,i)=>`${i+1}. ${x.p.rank} ${x.p.dn||x.p.name.split(' ')[0]}`).join('\n');})());
-  L.push('');
-  L.push(line('MTL','mtl'));
   L.push('');
   L.push(line('RSO','rso'));
   L.push('');
