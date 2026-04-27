@@ -3705,7 +3705,8 @@ function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal
   const dooMsg=useMemo(()=>{
     const nextDay=new Date(date+'T00:00:00');
     nextDay.setDate(nextDay.getDate()+1);
-    const nextDayFmt=fmtTeleDate(nextDay.toISOString().split('T')[0]);
+    const nextDayStr=`${nextDay.getFullYear()}-${String(nextDay.getMonth()+1).padStart(2,'0')}-${String(nextDay.getDate()).padStart(2,'0')}`;
+    const nextDayFmt=fmtTeleDate(nextDayStr);
     const personMap=Object.fromEntries(personnel.map(p=>[p.id,p]));
     const roles=[{k:'dtl',l:'DTL'},{k:'adtl',l:'ADTL'},{k:'doo',l:'DOO'},{k:'t1',l:'T1'},{k:'t2',l:'T2'}];
     const dutyLines=roles.map(r=>{
@@ -3715,7 +3716,7 @@ function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal
       const phone=p.phone?` (${p.phone})`:'';
       return`${r.l}: ${name}${phone}`;
     });
-    return`${msg}\n\n\nDuty Personnel on ${nextDayFmt}\n${dutyLines.join('\n')}`;
+    return`${msg}\n\n----\n\nDuty Personnel on ${nextDayFmt}\n${dutyLines.join('\n')}`;
   },[msg,nextDayDuty,personnel,date]);
   const activeMsg=tab==='node'?msg:tab==='comd'?comdMsg:tab==='mc'?mcMsg:tab==='doo'?dooMsg:summaryMsg;
   function copy(){
