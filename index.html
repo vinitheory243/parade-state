@@ -2271,14 +2271,19 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
             setSubmitted({P1:false,P2:false,HQ:false});setMarkedBy({P1:'',P2:'',HQ:''});
           })();
         } else {
-          // FP/MP/LP/NS: seed from most recent previous TOD, strip present, then carry
+          // FP/MP/LP/NS: seed from most complete previous TOD (most assigned), strip present, then carry
           (async()=>{
             const todIdx=TODS.indexOf(tod);
+            const activePpl=personnelOnDate(personnelRef.current,date);
             let seeded={};
+            let bestCount=0;
             for(let i=todIdx-1;i>=0;i--){
               const snap2=await DB.ref(fbAttPath(date,TODS[i])).once('value');
               const td=snap2.val();
-              if(td&&td.records){seeded={...td.records};break;}
+              if(!td||!td.records)continue;
+              const count=activePpl.filter(p=>td.records[p.id]&&td.records[p.id].s).length;
+              if(count>bestCount){bestCount=count;seeded={...td.records};}
+              if(bestCount>=activePpl.length)break;
             }
             const nr={...seeded};
             Object.keys(nr).forEach(id=>{if(nr[id]?.s==='present')delete nr[id];});
