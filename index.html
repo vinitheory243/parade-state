@@ -2221,20 +2221,14 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
               if(td&&td.records){prevRec=td.records;break;}
             }
             if(!Object.keys(prevRec).length)return;
-            const fills={};
             setRecords(prev=>{
               const next={...prev};let changed=false;
               personnelOnDate(personnelRef.current,date).forEach(p=>{
                 const ps=prevRec[p.id]?.s;
-                if(!next[p.id]?.s&&ps&&ps!=='present'){next[p.id]={...prevRec[p.id]};fills[p.id]=next[p.id];changed=true;}
+                if(!next[p.id]?.s&&ps&&ps!=='present'){next[p.id]={...prevRec[p.id]};changed=true;}
               });
               return changed?next:prev;
             });
-            if(Object.keys(fills).length){
-              await Promise.all(Object.entries(fills).map(([id,rec])=>
-                DB.ref(`${attPath}/records/${id}`).transaction(curr=>curr&&curr.s?undefined:rec)
-              ));
-            }
           })();}
         }
       } else {
