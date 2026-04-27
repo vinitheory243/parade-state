@@ -3700,18 +3700,41 @@ function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal
   useEffect(()=>{
     DB.ref(dutyFbPath).once('value').then(snap=>{if(snap.val())setNextDayDuty(snap.val());});
   },[dutyFbPath]);
+  // Next day date string (local time, not UTC)
+  const nextDayStr=useMemo(()=>{const d=new Date(date+'T00:00:00');d.setDate(d.getDate()+1);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;},[date]);
+  const DUTY_ROLE_STATUS={dtl:'dtl',adtl:'adtl',doo:'dto',t1:'amb_t1',t2:'amb_t2'};
   function setDutyRole(role,id){
+    const prevId=nextDayDuty[role];
     const next={...nextDayDuty,[role]:id};
     setNextDayDuty(next);
     DB.ref(dutyFbPath).set(next);
+    const statusKey=DUTY_ROLE_STATUS[role];
+    if(!statusKey)return;
+    const hlsRec=`${DB_ROOT}/att/${nextDayStr}/HLS/records`;
+    // Remove old person's auto-set record if it still matches what we wrote
+    if(prevId&&prevId!==id){
+      DB.ref(`${hlsRec}/${prevId}`).once('value').then(snap=>{
+        if(snap.val()?.s===statusKey){
+          DB.ref(`${hlsRec}/${prevId}`).remove();
+          if(WHOLE_DAY_DUTY.has(statusKey))
+            DB.ref(`${DB_ROOT}/personnel/${prevId}/dailyDuty`).once('value').then(dd=>{
+              if(dd.val()?.s===statusKey&&dd.val()?.date===nextDayStr)
+                DB.ref(`${DB_ROOT}/personnel/${prevId}/dailyDuty`).remove();
+            });
+        }
+      });
+    }
+    // Write new person's record + dailyDuty
+    if(id){
+      DB.ref(`${hlsRec}/${id}`).set({s:statusKey,det:'',from:''});
+      if(WHOLE_DAY_DUTY.has(statusKey))
+        DB.ref(`${DB_ROOT}/personnel/${id}/dailyDuty`).set({date:nextDayStr,s:statusKey});
+    }
   }
   const comdMsg=useMemo(()=>genComdMsg(date,tod,records,personnel),[date,tod,records,personnel]);
   const mcMsg=useMemo(()=>genMCMsg(date,records,personnel),[date,records,personnel]);
   const summaryMsg=useMemo(()=>genSummaryMsg(date,tod,records,personnel,total),[date,tod,records,personnel,total]);
   const dooMsg=useMemo(()=>{
-    const nextDay=new Date(date+'T00:00:00');
-    nextDay.setDate(nextDay.getDate()+1);
-    const nextDayStr=`${nextDay.getFullYear()}-${String(nextDay.getMonth()+1).padStart(2,'0')}-${String(nextDay.getDate()).padStart(2,'0')}`;
     const nextDayFmt=fmtTeleDate(nextDayStr);
     const personMap=Object.fromEntries(personnel.map(p=>[p.id,p]));
     const roles=[{k:'dtl',l:'DTL'},{k:'adtl',l:'ADTL'},{k:'doo',l:'DTO'},{k:'t1',l:'T1'},{k:'t2',l:'T2'}];
@@ -3723,7 +3746,7 @@ function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal
       return`${r.l}: ${name}${phone}`;
     });
     return`${msg}\n\n----\n\nDuty Personnel on ${nextDayFmt}\n${dutyLines.join('\n')}`;
-  },[msg,nextDayDuty,personnel,date]);
+  },[msg,nextDayDuty,personnel,nextDayStr]);
   const activeMsg=tab==='node'?msg:tab==='comd'?comdMsg:tab==='mc'?mcMsg:tab==='doo'?dooMsg:summaryMsg;
   function copy(){
     const go=text=>{
