@@ -824,7 +824,7 @@ function genMCMsg(date,records,personnel){
   else{
     list.forEach(({p,r},i)=>{
       const plt=p.plt==='HQ'?'HQ':`PLT ${p.plt==='P1'?'1':'2'}`;
-      const sec=p.sec?` TO ${p.sec.toUpperCase()}`:'';
+      const sec=p.sec&&p.plt!=='HQ'?` TO ${p.sec.toUpperCase()}`:'';
       L.push(`${i+1}. ${p.rank} ${(p.dn||p.name.split(' ')[0]).toUpperCase()}, ${plt}${sec}`);
       if(r.s==='hospitalised'){
         L.push('HL PENDING');
