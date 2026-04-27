@@ -2274,20 +2274,22 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
           // FP/MP/LP/NS: seed from most complete previous TOD (most assigned), strip present, then carry
           (async()=>{
             const todIdx=TODS.indexOf(tod);
-            const activePpl=personnelOnDate(personnelRef.current,date);
+            // Use raw record counts (not filtered by activePpl) so seeding works even
+            // if personnelRef hasn't loaded yet when this IIFE starts.
             let seeded={};
             let bestCount=0;
             for(let i=todIdx-1;i>=0;i--){
               const snap2=await DB.ref(fbAttPath(date,TODS[i])).once('value');
               const td=snap2.val();
               if(!td||!td.records)continue;
-              const count=activePpl.filter(p=>td.records[p.id]&&td.records[p.id].s).length;
+              const count=Object.values(td.records).filter(r=>r&&r.s).length;
               if(count>bestCount){bestCount=count;seeded={...td.records};}
-              if(bestCount>=activePpl.length)break;
             }
+            // Re-read personnel AFTER awaits — by now it should have loaded
+            const activePpl=personnelOnDate(personnelRef.current,date);
             const nr={...seeded};
             Object.keys(nr).forEach(id=>{if(nr[id]?.s==='present')delete nr[id];});
-            personnelOnDate(personnelRef.current,date).forEach(p=>applyCarry(nr,p));
+            activePpl.forEach(p=>applyCarry(nr,p));
             setRecords(prev=>{const m={...nr};Object.entries(prev).forEach(([id,r])=>{if(r?.s)m[id]=r;});return m;});
             await Promise.all(Object.entries(nr).map(([id,r])=>
               DB.ref(`${attPath}/records/${id}`).transaction(curr=>curr&&curr.s?undefined:r)
