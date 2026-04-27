@@ -3650,15 +3650,73 @@ function CustomReportModal({personnel,date,records,toast_,onClose}){
   );
 }
 
+// ─── PERSON SEARCH DROPDOWN ─────────────────────────────────────
+function PersonSearch({value,onChange,personnel,placeholder}){
+  const[query,setQuery]=useState('');
+  const[open,setOpen]=useState(false);
+  const person=personnel.find(p=>p.id===value);
+  const displayVal=person?`${person.rank} ${person.dn||person.name.split(' ')[0]}`:query;
+  const filtered=query.length>0?personnel.filter(p=>
+    (`${p.rank} ${p.name}`).toLowerCase().includes(query.toLowerCase())||
+    (p.dn&&p.dn.toLowerCase().includes(query.toLowerCase()))
+  ).slice(0,8):[];
+  return(
+    <div style={{position:'relative'}}>
+      <input value={displayVal}
+        onChange={e=>{setQuery(e.target.value);onChange('');setOpen(true);}}
+        onFocus={e=>{setQuery('');setOpen(true);e.target.select();}}
+        onBlur={()=>setTimeout(()=>setOpen(false),150)}
+        placeholder={placeholder||'Search name...'}
+        style={{width:'100%',boxSizing:'border-box'}}/>
+      {open&&filtered.length>0&&(
+        <div style={{position:'absolute',zIndex:200,background:'#fff',border:'1px solid #e2e8f0',borderRadius:'8px',maxHeight:'180px',overflowY:'auto',width:'100%',boxShadow:'0 4px 16px rgba(0,0,0,0.12)',top:'100%',left:0}}>
+          {filtered.map(p=>(
+            <div key={p.id} onMouseDown={()=>{onChange(p.id);setQuery('');setOpen(false);}}
+              style={{padding:'9px 12px',cursor:'pointer',fontSize:'13px',fontWeight:600,borderBottom:'1px solid #f1f5f9',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <span>{p.rank} {p.dn||p.name.split(' ')[0]}</span>
+              {p.phone&&<span style={{color:'#94a3b8',fontWeight:400,fontSize:'12px'}}>{p.phone}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── GENERATE SCREEN ────────────────────────────────────────────
 function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal,extra,setExtra,toast_,date,tod,records,personnel,isAdmin}){
   const[tab,setTab]=useState('node');
   const[copied,setCopied]=useState(false);
   const[showCustomReport,setShowCustomReport]=useState(false);
+  const[nextDayDuty,setNextDayDuty]=useState({dtl:'',adtl:'',doo:'',t1:'',t2:''});
+  const dutyFbPath=`${fbAttPath(date,tod)}/nextDayDuty`;
+  useEffect(()=>{
+    DB.ref(dutyFbPath).once('value').then(snap=>{if(snap.val())setNextDayDuty(snap.val());});
+  },[dutyFbPath]);
+  function setDutyRole(role,id){
+    const next={...nextDayDuty,[role]:id};
+    setNextDayDuty(next);
+    DB.ref(dutyFbPath).set(next);
+  }
   const comdMsg=useMemo(()=>genComdMsg(date,tod,records,personnel),[date,tod,records,personnel]);
   const mcMsg=useMemo(()=>genMCMsg(date,records,personnel),[date,records,personnel]);
   const summaryMsg=useMemo(()=>genSummaryMsg(date,tod,records,personnel,total),[date,tod,records,personnel,total]);
-  const activeMsg=tab==='node'?msg:tab==='comd'?comdMsg:tab==='mc'?mcMsg:tab==='doo'?msg:summaryMsg;
+  const dooMsg=useMemo(()=>{
+    const nextDay=new Date(date+'T00:00:00');
+    nextDay.setDate(nextDay.getDate()+1);
+    const nextDayFmt=fmtTeleDate(nextDay.toISOString().split('T')[0]);
+    const personMap=Object.fromEntries(personnel.map(p=>[p.id,p]));
+    const roles=[{k:'dtl',l:'DTL'},{k:'adtl',l:'ADTL'},{k:'doo',l:'DOO'},{k:'t1',l:'T1'},{k:'t2',l:'T2'}];
+    const dutyLines=roles.map(r=>{
+      const p=personMap[nextDayDuty[r.k]];
+      if(!p)return`${r.l}: -`;
+      const name=`${p.rank} ${p.dn||p.name.split(' ')[0]}`;
+      const phone=p.phone?` (${p.phone})`:'';
+      return`${r.l}: ${name}${phone}`;
+    });
+    return`${msg}\n\n\nDuty Personnel on ${nextDayFmt}\n${dutyLines.join('\n')}`;
+  },[msg,nextDayDuty,personnel,date]);
+  const activeMsg=tab==='node'?msg:tab==='comd'?comdMsg:tab==='mc'?mcMsg:tab==='doo'?dooMsg:summaryMsg;
   function copy(){
     const go=text=>{
       if(navigator.clipboard&&navigator.clipboard.writeText){
@@ -3728,6 +3786,23 @@ function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal
       {tab==='comd'&&(
         <div className="card" style={{padding:'14px',marginTop:'12px',background:'#faf5ff',border:'1px solid #e9d5ff'}}>
           <div style={{fontSize:'12px',color:'#7c3aed',fontWeight:700,marginBottom:'8px'}}>👑 Commander message — 3SG and above only</div>
+        </div>
+      )}
+
+      {tab==='doo'&&(
+        <div className="card" style={{padding:'14px',marginTop:'12px',background:'#fffbeb',border:'1px solid #fde68a'}}>
+          <div style={{fontSize:'12px',color:'#b45309',fontWeight:700,marginBottom:'12px'}}>🌙 Next Day Duty Personnel</div>
+          {[{k:'dtl',l:'DTL'},{k:'adtl',l:'ADTL'},{k:'doo',l:'DOO'},{k:'t1',l:'T1'},{k:'t2',l:'T2'}].map(r=>(
+            <div key={r.k} style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'10px'}}>
+              <span style={{fontSize:'13px',fontWeight:800,color:'#92400e',width:'44px',flexShrink:0}}>{r.l}</span>
+              <div style={{flex:1}}>
+                <PersonSearch value={nextDayDuty[r.k]||''} onChange={id=>setDutyRole(r.k,id)}
+                  personnel={personnel.filter(p=>p.active)} placeholder={`Search ${r.l}...`}/>
+              </div>
+              {nextDayDuty[r.k]&&<button onClick={()=>setDutyRole(r.k,'')}
+                style={{background:'none',border:'none',color:'#94a3b8',cursor:'pointer',fontSize:'18px',padding:'0 4px',lineHeight:1}}>×</button>}
+            </div>
+          ))}
         </div>
       )}
 
