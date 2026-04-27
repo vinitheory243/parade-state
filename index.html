@@ -804,7 +804,7 @@ function genSummaryMsg(date,tod,records,personnel,total){
 // ─── MC LIST GENERATION ─────────────────────────────────────────
 function genMCMsg(date,records,personnel){
   const fmtD=d=>{if(!d)return'';const[y,m,day]=d.split('-');return`${day}${m}${y.slice(2)}`;};
-  const MC_STATUSES=new Set(['mc','hl','hospitalised']);
+  const MC_STATUSES=new Set(['mc','hl','hospitalised','rso']);
   const active=personnel.filter(p=>p.active);
   const list=[];
   active.forEach(p=>{
@@ -828,6 +828,8 @@ function genMCMsg(date,records,personnel){
       L.push(`${i+1}. ${p.rank} ${(p.dn||p.name.split(' ')[0]).toUpperCase()}, ${plt}${sec}`);
       if(r.s==='hospitalised'){
         L.push('HL PENDING');
+      } else if(r.s==='rso'){
+        L.push('MC PENDING');
       } else {
         const from=fmtD(r.from||date);
         const till=fmtD(r.det||'');
