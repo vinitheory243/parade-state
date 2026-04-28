@@ -2547,7 +2547,8 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       const next=typeof updater==='function'?updater(prev):updater;
       personnelRef.current=next; // sync immediately so attendance listener always has latest
       const obj={};next.forEach(p=>{obj[p.id]=p;});
-      DB.ref(`${DB_ROOT}/personnel`).set(obj);
+      // update() instead of set() so concurrent writes from other tabs don't wipe each other's changes
+      DB.ref(`${DB_ROOT}/personnel`).update(obj);
       return next;
     });
   }
