@@ -3979,9 +3979,10 @@ function BulkImportModal({personnel,setPersonnel,toast_,onClose}){
         else{name=line;val='';}
       }
       if(!name)return;
-      // Uppercase for certain fields
+      // Normalise field values to match stored format
       if(field==='pes'||field==='rank'||field==='sec')val=val.toUpperCase();
       if(field==='dn')val=val.toUpperCase();
+      if(field==='nokRelation')val=val.charAt(0).toUpperCase()+val.slice(1).toLowerCase();
       const match=findMatch(name);
       results.push({rawLine:line,name,val,match});
     });
@@ -4300,7 +4301,7 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
             </div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}}>
               <div><div className="label">NOK Relationship</div>
-                <select value={np.nokRelation||''} onChange={e=>setNp({...np,nokRelation:e.target.value})}>
+                <select value={(v=>v?v.charAt(0).toUpperCase()+v.slice(1).toLowerCase():'')(np.nokRelation||'')} onChange={e=>setNp({...np,nokRelation:e.target.value})}>
                   <option value="">— Select —</option>
                   {['Mother','Father','Spouse','Brother','Sister','Aunty','Uncle','Guardian','Others'].map(r=><option key={r} value={r}>{r}</option>)}
                 </select>
@@ -4389,7 +4390,7 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
                         </div>
                         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}}>
                           <div><div className="label">NOK Relationship</div>
-                            <select value={editData.nokRelation||''} onChange={e=>setEditData({...editData,nokRelation:e.target.value})}>
+                            <select value={(v=>v?v.charAt(0).toUpperCase()+v.slice(1).toLowerCase():'')(editData.nokRelation||'')} onChange={e=>setEditData({...editData,nokRelation:e.target.value})}>
                               <option value="">— Select —</option>
                               {['Mother','Father','Spouse','Brother','Sister','Aunty','Uncle','Guardian','Others'].map(r=><option key={r} value={r}>{r}</option>)}
                             </select>
