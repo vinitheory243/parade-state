@@ -42,7 +42,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .unset-tag{font-size:11px;color:#f59e0b;font-weight:700}
 .sc-present{background:#f0fdf4}
 .sc-mc,.sc-hl,.sc-hospitalised,.sc-mtl{background:#fef9c3}
-.sc-duty,.sc-dto,.sc-adtl,.sc-doo,.sc-dtl,.sc-amb_t1,.sc-amb_t2,.sc-late,.sc-off,.sc-birthday_off,.sc-oil,.sc-node_off,.sc-ol,.sc-ll,.sc-ul,.sc-fcl,.sc-ddr,.sc-dto_r,.sc-adtl_r,.sc-so,.sc-so_till,.sc-arf,.sc-rsi,.sc-rso,.sc-detail,.sc-ma,.sc-safer_upcat,.sc-cse,.sc-6ton_fam,.sc-attached_out,.sc-ao_local,.sc-ao_overseas,.sc-awol,.sc-sol,.sc-suspended,.sc-db_prison,.sc-others,.sc-cl,.sc-ccl,.sc-court,.sc-ca,.sc-civil,.sc-do_gcm,.sc-rib,.sc-driving,.sc-dcp{background:#fef9c3}
+.sc-duty,.sc-dto,.sc-adtl,.sc-doo,.sc-dtl,.sc-amb_t1,.sc-amb_t2,.sc-late,.sc-off,.sc-birthday_off,.sc-oil,.sc-node_off,.sc-ol,.sc-ll,.sc-ul,.sc-fcl,.sc-ddr,.sc-dto_r,.sc-adtl_r,.sc-so,.sc-so_till,.sc-arf,.sc-rsi,.sc-rso,.sc-detail,.sc-ma,.sc-safer_upcat,.sc-cse,.sc-6ton_fam,.sc-attached_out,.sc-ao_local,.sc-ao_overseas,.sc-awol,.sc-sol,.sc-suspended,.sc-db_prison,.sc-others,.sc-cl,.sc-ccl,.sc-court,.sc-ca,.sc-civil,.sc-do_gcm,.sc-rib,.sc-driving,.sc-dcp,.sc-am_leave,.sc-pm_leave{background:#fef9c3}
 .msg-box{font-family:'Courier New',monospace;font-size:12px;line-height:1.55;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:14px;white-space:pre;overflow-x:auto;-webkit-overflow-scrolling:touch;max-height:60vh}
 .copy-btn{width:100%;padding:14px;background:#0d9488;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;margin-top:12px}
 .copy-btn:active{background:#0f766e}
@@ -312,6 +312,8 @@ const SL = [
   {k:'node_off',     l:'Node OFF',                   d:true,  datePick:true, dateRange:true, names:true},
   {k:'ol',           l:'Overseas Leave',             d:true,  datePick:true, dateRange:true, names:true, pre:'TILL '},
   {k:'ll',           l:'Local Leave',                d:true,  datePick:true, dateRange:true, names:true, pre:'TILL '},
+  {k:'am_leave',     l:'AM Leave',                   d:false, halfDay:'am'},
+  {k:'pm_leave',     l:'PM Leave',                   d:false, halfDay:'pm'},
   {k:'ao_local',     l:'A/O Local (Attached Out Locally)',   d:true, datePick:true, dateRange:true, names:true},
   {k:'ao_overseas',  l:'A/O Overseas (Attached Out Overseas)', d:true, datePick:true, dateRange:true, names:true},
   {k:'safer_upcat',  l:'SAFER/UPCAT',                d:false, names:true},
@@ -603,7 +605,20 @@ function genMsg(date,tod,total,records,personnel,extra){
   L.push('');
   L.push(line('OVERSEAS LEAVE','ol','TILL '));
   L.push('');
-  L.push(line('LOCAL LEAVE','ll','TILL '));
+  L.push((()=>{
+    const llItems=grp['ll']||[];
+    const amItems=grp['am_leave']||[];
+    const pmItems=grp['pm_leave']||[];
+    const total=llItems.length+amItems.length+pmItems.length;
+    if(!total)return'LOCAL LEAVE: 0';
+    const allItems=[
+      ...llItems.map(x=>({x,suffix:x.det&&/^\d{4}-\d{2}-\d{2}$/.test(x.det)?` TILL ${fmtTeleDate(x.det)}`:''})),
+      ...amItems.map(x=>({x,suffix:' (AM LEAVE)'})),
+      ...pmItems.map(x=>({x,suffix:' (PM LEAVE)'})),
+    ];
+    const names='\n'+allItems.map((d,i)=>`${i+1}. ${d.x.p.rank} ${d.x.p.dn||d.x.p.name.split(' ')[0]}${d.suffix}`).join('\n');
+    return`LOCAL LEAVE: ${total}${names}`;
+  })());
   L.push('');
   L.push(line('ATTACHED OUT LOCAL','ao_local'));
   L.push('');
@@ -721,7 +736,19 @@ function genComdMsg(date,tod,records,personnel){
     block('MTL',['mtl'],false),
     block('OFF',['off','birthday_off','oil','node_off'],false),
     block('OVERSEAS LEAVE',['ol'],false),
-    block('LOCAL LEAVE',['ll'],false),
+    (()=>{
+      const llItems=grp['ll']||[];
+      const amItems=grp['am_leave']||[];
+      const pmItems=grp['pm_leave']||[];
+      const total=llItems.length+amItems.length+pmItems.length;
+      if(!total)return'';
+      const allItems=[
+        ...llItems.map(x=>({x,suffix:''})),
+        ...amItems.map(x=>({x,suffix:' (AM LEAVE)'})),
+        ...pmItems.map(x=>({x,suffix:' (PM LEAVE)'})),
+      ];
+      return`LOCAL LEAVE: ${total}\n`+allItems.map((d,i)=>`${i+1}. ${name(d.x)}${d.suffix}`).join('\n');
+    })(),
     block('URGENT LEAVE',['ul'],false),
     block('FAMILY CARE LEAVE',['fcl'],false),
     block('CL',['cl'],false),
@@ -2188,11 +2215,20 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         const dd=p.dailyDuty;
         if(dd&&dd.date===date&&WHOLE_DAY_DUTY.has(dd.s)){nr[p.id]={s:dd.s,det:'',from:''};return;}
         const al=p.activeLeave;
+        // Half-day leave: am_leave carries only at HLS/0745; pm_leave only at 1300/1730
+        if(al&&al.s==='am_leave'&&al.from===date){
+          if(tod==='HLS'||tod==='0745'){nr[p.id]={s:'am_leave',det:'',from:date};return;}
+          return;
+        }
+        if(al&&al.s==='pm_leave'&&al.from===date){
+          if(tod==='1300'||tod==='1730'){nr[p.id]={s:'pm_leave',det:'',from:date};return;}
+          return;
+        }
         if(al&&CARRY_DATE_RANGE.has(al.s)&&al.from&&al.det&&date>=al.from&&date<=al.det){
           if(date===al.det&&tod==='2030/2230'){
             const si=getSiso(p);
-            if(si.type==='so'||si.type==='so_till'){nr[p.id]={s:al.s,det:al.det,from:al.from,...(al.label?{label:al.label}:{})};return;} // S/O: back tomorrow, keep showing
-            return; // S/I: back tonight — do not carry, but do NOT remove activeLeave here (race condition risk)
+            if(si.type==='so'||si.type==='so_till'){nr[p.id]={s:al.s,det:al.det,from:al.from,...(al.label?{label:al.label}:{})};return;}
+            return;
           }
           nr[p.id]={s:al.s,det:al.det,from:al.from,...(al.label?{label:al.label}:{})};return;
         }
@@ -2286,6 +2322,12 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
             const activePpl=personnelOnDate(personnelRef.current,date);
             const nr={...seeded};
             Object.keys(nr).forEach(id=>{if(nr[id]?.s==='present')delete nr[id];});
+            // Strip half-day leaves that don't carry to this TOD
+            Object.keys(nr).forEach(id=>{
+              const s=nr[id]?.s;
+              if(s==='am_leave'&&(tod==='1300'||tod==='1730'||tod==='2030/2230'))delete nr[id];
+              if(s==='pm_leave'&&tod==='2030/2230')delete nr[id];
+            });
             activePpl.forEach(p=>applyCarry(nr,p));
             setRecords(prev=>{const m={...nr};Object.entries(prev).forEach(([id,r])=>{if(r?.s)m[id]=r;});return m;});
             await Promise.all(Object.entries(nr).map(([id,r])=>
@@ -2322,6 +2364,14 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         const dd=p.dailyDuty;
         if(dd&&dd.date===date&&WHOLE_DAY_DUTY.has(dd.s)){nr[p.id]={s:dd.s,det:'',from:''};fills[p.id]=nr[p.id];changed=true;return;}
         const al=p.activeLeave;
+        if(al&&al.s==='am_leave'&&al.from===date){
+          if(tod==='HLS'||tod==='0745'){nr[p.id]={s:'am_leave',det:'',from:date};fills[p.id]=nr[p.id];changed=true;return;}
+          return;
+        }
+        if(al&&al.s==='pm_leave'&&al.from===date){
+          if(tod==='1300'||tod==='1730'){nr[p.id]={s:'pm_leave',det:'',from:date};fills[p.id]=nr[p.id];changed=true;return;}
+          return;
+        }
         if(al&&CARRY_DATE_RANGE.has(al.s)&&al.from&&al.det&&date>=al.from&&date<=al.det){
           if(date===al.det&&tod==='2030/2230'){
             const si=getSiso(p);
@@ -2565,18 +2615,21 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
     if(leave) DB.ref(`${DB_ROOT}/personnel/${id}/activeLeave`).set(leave);
     else DB.ref(`${DB_ROOT}/personnel/${id}/activeLeave`).remove();
     setPersonnel(prev=>{const next=prev.map(p=>p.id===id?{...p,activeLeave:leave}:p);personnelRef.current=next;return next;});
-    // Night strength: pre-write date-range statuses to next day HLS+0745 so SGTs don't need to know which is first parade
+    // Night strength: pre-write date-range statuses and am_leave to next day HLS+0745
     if(tod==='2030/2230'&&!isNR){
       const nd=new Date(date+'T00:00:00');nd.setDate(nd.getDate()+1);
       const ndStr=`${nd.getFullYear()}-${String(nd.getMonth()+1).padStart(2,'0')}-${String(nd.getDate()).padStart(2,'0')}`;
       for(const t of['HLS','0745']){
         const tRef=DB.ref(`${DB_ROOT}/att/${ndStr}/${todKey(t)}/records/${id}`);
-        if(leave&&CARRY_DATE_RANGE.has(leave.s)){
+        if(leave&&leave.s==='am_leave'&&leave.from===ndStr){
+          tRef.transaction(curr=>curr&&curr.s?undefined:{s:'am_leave',det:'',from:ndStr});
+        }else if(leave&&CARRY_DATE_RANGE.has(leave.s)){
           const rec={s:leave.s,det:leave.det||'',from:leave.from||'',...(leave.label?{label:leave.label}:{})};
           tRef.transaction(curr=>curr&&curr.s?undefined:rec);
         }else{
           tRef.once('value').then(snap=>{
-            if(snap.val()&&CARRY_DATE_RANGE.has(snap.val().s))tRef.remove();
+            const sv=snap.val();
+            if(sv&&(CARRY_DATE_RANGE.has(sv.s)||sv.s==='am_leave'))tRef.remove();
           });
         }
       }
@@ -3263,14 +3316,21 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
   const showSO=tod==='2030/2230';
 
   function nsLeaveWarn(s){
-    // Returns true (ok to proceed) if no NS leave warning needed, or user confirms
     if(tod!=='2030/2230'||s!=='present'||isNR||!person.activeLeave)return true;
     const al=person.activeLeave;
-    const isOngoing=al.det&&al.det>=currentDate;
+    const isOngoing=SM[al.s]?.halfDay?al.from>=currentDate:(al.det&&al.det>=currentDate);
     if(!isOngoing)return true;
     const label=SM[al.s]?.l||al.s;
     const tillStr=al.det?`till ${fmtDetDate(al.det)}`:'';
-    return window.confirm(`${dispName(person)} is currently on ${label} ${tillStr}.\n\nMarking present will clear this leave. Proceed?`);
+    return window.confirm(`${dispName(person)} is currently on ${label}${tillStr?' '+tillStr:''}.\n\nMarking present will clear this leave. Proceed?`);
+  }
+  function _halfDayLeaveDate(s){
+    // am_leave at night strength applies to next day; pm_leave always applies to current day
+    if(s==='am_leave'&&tod==='2030/2230'){
+      const nd=new Date(currentDate+'T00:00:00');nd.setDate(nd.getDate()+1);
+      return `${nd.getFullYear()}-${String(nd.getMonth()+1).padStart(2,'0')}-${String(nd.getDate()).padStart(2,'0')}`;
+    }
+    return currentDate;
   }
   function quickSet(s){
     if(locked)return;
@@ -3278,7 +3338,9 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
     const autoFrom=s&&SM[s]?.datePick&&SM[s]?.dateRange?currentDate:'';
     setRec(person.id,s,'',autoFrom);
     if(!isNR){
-      if(SM[s]?.fromOnly){
+      if(SM[s]?.halfDay){
+        setPersonLeave(person.id,s,_halfDayLeaveDate(s),null);
+      } else if(SM[s]?.fromOnly){
         setPersonLeave(person.id,s,currentDate,null);
       } else {
         if(person.activeLeave)setPersonLeave(person.id,null,null,null);
@@ -3301,7 +3363,9 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
     const autoFrom=newS&&SM[newS]?.datePick&&SM[newS]?.dateRange?currentDate:'';
     setRec(person.id,newS,'',autoFrom);
     if(!isNR){
-      if(SM[newS]?.fromOnly){
+      if(SM[newS]?.halfDay){
+        setPersonLeave(person.id,newS,_halfDayLeaveDate(newS),null);
+      } else if(SM[newS]?.fromOnly){
         setPersonLeave(person.id,newS,currentDate,null);
       } else {
         if(person.activeLeave)setPersonLeave(person.id,null,null,null);
