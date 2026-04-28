@@ -3887,9 +3887,12 @@ function BulkImportModal({personnel,setPersonnel,toast_,onClose}){
   function score(a,b){const aw=a.split(' ');const bw=b.split(' ');return bw.filter(w=>w.length>1&&aw.includes(w)).length;}
   function findMatch(name){
     const n=normalize(name);let best=null,bestScore=0;
+    const nFirst=n.split(' ')[0];
     personnel.forEach(p=>{
       const pn=normalize(p.name);
       if(pn===n){best=p;bestScore=999;return;}
+      // Require first word (surname) to match — prevents e.g. TAN ZHI JIE matching TEH ZHI JIE
+      if(pn.split(' ')[0]!==nFirst)return;
       const s=score(n,pn)+score(pn,n);
       if(s>bestScore){bestScore=s;best=p;}
     });
