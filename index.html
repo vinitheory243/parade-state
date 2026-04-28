@@ -2546,9 +2546,14 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
     setPersonnel(prev=>{
       const next=typeof updater==='function'?updater(prev):updater;
       personnelRef.current=next; // sync immediately so attendance listener always has latest
-      const obj={};next.forEach(p=>{obj[p.id]=p;});
-      // update() instead of set() so concurrent writes from other tabs don't wipe each other's changes
-      DB.ref(`${DB_ROOT}/personnel`).update(obj);
+      // Multi-path update of only static metadata — activeLeave and dailyDuty are managed by
+      // their own dedicated functions and must not be overwritten by bulk personnel writes
+      const updates={};
+      next.forEach(p=>{
+        const {activeLeave,dailyDuty,...meta}=p;
+        Object.entries(meta).forEach(([k,v])=>{if(v!==undefined)updates[`${p.id}/${k}`]=v;});
+      });
+      DB.ref(`${DB_ROOT}/personnel`).update(updates);
       return next;
     });
   }
