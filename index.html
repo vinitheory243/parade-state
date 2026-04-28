@@ -3726,23 +3726,25 @@ function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal
     DB.ref(dutyFbPath).set(next);
     const statusKey=DUTY_ROLE_STATUS[role];
     if(!statusKey)return;
-    const hlsRec=`${DB_ROOT}/att/${nextDayStr}/HLS/records`;
-    // Remove old person's auto-set record if it still matches what we wrote
+    const NEXT_TODS=['HLS','0745'];
+    // Remove old person's auto-set records from both HLS and 0745
     if(prevId&&prevId!==id){
-      DB.ref(`${hlsRec}/${prevId}`).once('value').then(snap=>{
-        if(snap.val()?.s===statusKey){
-          DB.ref(`${hlsRec}/${prevId}`).remove();
-          if(WHOLE_DAY_DUTY.has(statusKey))
-            DB.ref(`${DB_ROOT}/personnel/${prevId}/dailyDuty`).once('value').then(dd=>{
-              if(dd.val()?.s===statusKey&&dd.val()?.date===nextDayStr)
-                DB.ref(`${DB_ROOT}/personnel/${prevId}/dailyDuty`).remove();
-            });
-        }
+      NEXT_TODS.forEach(t=>{
+        const recRef=DB.ref(`${DB_ROOT}/att/${nextDayStr}/${todKey(t)}/records/${prevId}`);
+        recRef.once('value').then(snap=>{if(snap.val()?.s===statusKey)recRef.remove();});
       });
+      if(WHOLE_DAY_DUTY.has(statusKey))
+        DB.ref(`${DB_ROOT}/personnel/${prevId}/dailyDuty`).once('value').then(dd=>{
+          if(dd.val()?.s===statusKey&&dd.val()?.date===nextDayStr)
+            DB.ref(`${DB_ROOT}/personnel/${prevId}/dailyDuty`).remove();
+        });
     }
-    // Write new person's record + dailyDuty
+    // Write new person's record to both HLS and 0745, plus dailyDuty for whole-day roles
     if(id){
-      DB.ref(`${hlsRec}/${id}`).set({s:statusKey,det:'',from:''});
+      const rec={s:statusKey,det:'',from:''};
+      NEXT_TODS.forEach(t=>{
+        DB.ref(`${DB_ROOT}/att/${nextDayStr}/${todKey(t)}/records/${id}`).transaction(curr=>curr&&curr.s?undefined:rec);
+      });
       if(WHOLE_DAY_DUTY.has(statusKey))
         DB.ref(`${DB_ROOT}/personnel/${id}/dailyDuty`).set({date:nextDayStr,s:statusKey});
     }
