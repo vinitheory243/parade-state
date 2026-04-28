@@ -4240,6 +4240,7 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
       <div style={{display:'flex',gap:'8px',marginBottom:'4px'}}>
         <button className="sbtn" style={{flex:1,margin:0}} onClick={()=>setShowAdd(v=>!v)}>{showAdd?'✕ Cancel':'+ Add New Personnel'}</button>
         {isAdmin&&<button className="sbtn" style={{flex:1,margin:0,background:'#7c3aed'}} onClick={()=>setShowBulkPes(true)}>📥 Bulk Import</button>}
+        {isAdmin&&<button className="sbtn" style={{flex:1,margin:0,background:'#dc2626'}} onClick={()=>{if(!window.confirm('Clear ALL personnel phone numbers? This cannot be undone.'))return;setPersonnel(prev=>prev.map(p=>{const{phone,...rest}=p;return rest;}));toast_('✓ All phone numbers cleared');}}>🗑 Clear All Phones</button>}
       </div>
       {showBulkPes&&<BulkImportModal personnel={personnel} setPersonnel={setPersonnel} toast_={toast_} onClose={()=>setShowBulkPes(false)}/>}
       {showAdd&&(
