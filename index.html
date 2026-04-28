@@ -2703,7 +2703,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setPersonDailyDuty={setPersonDailyDuty} setAllPresent={setAllPresent} clearAll={clearAll} submitted={submitted} setSubmitted={setSubmitted} markedBy={markedBy} setMarkedBy={setMarkedBy} toast_={toast_} overrideUnlocked={isAdmin||overrideUnlocked} onPlatoonSubmit={saveToHistory} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={isAdmin?deleteOtherReason:undefined} jumpTo={jumpTo} onJumpDone={()=>setJumpTo(null)} isNR={isNR} attLoaded={attLoaded}/>}
         {isNR&&screen==='telegram'&&<NRGenerateScreen date={date} eventName={eventName} records={records} personnel={personnelOnDate(personnel,date)} toast_={toast_}/>}
         {!isNR&&screen==='telegram'&&<GenerateScreen msg={msg} total={total} setTotal={setTotal} totalManual={totalManual} setTotalManual={setTotalManual} autoTotal={personnelOnDate(personnel,date).length} extra={extra} setExtra={setExtra} toast_={toast_} date={date} tod={tod} records={records} personnel={personnelOnDate(personnel,date)} isAdmin={isAdmin}/>}
-        {screen==='manage'&&<ManageScreen personnel={personnel} setPersonnel={setPersonnelAndSync} toast_={toast_} customSections={customSections} addCustomSection={addCustomSection} isAdmin={isAdmin} pendingPersonnel={pendingPersonnel} approvePending={approvePending} rejectPending={rejectPending}/>}
+        {screen==='manage'&&<ManageScreen personnel={personnel} setPersonnel={setPersonnelAndSync} toast_={toast_} customSections={customSections} addCustomSection={addCustomSection} isAdmin={isAdmin} pendingPersonnel={pendingPersonnel} approvePending={approvePending} rejectPending={rejectPending} clearAllPhones={()=>{setPersonnel(prev=>prev.map(p=>{const{phone,...rest}=p;return rest;}));personnel.forEach(p=>DB.ref(`${DB_ROOT}/personnel/${p.id}/phone`).remove());}}/>}
         {!isNR&&screen==='history'&&<HistoryScreen history={history} personnel={personnel} onPreview={(e,setL)=>loadDayAndPreview(e.date,setL)} onDelete={deleteHistory} overrideUnlocked={isAdmin||overrideUnlocked} setOverrideUnlocked={setOverrideUnlocked} toast_={toast_} onEdit={dateStr=>{setDate(dateStr);setScreen('attendance');}} isAdmin={isAdmin} onBulkDownload={isAdmin?(type,setL,setP,filtered)=>handleBulkDownload(type,setL,setP,filtered):undefined}/>}
         {isNR&&screen==='history'&&<NRHistoryScreen nrHistory={nrHistory} personnel={personnelOnDate(personnel,date)} overrideUnlocked={isAdmin||overrideUnlocked} setOverrideUnlocked={setOverrideUnlocked} toast_={toast_} isAdmin={isAdmin} currentDate={date} currentEventKey={eventKey}/>}
       </div>
@@ -4067,7 +4067,7 @@ function BulkImportModal({personnel,setPersonnel,toast_,onClose}){
   );
 }
 
-function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSection,isAdmin,pendingPersonnel,approvePending,rejectPending}){
+function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSection,isAdmin,pendingPersonnel,approvePending,rejectPending,clearAllPhones}){
   const[showAdd,setShowAdd]=useState(false);
   const[confirm,setConfirm]=useState(null);
   const[editId,setEditId]=useState(null);
@@ -4240,7 +4240,7 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
       <div style={{display:'flex',gap:'8px',marginBottom:'4px'}}>
         <button className="sbtn" style={{flex:1,margin:0}} onClick={()=>setShowAdd(v=>!v)}>{showAdd?'✕ Cancel':'+ Add New Personnel'}</button>
         {isAdmin&&<button className="sbtn" style={{flex:1,margin:0,background:'#7c3aed'}} onClick={()=>setShowBulkPes(true)}>📥 Bulk Import</button>}
-        {isAdmin&&<button className="sbtn" style={{flex:1,margin:0,background:'#dc2626'}} onClick={()=>{if(!window.confirm('Clear ALL personnel phone numbers? This cannot be undone.'))return;setPersonnel(prev=>prev.map(p=>{const{phone,...rest}=p;return rest;}));toast_('✓ All phone numbers cleared');}}>🗑 Clear All Phones</button>}
+        {isAdmin&&<button className="sbtn" style={{flex:1,margin:0,background:'#dc2626'}} onClick={()=>{if(!window.confirm('Clear ALL personnel phone numbers? This cannot be undone.'))return;clearAllPhones();toast_('✓ All phone numbers cleared');}}>🗑 Clear All Phones</button>}
       </div>
       {showBulkPes&&<BulkImportModal personnel={personnel} setPersonnel={setPersonnel} toast_={toast_} onClose={()=>setShowBulkPes(false)}/>}
       {showAdd&&(
