@@ -337,7 +337,7 @@ const SL = [
   {k:'rib',          l:'Rest In Bunk',               d:true,  datePick:true, dateRange:true, names:true},
   {k:'6ton_fam',     l:'6TON FAM (COE)',             d:false, names:true},
   {k:'gp_fam',       l:'GP FAM',                     d:false},
-  {k:'driving',      l:'Driving Course',             d:true,  datePick:true, fromOnly:true, names:true},
+  {k:'driving',      l:'Driving Course',             d:true,  datePick:true, dateRange:true, names:true},
   {k:'others',       l:'Others (specify)',            d:true,  dp:'Specify e.g. IPPT, DTO', names:true, datePick:true, dateRange:true},
 ];
 const SM = Object.fromEntries(SL.map(s=>[s.k,s]));
@@ -2188,9 +2188,6 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         const dd=p.dailyDuty;
         if(dd&&dd.date===date&&WHOLE_DAY_DUTY.has(dd.s)){nr[p.id]={s:dd.s,det:'',from:''};return;}
         const al=p.activeLeave;
-        if(al&&al.s==='driving'&&al.from&&date>=al.from){
-          nr[p.id]={s:'driving',from:al.from,det:''};return;
-        }
         if(al&&CARRY_DATE_RANGE.has(al.s)&&al.from&&al.det&&date>=al.from&&date<=al.det){
           if(date===al.det&&tod==='2030/2230'){
             const si=getSiso(p);
@@ -2325,9 +2322,6 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         const dd=p.dailyDuty;
         if(dd&&dd.date===date&&WHOLE_DAY_DUTY.has(dd.s)){nr[p.id]={s:dd.s,det:'',from:''};fills[p.id]=nr[p.id];changed=true;return;}
         const al=p.activeLeave;
-        if(al&&al.s==='driving'&&al.from&&date>=al.from){
-          nr[p.id]={s:'driving',from:al.from,det:''};fills[p.id]=nr[p.id];changed=true;return;
-        }
         if(al&&CARRY_DATE_RANGE.has(al.s)&&al.from&&al.det&&date>=al.from&&date<=al.det){
           if(date===al.det&&tod==='2030/2230'){
             const si=getSiso(p);
@@ -3272,10 +3266,10 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
     // Returns true (ok to proceed) if no NS leave warning needed, or user confirms
     if(tod!=='2030/2230'||s!=='present'||isNR||!person.activeLeave)return true;
     const al=person.activeLeave;
-    const isOngoing=al.s==='driving'||(al.det&&al.det>=currentDate);
+    const isOngoing=al.det&&al.det>=currentDate;
     if(!isOngoing)return true;
     const label=SM[al.s]?.l||al.s;
-    const tillStr=al.s==='driving'?'(no end date)':al.det?`till ${fmtDetDate(al.det)}`:'';
+    const tillStr=al.det?`till ${fmtDetDate(al.det)}`:'';
     return window.confirm(`${dispName(person)} is currently on ${label} ${tillStr}.\n\nMarking present will clear this leave. Proceed?`);
   }
   function quickSet(s){
