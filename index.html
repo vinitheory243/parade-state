@@ -2498,6 +2498,21 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         }
       }));
       const pplForDate=personnelOnDate(personnelRef.current,dateStr);
+      // Apply intra-day carry for PDF: fill blank TOD cells from the most recent previous TOD (excluding present)
+      for(let ti=1;ti<TODS.length;ti++){
+        const tod=TODS[ti];
+        for(let pi=ti-1;pi>=0;pi--){
+          const prevRecs=allTodRecs[TODS[pi]]||{};
+          if(!Object.keys(prevRecs).length)continue;
+          pplForDate.forEach(p=>{
+            if(!allTodRecs[tod][p.id]?.s){
+              const pr=prevRecs[p.id];
+              if(pr?.s&&pr.s!=='present')allTodRecs[tod][p.id]={...pr};
+            }
+          });
+          break;
+        }
+      }
       setPdfPreview({date:dateStr,allTodRecs,total:pTotal,allTodMarkedBy,personnelForDate:pplForDate});
     }catch(e){alert('Failed to load data.');}
     finally{if(setLoadingFn)setLoadingFn(null); else setPdfLoading(false);}
