@@ -2204,18 +2204,12 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       attInitRef.current=true;
       setAttLoaded(true);
       // ── CARRY RULE ──────────────────────────────────────────────
-      // Applies a carry status to a person who has no record yet.
-      // Only two carry sources:
-      //   1. Driving course (fromOnly): carries indefinitely until SGT clears it
-      //   2. Date-range statuses (CARRY_DATE_RANGE): carries within from→det
-      // Night Strength: S/O personnel auto-marked S/O if no other status.
       function applyCarry(nr,p){
         if(skipCarryPltRef.current===p.plt)return;
         if(nr[p.id]&&nr[p.id].s)return;
         const dd=p.dailyDuty;
         if(dd&&dd.date===date&&WHOLE_DAY_DUTY.has(dd.s)){nr[p.id]={s:dd.s,det:'',from:''};return;}
         const al=p.activeLeave;
-        // Half-day leave: am_leave carries only at HLS/0745; pm_leave only at 1300/1730
         if(al&&al.s==='am_leave'&&al.from===date){
           if(tod==='HLS'||tod==='0745'){nr[p.id]={s:'am_leave',det:'',from:date};return;}
           return;
@@ -2225,11 +2219,6 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
           return;
         }
         if(al&&CARRY_DATE_RANGE.has(al.s)&&al.from&&al.det&&date>=al.from&&date<=al.det){
-          if(date===al.det&&tod==='2030/2230'){
-            const si=getSiso(p);
-            if(si.type==='so'||si.type==='so_till'){nr[p.id]={s:al.s,det:al.det,from:al.from,...(al.label?{label:al.label}:{})};return;}
-            return;
-          }
           nr[p.id]={s:al.s,det:al.det,from:al.from,...(al.label?{label:al.label}:{})};return;
         }
       }
@@ -2373,11 +2362,6 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
           return;
         }
         if(al&&CARRY_DATE_RANGE.has(al.s)&&al.from&&al.det&&date>=al.from&&date<=al.det){
-          if(date===al.det&&tod==='2030/2230'){
-            const si=getSiso(p);
-            if(si.type==='so'||si.type==='so_till'){nr[p.id]={s:al.s,det:al.det,from:al.from,...(al.label?{label:al.label}:{})};fills[p.id]=nr[p.id];changed=true;return;}
-            return;
-          }
           nr[p.id]={s:al.s,det:al.det,from:al.from,...(al.label?{label:al.label}:{})};fills[p.id]=nr[p.id];changed=true;return;
         }
       });
