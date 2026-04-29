@@ -4101,7 +4101,7 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
     setEditSecInput('');setAddingNewSecEdit(false);
   }
   const active=personnel.filter(p=>p.active&&(filterPlt==='ALL'||p.plt===filterPlt));
-  const ARCHIVE_DAYS=10;
+  const ARCHIVE_DAYS=5;
   const inactive=personnel.filter(p=>{
     if(p.active)return false;
     if(!p.removedDate)return false; // legacy with no removedDate: don't show
