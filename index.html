@@ -3478,7 +3478,23 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
           {si&&si.d&&(!si.datePick||(record.s==='others'&&!(record.label&&otherReasons?.includes(record.label))))&&(
             <div style={{display:'flex',gap:'6px',alignItems:'center'}}>
               <input type="text" placeholder={si.dp||'Enter details...'} value={record.s==='others'?(record.label||''):(record.det||'')}
-                onChange={e=>record.s==='others'?setRec(person.id,record.s,record.det||'',record.from||currentDate,e.target.value):setRec(person.id,record.s,e.target.value,record.from||'')}
+                onChange={e=>{
+                  if(record.s==='others'){
+                    const nl=e.target.value;
+                    setRec(person.id,'others',record.det||'',record.from||currentDate,nl);
+                    // Keep activeLeave label in sync (cross-day carry)
+                    if(!isNR&&record.det&&CARRY_DATE_RANGE.has('others'))
+                      setPersonLeave(person.id,'others',record.from||currentDate,record.det,nl);
+                    // Propagate label to other same-day TODs already seeded with 'others'
+                    if(!isNR)TODS.forEach(t=>{
+                      if(t===tod)return;
+                      const tRef=DB.ref(`${DB_ROOT}/att/${currentDate}/${todKey(t)}/records/${person.id}`);
+                      tRef.once('value').then(snap=>{const sv=snap.val();if(sv&&sv.s==='others')tRef.update({label:nl});});
+                    });
+                  }else{
+                    setRec(person.id,record.s,e.target.value,record.from||'');
+                  }
+                }}
                 style={{flex:1}}/>
               {record.s==='others'&&(record.label||record.det)&&(record.label||record.det).trim()&&(
                 <button
