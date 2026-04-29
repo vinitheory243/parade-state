@@ -4279,9 +4279,9 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
                 </select>
                 {np.siso.type==='so_till'&&<input type="date" value={np.siso.date||''} onChange={e=>setNp({...np,siso:{type:'so_till',date:e.target.value}})} style={{marginTop:'6px'}}/>}
               </div>
-              <div><div className="label">Phone Number</div>
+              {isAdmin&&<div><div className="label">Phone Number</div>
                 <input type="tel" placeholder="e.g. 91234567" value={np.phone||''} onChange={e=>setNp({...np,phone:e.target.value.trim()})}/>
-              </div>
+              </div>}
             </div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}}>
               <div><div className="label">NOK Relationship</div>
@@ -4290,9 +4290,9 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
                   {['Mother','Father','Spouse','Brother','Sister','Aunty','Uncle','Guardian','Others'].map(r=><option key={r} value={r}>{r}</option>)}
                 </select>
               </div>
-              <div><div className="label">NOK Phone</div>
+              {isAdmin?<div><div className="label">NOK Phone</div>
                 <input type="tel" placeholder="e.g. 91234567" value={np.nokPhone||''} onChange={e=>setNp({...np,nokPhone:e.target.value.trim()})}/>
-              </div>
+              </div>:<div><div className="label">NOK Phone</div><input type="tel" disabled value="••••••••" style={{color:'#94a3b8',background:'#f1f5f9'}}/></div>}
             </div>
             <div><div className="label">PES Status</div>
               <select value={PES_LIST.includes(np.pes||'')?np.pes||'':'__other__'} onChange={e=>{if(e.target.value==='__other__')setNp({...np,pes:'OTHER:'});else setNp({...np,pes:e.target.value});}}>
@@ -4369,7 +4369,9 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
                             {(editData.siso||{}).type==='so_till'&&<input type="date" value={(editData.siso||{}).date||''} onChange={e=>setEditData({...editData,siso:{type:'so_till',date:e.target.value}})} style={{marginTop:'6px'}}/>}
                           </div>
                           <div><div className="label">Phone Number</div>
-                            <input type="tel" placeholder="e.g. 91234567" value={editData.phone||''} onChange={e=>setEditData({...editData,phone:e.target.value.trim()})}/>
+                            {isAdmin
+                              ?<input type="tel" placeholder="e.g. 91234567" value={editData.phone||''} onChange={e=>setEditData({...editData,phone:e.target.value.trim()})}/>
+                              :<input type="tel" disabled value={editData.phone?'••••••••':''} placeholder="Not set" style={{color:'#94a3b8',background:'#f1f5f9'}}/>}
                           </div>
                         </div>
                         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}}>
@@ -4380,7 +4382,9 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
                             </select>
                           </div>
                           <div><div className="label">NOK Phone</div>
-                            <input type="tel" placeholder="e.g. 91234567" value={editData.nokPhone||''} onChange={e=>setEditData({...editData,nokPhone:e.target.value.trim()})}/>
+                            {isAdmin
+                              ?<input type="tel" placeholder="e.g. 91234567" value={editData.nokPhone||''} onChange={e=>setEditData({...editData,nokPhone:e.target.value.trim()})}/>
+                              :<input type="tel" disabled value={editData.nokPhone?'••••••••':''} placeholder="Not set" style={{color:'#94a3b8',background:'#f1f5f9'}}/>}
                           </div>
                         </div>
                         <div><div className="label">PES Status</div>
