@@ -4244,23 +4244,30 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
     <div>
       {/* Auth pending users section */}
       {isAdmin&&authPending.length>0&&(
-        <div className="card" style={{marginBottom:'12px',border:'2px solid #7c3aed'}}>
-          <div className="card-hdr" style={{background:'#f3e8ff',color:'#5b21b6'}}>🔐 New Account Requests ({authPending.length})</div>
+        <div style={{marginBottom:'16px',background:'#fdf4ff',border:'1.5px solid #d8b4fe',borderRadius:'14px',overflow:'hidden'}}>
+          <div style={{padding:'12px 16px',background:'#f3e8ff',display:'flex',alignItems:'center',gap:'8px',borderBottom:'1.5px solid #d8b4fe'}}>
+            <span style={{fontSize:'15px'}}>🔐</span>
+            <span style={{fontWeight:700,fontSize:'13px',color:'#6d28d9',letterSpacing:'0.04em'}}>ACCESS REQUESTS</span>
+            <span style={{marginLeft:'auto',background:'#7c3aed',color:'#fff',borderRadius:'99px',fontSize:'11px',fontWeight:700,padding:'2px 9px'}}>{authPending.length}</span>
+          </div>
           {authPending.map(u=>(
-            <div key={u.uid} className="auth-pending-row">
+            <div key={u.uid} style={{padding:'12px 16px',borderBottom:'1px solid #ede9fe',display:'flex',alignItems:'center',gap:'10px'}}>
+              <div style={{width:36,height:36,borderRadius:'50%',background:'#ede9fe',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:'15px',fontWeight:700,color:'#7c3aed'}}>
+                {(u.googleName||u.email||'?')[0].toUpperCase()}
+              </div>
               <div style={{flex:1,minWidth:0}}>
-                <div style={{fontWeight:700,fontSize:'13px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{u.googleName||'—'}</div>
-                <div style={{fontSize:'11px',color:'#64748b'}}>{u.email}</div>
+                <div style={{fontWeight:700,fontSize:'13px',color:'#1e293b',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{u.googleName||'—'}</div>
+                <div style={{fontSize:'11px',color:'#64748b',marginTop:'1px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{u.email}</div>
               </div>
               <div style={{display:'flex',gap:'6px',alignItems:'center',flexShrink:0}}>
-                <select style={{padding:'4px 6px',fontSize:'12px',borderRadius:'6px',border:'1.5px solid #e2e8f0'}}
+                <select style={{padding:'5px 8px',fontSize:'12px',borderRadius:'8px',border:'1.5px solid #d8b4fe',background:'#fff',color:'#1e293b',fontWeight:600}}
                   value={approveAuthRole[u.uid]||'sgt'}
                   onChange={e=>setApproveAuthRole(r=>({...r,[u.uid]:e.target.value}))}>
                   <option value="sgt">SGT/Comd</option>
                   <option value="admin">Admin</option>
                 </select>
-                <button onClick={()=>approveAuthUser(u.uid,approveAuthRole[u.uid]||'sgt')} style={{padding:'5px 10px',background:'#16a34a',color:'#fff',border:'none',borderRadius:'7px',fontSize:'12px',fontWeight:700,cursor:'pointer'}}>✓</button>
-                <button onClick={()=>rejectAuthUser(u.uid)} style={{padding:'5px 10px',background:'#fee2e2',color:'#991b1b',border:'none',borderRadius:'7px',fontSize:'12px',fontWeight:700,cursor:'pointer'}}>✕</button>
+                <button onClick={()=>approveAuthUser(u.uid,approveAuthRole[u.uid]||'sgt')} style={{padding:'6px 12px',background:'#16a34a',color:'#fff',border:'none',borderRadius:'8px',fontSize:'12px',fontWeight:700,cursor:'pointer'}}>Approve</button>
+                <button onClick={()=>rejectAuthUser(u.uid)} style={{padding:'6px 12px',background:'#fee2e2',color:'#991b1b',border:'none',borderRadius:'8px',fontSize:'12px',fontWeight:700,cursor:'pointer'}}>Reject</button>
               </div>
             </div>
           ))}
@@ -4268,15 +4275,22 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
       )}
       {/* Approved users management */}
       {isAdmin&&authUsers.length>0&&(
-        <div className="card" style={{marginBottom:'12px'}}>
-          <div className="card-hdr">👥 Approved Accounts ({authUsers.length})</div>
+        <div style={{marginBottom:'16px',background:'#f8fafc',border:'1.5px solid #e2e8f0',borderRadius:'14px',overflow:'hidden'}}>
+          <div style={{padding:'12px 16px',background:'#f1f5f9',display:'flex',alignItems:'center',gap:'8px',borderBottom:'1.5px solid #e2e8f0'}}>
+            <span style={{fontSize:'15px'}}>👥</span>
+            <span style={{fontWeight:700,fontSize:'13px',color:'#475569',letterSpacing:'0.04em'}}>APPROVED ACCOUNTS</span>
+            <span style={{marginLeft:'auto',background:'#64748b',color:'#fff',borderRadius:'99px',fontSize:'11px',fontWeight:700,padding:'2px 9px'}}>{authUsers.length}</span>
+          </div>
           {authUsers.map(u=>(
-            <div key={u.uid} className="auth-pending-row">
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontWeight:700,fontSize:'13px'}}>{u.name||'(name not set)'}</div>
-                <div style={{fontSize:'11px',color:'#64748b'}}>{u.email} — <span style={{color:u.role==='admin'?'#7c3aed':'#0d9488',fontWeight:700}}>{u.role==='admin'?'Admin':'SGT/Comd'}</span></div>
+            <div key={u.uid} style={{padding:'12px 16px',borderBottom:'1px solid #e2e8f0',display:'flex',alignItems:'center',gap:'10px'}}>
+              <div style={{width:36,height:36,borderRadius:'50%',background:u.role==='admin'?'#ede9fe':'#ccfbf1',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:'15px',fontWeight:700,color:u.role==='admin'?'#7c3aed':'#0d9488'}}>
+                {(u.name||u.email||'?')[0].toUpperCase()}
               </div>
-              <select style={{padding:'4px 6px',fontSize:'12px',borderRadius:'6px',border:'1.5px solid #e2e8f0'}}
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:700,fontSize:'13px',color:'#1e293b'}}>{u.name||'(name not set)'}</div>
+                <div style={{fontSize:'11px',color:'#64748b',marginTop:'1px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{u.email}</div>
+              </div>
+              <select style={{padding:'5px 8px',fontSize:'12px',borderRadius:'8px',border:'1.5px solid #e2e8f0',background:'#fff',color:u.role==='admin'?'#7c3aed':'#0d9488',fontWeight:700}}
                 value={u.role||'sgt'}
                 onChange={e=>updateAuthUserRole(u.uid,e.target.value)}>
                 <option value="sgt">SGT/Comd</option>
