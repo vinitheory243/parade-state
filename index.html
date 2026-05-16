@@ -4290,7 +4290,7 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
                 <div style={{fontWeight:700,fontSize:'13px',color:'#1e293b'}}>{u.name||'(name not set)'}</div>
                 <div style={{fontSize:'11px',color:'#64748b',marginTop:'1px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{u.email}</div>
               </div>
-              <select style={{padding:'5px 8px',fontSize:'12px',borderRadius:'8px',border:'1.5px solid #e2e8f0',background:'#fff',color:u.role==='admin'?'#7c3aed':'#0d9488',fontWeight:700}}
+              <select style={{padding:'5px 8px',fontSize:'12px',borderRadius:'8px',border:'1.5px solid #e2e8f0',background:'#fff',color:u.role==='admin'?'#7c3aed':'#0d9488',fontWeight:700,flexShrink:0}}
                 value={u.role||'sgt'}
                 onChange={e=>updateAuthUserRole(u.uid,e.target.value)}>
                 <option value="sgt">SGT/Comd</option>
