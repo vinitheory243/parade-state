@@ -4282,15 +4282,15 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
             <span style={{marginLeft:'auto',background:'#64748b',color:'#fff',borderRadius:'99px',fontSize:'11px',fontWeight:700,padding:'2px 9px'}}>{authUsers.length}</span>
           </div>
           {authUsers.map(u=>(
-            <div key={u.uid} style={{padding:'12px 16px',borderBottom:'1px solid #e2e8f0',display:'flex',alignItems:'center',gap:'10px'}}>
+            <div key={u.uid} style={{padding:'12px 16px',borderBottom:'1px solid #e2e8f0',display:'flex',alignItems:'center',gap:'12px'}}>
               <div style={{width:36,height:36,borderRadius:'50%',background:u.role==='admin'?'#ede9fe':'#ccfbf1',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:'15px',fontWeight:700,color:u.role==='admin'?'#7c3aed':'#0d9488'}}>
                 {(u.name||u.email||'?')[0].toUpperCase()}
               </div>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontWeight:700,fontSize:'13px',color:'#1e293b'}}>{u.name||'(name not set)'}</div>
+              <div style={{flex:1,overflow:'hidden'}}>
+                <div style={{fontWeight:700,fontSize:'13px',color:'#1e293b',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{u.name||'(name not set)'}</div>
                 <div style={{fontSize:'11px',color:'#64748b',marginTop:'1px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{u.email}</div>
               </div>
-              <select style={{padding:'5px 8px',fontSize:'12px',borderRadius:'8px',border:'1.5px solid #e2e8f0',background:'#fff',color:u.role==='admin'?'#7c3aed':'#0d9488',fontWeight:700,flexShrink:0}}
+              <select style={{width:'110px',flexShrink:0,padding:'6px 8px',fontSize:'12px',borderRadius:'8px',border:'1.5px solid #e2e8f0',background:'#fff',color:u.role==='admin'?'#7c3aed':'#0d9488',fontWeight:700}}
                 value={u.role||'sgt'}
                 onChange={e=>updateAuthUserRole(u.uid,e.target.value)}>
                 <option value="sgt">SGT/Comd</option>
