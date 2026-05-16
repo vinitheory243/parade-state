@@ -2748,7 +2748,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setPersonDailyDuty={setPersonDailyDuty} setAllPresent={setAllPresent} clearAll={clearAll} toast_={toast_} overrideUnlocked={isAdmin||overrideUnlocked} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={isAdmin?deleteOtherReason:undefined} jumpTo={jumpTo} onJumpDone={()=>setJumpTo(null)} isNR={isNR} attLoaded={attLoaded} currentUser={currentUser}/>}
         {isNR&&screen==='telegram'&&<NRGenerateScreen date={date} eventName={eventName} records={records} personnel={personnelOnDate(personnel,date)} toast_={toast_}/>}
         {!isNR&&screen==='telegram'&&<GenerateScreen msg={msg} total={total} setTotal={setTotal} totalManual={totalManual} setTotalManual={setTotalManual} autoTotal={personnelOnDate(personnel,date).length} extra={extra} setExtra={setExtra} toast_={toast_} date={date} tod={tod} records={records} personnel={personnelOnDate(personnel,date)} isAdmin={isAdmin}/>}
-        {screen==='manage'&&<ManageScreen personnel={personnel} setPersonnel={setPersonnelAndSync} toast_={toast_} customSections={customSections} addCustomSection={addCustomSection} isAdmin={isAdmin} pendingPersonnel={pendingPersonnel} approvePending={approvePending} rejectPending={rejectPending}/>}
+        {screen==='manage'&&<ManageScreen personnel={personnel} setPersonnel={setPersonnelAndSync} toast_={toast_} customSections={customSections} addCustomSection={addCustomSection} isAdmin={isAdmin} pendingPersonnel={pendingPersonnel} approvePending={approvePending} rejectPending={rejectPending} currentUser={currentUser}/>}
         {!isNR&&screen==='history'&&<HistoryScreen history={history} personnel={personnel} onPreview={(e,setL)=>loadDayAndPreview(e.date,setL)} onDelete={deleteHistory} overrideUnlocked={isAdmin||overrideUnlocked} setOverrideUnlocked={setOverrideUnlocked} toast_={toast_} onEdit={dateStr=>{setDate(dateStr);setScreen('attendance');}} isAdmin={isAdmin} onBulkDownload={isAdmin?(type,setL,setP,filtered)=>handleBulkDownload(type,setL,setP,filtered):undefined}/>}
         {isNR&&screen==='history'&&<NRHistoryScreen nrHistory={nrHistory} personnel={personnelOnDate(personnel,date)} overrideUnlocked={isAdmin||overrideUnlocked} setOverrideUnlocked={setOverrideUnlocked} toast_={toast_} isAdmin={isAdmin} currentDate={date} currentEventKey={eventKey}/>}
       </div>
@@ -4055,7 +4055,7 @@ function BulkImportModal({personnel,setPersonnel,toast_,onClose}){
   );
 }
 
-function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSection,isAdmin,pendingPersonnel,approvePending,rejectPending}){
+function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSection,isAdmin,pendingPersonnel,approvePending,rejectPending,currentUser}){
   const[showAdd,setShowAdd]=useState(false);
   const[confirm,setConfirm]=useState(null);
   // Auth pending users (Google accounts awaiting approval)
