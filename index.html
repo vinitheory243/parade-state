@@ -3213,7 +3213,7 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setP
       <div className="stats-grid">
         <div className="stat-box"><div className="stat-n">{attLoaded?active.length:'—'}</div><div className="stat-l">Total</div></div>
         <div className="stat-box"><div className="stat-n" style={{color:'#16a34a'}}>{attLoaded?presentCnt:'—'}</div><div className="stat-l">Present</div></div>
-        <div className="stat-box"><div className="stat-n" style={{color:attLoaded?(unCnt>0?'#f59e0b':'#16a34a'):'#94a3b8'}}>{attLoaded?unCnt:'—'}</div><div className="stat-l">Unassigned</div></div>
+        <div className="stat-box" onClick={()=>{if(!attLoaded||unCnt===0)return;const unassigned=active.filter(p=>p.plt===plt&&(!records[p.id]||!records[p.id].s));const first=unassigned[0]||active.filter(p=>!records[p.id]||!records[p.id].s)[0];if(first){const el=document.getElementById(`pr-${first.id}`);if(el)el.scrollIntoView({behavior:'smooth',block:'center'});}}} style={{cursor:attLoaded&&unCnt>0?'pointer':'default',transition:'transform .15s',userSelect:'none'}} onMouseEnter={e=>{if(attLoaded&&unCnt>0)e.currentTarget.style.transform='scale(1.04)';}} onMouseLeave={e=>{e.currentTarget.style.transform='';}}><div className="stat-n" style={{color:attLoaded?(unCnt>0?'#f59e0b':'#16a34a'):'#94a3b8'}}>{attLoaded?unCnt:'—'}</div><div className="stat-l">Unassigned{attLoaded&&unCnt>0?' ↓':''}</div></div>
       </div>
       {(()=>{const isPastDate=date<todayStr();const isLocked=isPastDate&&!overrideUnlocked;return confirmClear===plt?(
         <div style={{display:'flex',gap:'8px',marginBottom:'10px',background:'#fef2f2',border:'1.5px solid #fca5a5',borderRadius:'10px',padding:'10px 12px',alignItems:'center'}}>
