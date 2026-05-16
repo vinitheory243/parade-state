@@ -2645,14 +2645,14 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   function setRec(id,s,det,from,label){
     const rec={s,det:det||'',from:from||''};
     if(label!==undefined)rec.label=label||'';
-    if(s&&currentUser?.uid)rec.markedBy={uid:currentUser.uid,name:currentUser.name||currentUser.email||''};
+    if(s&&currentUser?.uid)rec.markedBy={uid:currentUser.uid,name:currentUser.name||currentUser.email||'',markedAt:Date.now()};
     setRecords(p=>({...p,[id]:rec}));
     // Atomic per-record write — prevents concurrent sgts from overwriting each other's marks
     if(s){DB.ref(`${attPath}/records/${id}`).set(rec);}
     else{DB.ref(`${attPath}/records/${id}`).remove();}
   }
   function setPersonLeave(id,s,from,till,label){
-    const mb=currentUser?.uid?{uid:currentUser.uid,name:currentUser.name||currentUser.email||''}:null;
+    const mb=currentUser?.uid?{uid:currentUser.uid,name:currentUser.name||currentUser.email||'',markedAt:Date.now()}:null;
     const leave=s?{s,from:from||todayStr(),det:till||'',...(label?{label}:{}),...(mb?{markedBy:mb}:{})}:null;
     // Targeted write — avoids race condition from full-replace when multiple sgts write simultaneously
     if(leave) DB.ref(`${DB_ROOT}/personnel/${id}/activeLeave`).set(leave);
@@ -2680,7 +2680,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
     }
   }
   function setPersonDailyDuty(id,s,d){
-    const mb=currentUser?.uid?{uid:currentUser.uid,name:currentUser.name||currentUser.email||''}:null;
+    const mb=currentUser?.uid?{uid:currentUser.uid,name:currentUser.name||currentUser.email||'',markedAt:Date.now()}:null;
     const duty=s?{s,date:d,...(mb?{markedBy:mb}:{})}:null;
     // Targeted write — same race-condition fix as setPersonLeave
     if(duty) DB.ref(`${DB_ROOT}/personnel/${id}/dailyDuty`).set(duty);
@@ -3396,7 +3396,7 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
           <div style={{display:'flex',flexDirection:'column',flex:1,gap:'2px'}}>
             <span className="prow-cur-chip">{record.s==='others'&&record.label?`Others (specify) → ${record.label}`:si?.l||record.s}</span>
             {dateSummary()&&<span style={{fontSize:'11px',color:'#0f766e',fontWeight:600,paddingLeft:'2px'}}>{dateSummary()}</span>}
-            {showMarker&&record.markedBy&&<span style={{fontSize:'10px',color:'#7c3aed',fontWeight:600,paddingLeft:'2px'}}>Marked by: {record.markedBy.name||record.markedBy.uid}</span>}
+            {showMarker&&record.markedBy&&<span style={{fontSize:'10px',color:'#7c3aed',fontWeight:600,paddingLeft:'2px'}}>Marked by: {record.markedBy.name||record.markedBy.uid}{record.markedBy.markedAt?' on '+new Date(record.markedBy.markedAt).toLocaleDateString('en-SG',{day:'2-digit',month:'2-digit',year:'numeric'})+' at '+new Date(record.markedBy.markedAt).toLocaleTimeString('en-SG',{hour:'numeric',minute:'2-digit',hour12:true}):''}</span>}
           </div>
           <div style={{display:'flex',gap:'4px',alignItems:'center'}}>
             {record.markedBy&&<button onClick={()=>setShowMarker(v=>!v)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'14px',color:showMarker?'#7c3aed':'#94a3b8',padding:'2px 4px',lineHeight:1}} title="Who marked this?">ⓘ</button>}
