@@ -4093,6 +4093,11 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
     DB.ref(`jrn/users/${uid}/role`).set(role);
     toast_(`Role updated to ${role}`);
   }
+  function removeAuthUser(uid,name){
+    if(!window.confirm(`Remove access for ${name}? They will no longer be able to log in.`))return;
+    DB.ref(`jrn/users/${uid}`).remove();
+    toast_(`Access removed for ${name}`);
+  }
   const[editId,setEditId]=useState(null);
   const[approveEntry,setApproveEntry]=useState(null);
   const[approveData,setApproveData]=useState({plt:'P1',sec:'BASE',dn:'',rank:''});
@@ -4220,6 +4225,7 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
                 <option value="sgt">SGT/Comd</option>
                 <option value="admin">Admin</option>
               </select>
+              {u.uid!==currentUser?.uid&&<button onClick={()=>removeAuthUser(u.uid,u.name||u.email)} style={{flexShrink:0,padding:'6px 10px',background:'#fee2e2',color:'#991b1b',border:'none',borderRadius:'8px',fontSize:'12px',fontWeight:700,cursor:'pointer'}}>Remove</button>}
             </div>
           ))}
         </div>
