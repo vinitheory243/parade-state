@@ -2148,8 +2148,6 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   const[totalManual,setTotalManual]=useState(false); // true = user overrode it
   const[duty,setDuty]=useState(0);
   const[extra,setExtra]=useState('');
-  const[submitted,setSubmitted]=useState({P1:false,P2:false,HQ:false});
-  const[markedBy,setMarkedBy]=useState({P1:'',P2:'',HQ:''});
   const[toast,setToast]=useState(null);
   const[toastKey,setToastKey]=useState(0);
   const[online,setOnline]=useState(true);
@@ -2273,8 +2271,6 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         // ── DATA EXISTS: load from Firebase, fill missing with carry ──
         if(d.totalManual&&d.total){setTotal(d.total);setTotalManual(true);}
         setDuty(d.duty??0);setExtra(d.extra||'');
-        setSubmitted(d.submitted||{P1:false,P2:false,HQ:false});
-        setMarkedBy(d.markedBy||{P1:'',P2:'',HQ:''});
         if(isNR&&eventName&&!d.eventName)DB.ref(`${attPath}/eventName`).set(eventName);
         // Only update records if Firebase has explicit record data — prevents wiping local state
         // when listener fires for metadata-only updates (e.g. write-back during seeding)
@@ -2381,10 +2377,10 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   useEffect(()=>{
     if(!attInitRef.current)return;
     if(skipRef.current)return;
-    const data={total,totalManual,duty,extra,submitted,markedBy};
+    const data={total,totalManual,duty,extra};
     if(isNR)data.eventName=eventName;
     DB.ref(attPath).update(data);
-  },[total,totalManual,duty,extra,date,tod,submitted,markedBy]);
+  },[total,totalManual,duty,extra,date,tod]);
   // Re-apply carry when personnel/date/tod changes.
   // Also writes newly filled carries to Firebase via transaction — fixes timing race where
   // personnel activeLeave data arrives after seeding already ran without it.
@@ -2538,8 +2534,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       await Promise.all(TODS.map(async tod=>{
         const snap=await DB.ref(fbAttPath(dateStr,tod)).once('value');
         const d=snap.val();
-        const anySubmitted=d&&d.submitted&&Object.values(d.submitted).some(v=>v);
-        allTodRecs[tod]=(tod==='HLS'?anySubmitted:d)?(d.records||{}):{};
+        allTodRecs[tod]=d?(d.records||{}):{};
         if(d){
           if(d.totalManual&&d.total){pTotal=d.total;pTotalManual=true;}
           if(d.markedBy)allTodMarkedBy[tod]=d.markedBy;
@@ -2589,8 +2584,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         await Promise.all(TODS.map(async t=>{
           const snap=await DB.ref(fbAttPath(ds,t)).once('value');
           const td=snap.val();
-          const anySubmitted=td&&td.submitted&&Object.values(td.submitted).some(v=>v);
-          allTodRecs[t]=(t==='HLS'?anySubmitted:td)?(td.records||{}):{};
+          allTodRecs[t]=td?(td.records||{}):{};
           if(td&&td.totalManual&&td.total)pTotal=td.total;
           if(td&&td.markedBy)allTodMarkedBy[t]=td.markedBy;
         }));
@@ -2701,16 +2695,15 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
     DB.ref(`${attPath}/records`).set(nr);
     toast_('✓ All set to Present');
   }
-  function clearAll(plt,submittedState){
+  function clearAll(plt){
     const pltPpl=personnelOnDate(personnel,date).filter(p=>p.plt===plt);
-    if(submittedState[plt]){return;}
     const next={...records};
     pltPpl.forEach(p=>{delete next[p.id];});
     skipCarryPltRef.current=plt;
     // Pause the listener so Firebase echo doesn't overwrite cleared state
     listenerPausedRef.current=true;
     // Write cleared records directly to Firebase
-    const data={records:next,total,totalManual,duty,extra,submitted,markedBy};
+    const data={records:next,total,totalManual,duty,extra};
     if(isNR)data.eventName=eventName;
     DB.ref(attPath).set(data);
     // Update React state — write effect will also fire and confirm write
@@ -2751,7 +2744,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         )}
       </div>
       <div className="main">
-        {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setPersonDailyDuty={setPersonDailyDuty} setAllPresent={setAllPresent} clearAll={clearAll} submitted={submitted} setSubmitted={setSubmitted} markedBy={markedBy} setMarkedBy={setMarkedBy} toast_={toast_} overrideUnlocked={isAdmin||overrideUnlocked} onPlatoonSubmit={saveToHistory} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={isAdmin?deleteOtherReason:undefined} jumpTo={jumpTo} onJumpDone={()=>setJumpTo(null)} isNR={isNR} attLoaded={attLoaded} currentUser={currentUser}/>}
+        {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setPersonDailyDuty={setPersonDailyDuty} setAllPresent={setAllPresent} clearAll={clearAll} toast_={toast_} overrideUnlocked={isAdmin||overrideUnlocked} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={isAdmin?deleteOtherReason:undefined} jumpTo={jumpTo} onJumpDone={()=>setJumpTo(null)} isNR={isNR} attLoaded={attLoaded} currentUser={currentUser}/>}
         {isNR&&screen==='telegram'&&<NRGenerateScreen date={date} eventName={eventName} records={records} personnel={personnelOnDate(personnel,date)} toast_={toast_}/>}
         {!isNR&&screen==='telegram'&&<GenerateScreen msg={msg} total={total} setTotal={setTotal} totalManual={totalManual} setTotalManual={setTotalManual} autoTotal={personnelOnDate(personnel,date).length} extra={extra} setExtra={setExtra} toast_={toast_} date={date} tod={tod} records={records} personnel={personnelOnDate(personnel,date)} isAdmin={isAdmin}/>}
         {screen==='manage'&&<ManageScreen personnel={personnel} setPersonnel={setPersonnelAndSync} toast_={toast_} customSections={customSections} addCustomSection={addCustomSection} isAdmin={isAdmin} pendingPersonnel={pendingPersonnel} approvePending={approvePending} rejectPending={rejectPending}/>}
@@ -3161,7 +3154,7 @@ function NRHistoryScreen({nrHistory,personnel,overrideUnlocked,setOverrideUnlock
 }
 
 // ─── ATTENDANCE SCREEN ──────────────────────────────────────────
-function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setPersonDailyDuty,setAllPresent,clearAll,submitted,setSubmitted,markedBy,setMarkedBy,toast_,overrideUnlocked,onPlatoonSubmit,otherReasons,addOtherReason,deleteOtherReason,jumpTo,onJumpDone,isNR,attLoaded,currentUser}){
+function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setPersonDailyDuty,setAllPresent,clearAll,toast_,overrideUnlocked,otherReasons,addOtherReason,deleteOtherReason,jumpTo,onJumpDone,isNR,attLoaded,currentUser}){
   const[search,setSearch]=useState('');
   const[plt,setPlt]=useState('P1');
   const[confirmClear,setConfirmClear]=useState(null); // null or plt key
@@ -3222,10 +3215,10 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setP
         <div className="stat-box"><div className="stat-n" style={{color:'#16a34a'}}>{attLoaded?presentCnt:'—'}</div><div className="stat-l">Present</div></div>
         <div className="stat-box"><div className="stat-n" style={{color:attLoaded?(unCnt>0?'#f59e0b':'#16a34a'):'#94a3b8'}}>{attLoaded?unCnt:'—'}</div><div className="stat-l">Unassigned</div></div>
       </div>
-      {(()=>{const isPastDate=date<todayStr();const isLocked=(submitted[plt]||false)||(isPastDate&&!overrideUnlocked);return confirmClear===plt?(
+      {(()=>{const isPastDate=date<todayStr();const isLocked=isPastDate&&!overrideUnlocked;return confirmClear===plt?(
         <div style={{display:'flex',gap:'8px',marginBottom:'10px',background:'#fef2f2',border:'1.5px solid #fca5a5',borderRadius:'10px',padding:'10px 12px',alignItems:'center'}}>
           <span style={{flex:1,fontSize:'13px',fontWeight:700,color:'#991b1b'}}>Clear all {P_LABEL[plt]||plt} statuses?</span>
-          <button className="conf-yes" onClick={()=>{setConfirmClear(null);clearAll(plt,submitted);}}>Clear</button>
+          <button className="conf-yes" onClick={()=>{setConfirmClear(null);clearAll(plt);}}>Clear</button>
           <button className="conf-no" onClick={()=>setConfirmClear(null)}>Cancel</button>
         </div>
       ):(
@@ -3244,7 +3237,7 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setP
       </div>
       {PLATOONS.filter(p=>tree[p]).map(p=>{
         const isPastDate=date<todayStr();
-        const isLocked=(submitted[p]||false)||(isPastDate&&!overrideUnlocked);
+        const isLocked=isPastDate&&!overrideUnlocked;
         return(
         <div key={p} style={isLocked?{opacity:.7}:{}}>
           {[...new Set([...(P_SECTIONS[p]||[]),...Object.keys(tree[p]||{})])].filter(s=>tree[p]&&tree[p][s]&&tree[p][s].length>0).map(s=>{
@@ -3268,82 +3261,9 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setP
               </div>
             );
           })}
-          {!search&&(
-            <div style={{pointerEvents:'auto',opacity:1,filter:'none'}}>
-              <PlatoonFooter plt={p} allPersonnel={active} records={records} pltColors={pltColors}
-                submitted={submitted} setSubmitted={setSubmitted} markedBy={markedBy} setMarkedBy={setMarkedBy} toast_={toast_}
-                date={date} overrideUnlocked={overrideUnlocked} onSubmit={onPlatoonSubmit}
-                currentUser={currentUser}
-                onHighlight={ids=>setHighlightIds(new Set(ids))}/>
-            </div>
-          )}
         </div>
         );
       })}
-    </div>
-  );
-}
-
-// ─── PLATOON FOOTER ─────────────────────────────────────────────
-const OVERRIDE_PASS='Transport1409$';
-function PlatoonFooter({plt,allPersonnel,records,pltColors,submitted,setSubmitted,markedBy,setMarkedBy,toast_,date,overrideUnlocked,onSubmit,onHighlight,currentUser}){
-  const pltPersonnel=allPersonnel.filter(p=>p.plt===plt);
-  const unassignedList=pltPersonnel.filter(p=>!records[p.id]||!records[p.id].s);
-  const marker=markedBy[plt]||'';
-  const isSubmitted=submitted[plt]||false;
-  const accentColor=plt==='P1'?'#0d9488':plt==='P2'?'#16a34a':'#d97706';
-  const isPastDate=date<todayStr();
-  const canEdit=!isPastDate||overrideUnlocked;
-  const userName=currentUser?.name||currentUser?.email||'';
-
-  function handleSubmit(){
-    if(unassignedList.length>0){
-      const names=unassignedList.slice(0,3).map(p=>`${p.rank} ${p.dn||p.name.split(' ')[0]}`).join(', ');
-      const more=unassignedList.length>3?` +${unassignedList.length-3} more`:'';
-      toast_(`⚠ ${unassignedList.length} not marked: ${names}${more}`);
-      if(onHighlight)onHighlight(unassignedList.map(p=>p.id));
-      setTimeout(()=>{const el=document.getElementById(`pr-${unassignedList[0].id}`);if(el)el.scrollIntoView({behavior:'smooth',block:'center'});},80);
-      return;
-    }
-    // Auto-record current user as sign-off
-    if(userName)setMarkedBy(m=>({...m,[plt]:userName}));
-    setSubmitted(s=>({...s,[plt]:true}));
-    toast_(`✓ ${P_LABEL[plt]} submitted`);
-    if(onSubmit)onSubmit();
-  }
-  function handleEdit(){
-    if(!canEdit){
-      toast_('🔒 Past records locked. Enter override password in the History tab.',4000);return;
-    }
-    setSubmitted(s=>({...s,[plt]:false}));
-  }
-
-  return(
-    <div className="card" style={{marginBottom:'16px',border:`2px solid ${isSubmitted?'#bbf7d0':'#e2e8f0'}`}}>
-      <div style={{padding:'10px 14px',background:isSubmitted?'#f0fdf4':'#f8fafc',borderBottom:`2px solid ${isSubmitted?'#bbf7d0':'#e2e8f0'}`,display:'flex',alignItems:'center',gap:'8px'}}>
-        <div style={{width:'8px',height:'8px',borderRadius:'50%',background:isSubmitted?'#16a34a':unassignedList.length===0?'#f59e0b':'#e2e8f0',flexShrink:0}}/>
-        <span style={{fontSize:'11px',fontWeight:800,color:'#475569',textTransform:'uppercase',letterSpacing:'.6px',flex:1}}>{P_LABEL[plt]} — Sign-off</span>
-        {isPastDate&&overrideUnlocked&&<span style={{fontSize:'10px',fontWeight:700,color:'#7c3aed',background:'#f3e8ff',padding:'2px 7px',borderRadius:'8px'}}>🔓 Override</span>}
-        {isPastDate&&!overrideUnlocked&&<span style={{fontSize:'10px',color:'#94a3b8'}}>🔒 Past date</span>}
-        {!isPastDate&&unassignedList.length>0&&!isSubmitted&&<span style={{fontSize:'11px',fontWeight:700,color:'#ef4444'}}>{unassignedList.length} unmarked</span>}
-        {!isPastDate&&unassignedList.length===0&&!isSubmitted&&<span style={{fontSize:'11px',fontWeight:700,color:'#16a34a'}}>All marked ✓</span>}
-      </div>
-      <div className="plt-footer">
-        {userName&&!isSubmitted&&<div style={{fontSize:'12px',color:'#64748b',padding:'2px 0 6px'}}>Submitting as: <strong style={{color:'#0f766e'}}>{userName}</strong></div>}
-        {isSubmitted?(
-          <div style={{display:'flex',gap:'8px',alignItems:'center'}}>
-            <div className="submit-btn submit-btn-done" style={{flex:1,textAlign:'center',padding:'12px'}}>
-              ✓ Submitted — {marker||userName}
-            </div>
-            <button className="btn-cancel" style={{padding:'12px 14px',borderRadius:'10px',opacity:canEdit?1:.5}} onClick={handleEdit}>✏ Edit</button>
-          </div>
-        ):(
-          <button className="submit-btn submit-btn-active" onClick={handleSubmit} style={{background:accentColor}}>
-            Save &amp; Submit {P_LABEL[plt]} Attendance
-          </button>
-        )}
-        <button onClick={()=>window.scrollTo({top:0,behavior:'smooth'})} style={{width:'100%',padding:'9px',background:'#f1f5f9',color:'#475569',border:'1.5px solid #e2e8f0',borderRadius:'10px',fontSize:'13px',fontWeight:700,cursor:'pointer'}}>↑ Back to Top</button>
-      </div>
     </div>
   );
 }
