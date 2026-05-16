@@ -4077,7 +4077,10 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
     return()=>{pendRef.off();usersRef.off();};
   },[isAdmin]);
   function approveAuthUser(uid,role){
-    DB.ref(`jrn/users/${uid}`).update({role,approvedAt:new Date().toISOString()});
+    const pending=authPending.find(u=>u.uid===uid);
+    const update={role,approvedAt:new Date().toISOString()};
+    if(pending?.email)update.email=pending.email;
+    DB.ref(`jrn/users/${uid}`).update(update);
     DB.ref(`jrn/pending_users/${uid}`).remove();
     toast_(`✓ User approved as ${role}`);
   }
