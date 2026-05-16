@@ -96,6 +96,15 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .login-btn:active{opacity:.85}
 .login-err{background:#fff1f2;border:1.5px solid #fca5a5;border-radius:10px;padding:10px 14px;color:#dc2626;font-size:13px;font-weight:600;margin-bottom:14px;text-align:center}
 .login-footer{color:rgba(255,255,255,.35);font-size:11px;margin-top:28px;text-align:center}
+.google-btn{width:100%;padding:14px;background:#fff;color:#1e293b;border:2px solid #e2e8f0;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,.08);transition:box-shadow .2s,border-color .2s}
+.google-btn:hover{box-shadow:0 4px 16px rgba(0,0,0,.15);border-color:#cbd5e1}
+.google-btn:active{opacity:.85}
+.google-btn:disabled{opacity:.6;cursor:not-allowed}
+.pending-card{background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.4);text-align:center}
+.setname-inp{width:100%;padding:13px 14px;border:2px solid #e2e8f0;border-radius:12px;font-size:15px;outline:none;color:#1e293b;background:#f8fafc;transition:border-color .2s;margin-bottom:12px}
+.setname-inp:focus{border-color:#0d9488;background:#fff}
+.auth-pending-row{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid #f1f5f9;gap:10px}
+.auth-pending-row:last-child{border-bottom:none}
 /* ── Landing / TOD Picker ── */
 .land-wrap{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;background:linear-gradient(160deg,#0f2235 0%,#0d4a45 60%,#064e3b 100%);padding:0 0 env(safe-area-inset-bottom,0px)}
 .land-hdr{padding:20px 20px 0;display:flex;align-items:center;justify-content:space-between}
@@ -228,6 +237,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 <div id="root"></div>
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js"></script>
 <script>
 firebase.initializeApp({
   apiKey:"AIzaSyDvlNNE7-r9NQP4yO2PXXkHE4APO7WlY-4",
@@ -239,6 +249,7 @@ firebase.initializeApp({
   appId:"1:1009079802431:web:5c8da8c7d633dba5ea768a"
 });
 const DB = firebase.database();
+const AUTH = firebase.auth();
 </script>
 <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
@@ -1055,11 +1066,7 @@ function ParadeStatePDFPage({plt,personnel,allTodRecs,date,total,allTodMarkedBy}
         </tbody>
       </table>
       <div className="pdf-pg-footer">
-        <div><div className="pdf-ft-lbl">HLS Marked By</div><div>{markerLabel('HLS')}</div></div>
-        <div><div className="pdf-ft-lbl">FP Marked By</div><div>{markerLabel('0745')}</div></div>
-        <div><div className="pdf-ft-lbl">MP Marked By</div><div>{markerLabel('1300')}</div></div>
-        <div><div className="pdf-ft-lbl">LP Marked By</div><div>{markerLabel('1730')}</div></div>
-        <div style={{textAlign:'right'}}>
+        <div style={{textAlign:'right',gridColumn:'1/-1',marginLeft:'auto'}}>
           <div className="pdf-ft-lbl">Total Node Strength</div>
           <div style={{fontWeight:'bold',fontSize:'14px'}}>{total}</div>
           <div className="pdf-ft-lbl" style={{marginTop:'4px'}}>Total Plt Strength</div>
@@ -1642,8 +1649,7 @@ function HistoryScreen({history,personnel,onPreview,onDelete,overrideUnlocked,se
   );
 }
 
-// ─── LOGIN ──────────────────────────────────────────────────────
-const USERS=[{user:'comd',pass:'comd123',label:'Commander'},{user:'admin',pass:'Transport1409$',label:'Admin',isAdmin:true},{user:'demo',pass:'demo1234',label:'Demo User',isAdmin:true,isDemo:true}];
+// ─── AUTH ────────────────────────────────────────────────────────
 // ─── DEMO PERSONNEL (fake names — seeded into demo/personnel on first use) ───
 const DEMO_IP=[
   {id:'d01',plt:'HQ',rank:'CPT', name:'ALEX TAN WEI LIANG',     dn:'ALEX',    sec:'NODE CMD',   siso:{type:'si'},active:true},
@@ -1667,27 +1673,20 @@ const DEMO_IP=[
   {id:'d19',plt:'P2',rank:'PTE', name:'LIAM KWAN JUN LONG',     dn:'LIAM',    sec:'CS/CSS',     siso:{type:'si'},active:true},
   {id:'d20',plt:'P2',rank:'PTE', name:'OMAR BIN HASSAN',        dn:'OMAR',    sec:'CS/CSS',     siso:{type:'si'},active:true},
 ];
-// Derive a stored token from credentials — never stores raw password
-function mkToken(u,p){return btoa(unescape(encodeURIComponent(`jrn:${u}:${p}:2026`)));}
 // Sanitize any string used as a Firebase path segment
 function safePath(s){return String(s).replace(/[.#$\[\]/]/g,'_').slice(0,120);}
-function LoginScreen({onLogin}){
+function LoginScreen(){
   useEffect(()=>{window.scrollTo({top:0,left:0,behavior:'instant'});},[]);
-  const[user,setUser]=useState(()=>{try{return localStorage.getItem('jrn_saved_user')||''}catch{return ''}});
-  const[pass,setPass]=useState('');
+  const[loading,setLoading]=useState(false);
   const[err,setErr]=useState('');
-  const[showPass,setShowPass]=useState(false);
-  const[remember,setRemember]=useState(()=>{try{return localStorage.getItem('jrn_remember')==='1'}catch{return false}});
-  function attempt(){
-    const found=USERS.find(u=>u.user===user.trim().toLowerCase()&&u.pass.toLowerCase()===pass.trim().toLowerCase());
-    if(found){
-      if(remember){
-        try{localStorage.setItem('jrn_saved_user',user.trim());localStorage.setItem('jrn_saved_token',mkToken(found.user,found.pass));localStorage.setItem('jrn_remember','1');}catch{}
-      } else {
-        try{localStorage.removeItem('jrn_saved_user');localStorage.removeItem('jrn_saved_token');localStorage.setItem('jrn_remember','0');}catch{}
-      }
-      onLogin(found);
-    } else {setErr('Incorrect username or password.');setPass('');}
+  function signInWithGoogle(){
+    setLoading(true);setErr('');
+    const provider=new firebase.auth.GoogleAuthProvider();
+    AUTH.signInWithPopup(provider).catch(e=>{
+      setLoading(false);
+      if(e.code==='auth/popup-closed-by-user'||e.code==='auth/cancelled-popup-request')return;
+      setErr('Sign-in failed. Please try again.');
+    });
   }
   return(
     <div className="login-wrap">
@@ -1696,31 +1695,65 @@ function LoginScreen({onLogin}){
       <div className="login-sub">Jurong Node — Commander Access</div>
       <div className="login-card">
         {err&&<div className="login-err">⚠ {err}</div>}
-        <div className="login-field">
-          <div className="login-lbl">Username</div>
-          <input className="login-inp" type="text" placeholder="Enter username" autoCapitalize="none" autoCorrect="off"
-            value={user} onChange={e=>{setUser(e.target.value);setErr('');}}
-            onKeyDown={e=>e.key==='Enter'&&attempt()}/>
+        <div style={{fontSize:'13px',color:'#64748b',marginBottom:'18px',lineHeight:1.5,textAlign:'center'}}>
+          Sign in with your Google account to access the parade state system.
         </div>
-        <div className="login-field">
-          <div className="login-lbl">Password</div>
-          <div style={{position:'relative'}}>
-            <input className="login-inp" type={showPass?'text':'password'} placeholder="Enter password" style={{paddingRight:'50px'}}
-              value={pass} onChange={e=>{setPass(e.target.value);setErr('');}}
-              onKeyDown={e=>e.key==='Enter'&&attempt()}/>
-            <button onClick={()=>setShowPass(v=>!v)} style={{position:'absolute',right:'12px',top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'#94a3b8',fontSize:'18px',padding:'0'}}>{showPass?'🙈':'👁'}</button>
-          </div>
-        </div>
-        <label style={{display:'flex',alignItems:'center',gap:'8px',cursor:'pointer',fontSize:'13px',color:'#64748b',userSelect:'none',marginBottom:'4px'}}>
-          <input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)}
-            style={{width:'16px',height:'16px',accentColor:'#0d9488',cursor:'pointer'}}/>
-          Remember me on this device
-        </label>
-        <button className="login-btn" onClick={attempt}>Sign In</button>
+        <button className="google-btn" onClick={signInWithGoogle} disabled={loading}>
+          <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+          {loading?'Signing in…':'Sign in with Google'}
+        </button>
       </div>
       <div className="login-footer">Authorised Personnel Only</div>
       <div style={{marginTop:'12px',fontSize:'11px',color:'rgba(255,255,255,.25)',textAlign:'center'}}>
         Developed by <a href="tel:+6581198326" style={{color:'rgba(255,255,255,.4)',textDecoration:'underline',fontWeight:600}}>Vinith</a>
+      </div>
+    </div>
+  );
+}
+function PendingScreen({email,onSignOut}){
+  useEffect(()=>{window.scrollTo({top:0,left:0,behavior:'instant'});},[]);
+  return(
+    <div className="login-wrap">
+      <div className="login-logo">⏳</div>
+      <div className="login-title">Access Pending</div>
+      <div className="login-sub">Waiting for admin approval</div>
+      <div className="pending-card">
+        <div style={{fontSize:'32px',marginBottom:'12px'}}>🔒</div>
+        <div style={{fontWeight:700,fontSize:'16px',color:'#1e293b',marginBottom:'8px'}}>Account not approved yet</div>
+        <div style={{fontSize:'13px',color:'#64748b',lineHeight:1.6,marginBottom:'16px'}}>
+          Your account (<strong>{email}</strong>) has been submitted for approval. An admin will review and activate your account shortly.
+        </div>
+        <div style={{fontSize:'12px',color:'#94a3b8',marginBottom:'20px'}}>Contact the system admin if you require urgent access.</div>
+        <button className="login-btn" onClick={onSignOut} style={{marginTop:0}}>Sign Out</button>
+      </div>
+      <div className="login-footer">Authorised Personnel Only</div>
+    </div>
+  );
+}
+function SetNameScreen({onSave,onSignOut}){
+  useEffect(()=>{window.scrollTo({top:0,left:0,behavior:'instant'});},[]);
+  const[name,setName]=useState('');
+  const[err,setErr]=useState('');
+  function save(){
+    const n=name.trim().toUpperCase();
+    if(!n||n.length<2){setErr('Please enter your display name (at least 2 characters).');return;}
+    onSave(n);
+  }
+  return(
+    <div className="login-wrap">
+      <div className="login-logo">✏️</div>
+      <div className="login-title">Set Your Name</div>
+      <div className="login-sub">First-time setup</div>
+      <div className="pending-card">
+        <div style={{fontSize:'13px',color:'#64748b',lineHeight:1.5,marginBottom:'16px',textAlign:'left'}}>
+          Enter the name that will appear in the attendance audit trail (e.g. <strong>3SG TAN</strong> or <strong>SGT LEE</strong>).
+        </div>
+        {err&&<div className="login-err">⚠ {err}</div>}
+        <input className="setname-inp" type="text" placeholder="e.g. 3SG TAN" autoCapitalize="characters"
+          value={name} onChange={e=>{setName(e.target.value);setErr('');}}
+          onKeyDown={e=>e.key==='Enter'&&save()}/>
+        <button className="login-btn" onClick={save} style={{marginTop:0}}>Confirm Name</button>
+        <button onClick={onSignOut} style={{width:'100%',padding:'10px',background:'none',border:'none',color:'#94a3b8',fontSize:'13px',cursor:'pointer',marginTop:'8px'}}>Sign out</button>
       </div>
     </div>
   );
@@ -2040,55 +2073,68 @@ function LandingScreen({onPick,onLogout,isAdmin,isDemo,currentUserLabel}){
 
 // ─── ROOT (auth gate) ───────────────────────────────────────────
 function Root(){
-  // Validate remember-me via token, not raw password
-  function validateRemember(){
-    try{
-      if(localStorage.getItem('jrn_remember')!=='1')return null;
-      const su=localStorage.getItem('jrn_saved_user');
-      const tok=localStorage.getItem('jrn_saved_token');
-      if(!su||!tok)return null;
-      return USERS.find(u=>u.user===su.toLowerCase()&&mkToken(u.user,u.pass)===tok)||null;
-    }catch{return null;}
+  // authState: 'loading' | 'unauthenticated' | 'pending' | 'set-name' | 'ready'
+  const[authState,setAuthState]=useState('loading');
+  const[currentUser,setCurrentUser]=useState(null); // {uid,name,email,role}
+  const[picked,setPicked]=useState(null);
+
+  React.useEffect(()=>{
+    const unsub=AUTH.onAuthStateChanged(async firebaseUser=>{
+      if(!firebaseUser){setAuthState('unauthenticated');setCurrentUser(null);return;}
+      // Check user record in DB
+      const snap=await DB.ref(`jrn/users/${firebaseUser.uid}`).once('value');
+      const rec=snap.val();
+      if(!rec){
+        // New user — add to pending if not already there
+        await DB.ref(`jrn/pending_users/${firebaseUser.uid}`).set({
+          email:firebaseUser.email||'',
+          googleName:firebaseUser.displayName||'',
+          requestedAt:new Date().toISOString()
+        });
+        setAuthState('pending');
+        setCurrentUser({uid:firebaseUser.uid,email:firebaseUser.email||''});
+        return;
+      }
+      if(!rec.name){
+        // Approved but no custom name set yet
+        setCurrentUser({uid:firebaseUser.uid,email:firebaseUser.email||'',role:rec.role});
+        setAuthState('set-name');
+        return;
+      }
+      setCurrentUser({uid:firebaseUser.uid,name:rec.name,email:firebaseUser.email||'',role:rec.role});
+      setAuthState('ready');
+    });
+    return unsub;
+  },[]);
+
+  function handleSignOut(){
+    AUTH.signOut();
+    setAuthState('unauthenticated');setCurrentUser(null);setPicked(null);
   }
-  const[loggedIn,setLoggedIn]=useState(()=>{try{return sessionStorage.getItem('jrn_auth')==='1'||!!validateRemember()}catch{return false}});
-  const[isAdmin,setIsAdmin]=useState(()=>{
-    try{
-      if(sessionStorage.getItem('jrn_admin')==='1')return true;
-      const found=validateRemember();
-      return !!(found&&found.isAdmin);
-    }catch{}
-    return false;
-  });
-  const[isDemo,setIsDemo]=useState(()=>{try{return sessionStorage.getItem('jrn_demo')==='1';}catch{return false;}});
-  const[picked,setPicked]=useState(null); // {date, tod}
-  const[currentUserLabel,setCurrentUserLabel]=useState(()=>{try{const f=validateRemember();return f?.label||'User';}catch{return 'User';}});
-  function handleLogin(u){
-    setLoggedIn(true);
-    const admin=!!(u&&u.isAdmin);
-    const demo=!!(u&&u.isDemo);
-    setIsAdmin(admin);
-    setIsDemo(demo);
-    setCurrentUserLabel(u?.label||'User');
-    DB_ROOT=demo?'demo':'jrn';
-    try{sessionStorage.setItem('jrn_auth','1');sessionStorage.setItem('jrn_admin',admin?'1':'0');sessionStorage.setItem('jrn_demo',demo?'1':'0');}catch{}
+  async function handleSetName(name){
+    await DB.ref(`jrn/users/${currentUser.uid}/name`).set(name);
+    setCurrentUser(u=>({...u,name}));
+    setAuthState('ready');
   }
-  function handleLogout(){
-    setLoggedIn(false);setIsAdmin(false);setIsDemo(false);setPicked(null);
-    DB_ROOT='jrn';
-    try{
-      sessionStorage.removeItem('jrn_auth');sessionStorage.removeItem('jrn_admin');sessionStorage.removeItem('jrn_demo');
-      localStorage.removeItem('jrn_saved_pass');
-    }catch{}
-  }
-  // Restore DB_ROOT from session on page reload
-  React.useEffect(()=>{try{if(sessionStorage.getItem('jrn_demo')==='1')DB_ROOT='demo';}catch{}},[]);
-  if(!loggedIn)return <LoginScreen onLogin={handleLogin}/>;
-  if(!picked)return <LandingScreen onPick={(date,tod,eventName,eventKey)=>setPicked({date,tod,eventName,eventKey})} onLogout={handleLogout} isAdmin={isAdmin} isDemo={isDemo} currentUserLabel={currentUserLabel}/>;
-  return <App initDate={picked.date} initTod={picked.tod} initEventName={picked.eventName||''} initEventKey={picked.eventKey||''} isAdmin={isAdmin} isDemo={isDemo} onHome={()=>setPicked(null)} onLogout={handleLogout}/>;
+  function handleLogout(){handleSignOut();}
+
+  if(authState==='loading')return(
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'linear-gradient(160deg,#0f2235 0%,#0d4a45 60%,#064e3b 100%)'}}>
+      <div style={{color:'rgba(255,255,255,.7)',fontSize:'15px',fontWeight:700}}>Loading…</div>
+    </div>
+  );
+  if(authState==='unauthenticated')return <LoginScreen/>;
+  if(authState==='pending')return <PendingScreen email={currentUser?.email||''} onSignOut={handleSignOut}/>;
+  if(authState==='set-name')return <SetNameScreen onSave={handleSetName} onSignOut={handleSignOut}/>;
+
+  const isAdmin=currentUser?.role==='admin';
+  const isDemo=false;
+  if(!picked)return <LandingScreen onPick={(date,tod,eventName,eventKey)=>setPicked({date,tod,eventName,eventKey})} onLogout={handleLogout} isAdmin={isAdmin} isDemo={isDemo} currentUserLabel={currentUser?.name||currentUser?.email||'User'}/>;
+  return <App initDate={picked.date} initTod={picked.tod} initEventName={picked.eventName||''} initEventKey={picked.eventKey||''} isAdmin={isAdmin} isDemo={isDemo} currentUser={currentUser} onHome={()=>setPicked(null)} onLogout={handleLogout}/>;
 }
 
 // ─── APP ────────────────────────────────────────────────────────
-function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmin,isDemo}){
+function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmin,isDemo,currentUser}){
   const isNR=initTod==='NR';
   const eventName=initEventName||'';
   const eventKey=initEventKey||'';
@@ -2208,18 +2254,19 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         if(skipCarryPltRef.current===p.plt)return;
         if(nr[p.id]&&nr[p.id].s)return;
         const dd=p.dailyDuty;
-        if(dd&&dd.date===date&&WHOLE_DAY_DUTY.has(dd.s)){nr[p.id]={s:dd.s,det:'',from:''};return;}
+        if(dd&&dd.date===date&&WHOLE_DAY_DUTY.has(dd.s)){nr[p.id]={s:dd.s,det:'',from:'',...(dd.markedBy?{markedBy:dd.markedBy}:{})};return;}
         const al=p.activeLeave;
+        const alMb=al?.markedBy?{markedBy:al.markedBy}:{};
         if(al&&al.s==='am_leave'&&al.from===date){
-          if(tod==='HLS'||tod==='0745'){nr[p.id]={s:'am_leave',det:'',from:date};return;}
+          if(tod==='HLS'||tod==='0745'){nr[p.id]={s:'am_leave',det:'',from:date,...alMb};return;}
           return;
         }
         if(al&&al.s==='pm_leave'&&al.from===date){
-          if(tod==='1300'||tod==='1730'){nr[p.id]={s:'pm_leave',det:'',from:date};return;}
+          if(tod==='1300'||tod==='1730'){nr[p.id]={s:'pm_leave',det:'',from:date,...alMb};return;}
           return;
         }
         if(al&&CARRY_DATE_RANGE.has(al.s)&&al.from&&date>=al.from&&(!al.det||date<=al.det)){
-          nr[p.id]={s:al.s,det:al.det,from:al.from,...(al.label?{label:al.label}:{})};return;
+          nr[p.id]={s:al.s,det:al.det,from:al.from,...(al.label?{label:al.label}:{}),...alMb};return;
         }
       }
       if(d){
@@ -2351,18 +2398,19 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         if(skipCarryPltRef.current===p.plt)return;
         if(nr[p.id]?.s)return;
         const dd=p.dailyDuty;
-        if(dd&&dd.date===date&&WHOLE_DAY_DUTY.has(dd.s)){nr[p.id]={s:dd.s,det:'',from:''};fills[p.id]=nr[p.id];changed=true;return;}
+        if(dd&&dd.date===date&&WHOLE_DAY_DUTY.has(dd.s)){nr[p.id]={s:dd.s,det:'',from:'',...(dd.markedBy?{markedBy:dd.markedBy}:{})};fills[p.id]=nr[p.id];changed=true;return;}
         const al=p.activeLeave;
+        const alMb=al?.markedBy?{markedBy:al.markedBy}:{};
         if(al&&al.s==='am_leave'&&al.from===date){
-          if(tod==='HLS'||tod==='0745'){nr[p.id]={s:'am_leave',det:'',from:date};fills[p.id]=nr[p.id];changed=true;return;}
+          if(tod==='HLS'||tod==='0745'){nr[p.id]={s:'am_leave',det:'',from:date,...alMb};fills[p.id]=nr[p.id];changed=true;return;}
           return;
         }
         if(al&&al.s==='pm_leave'&&al.from===date){
-          if(tod==='1300'||tod==='1730'){nr[p.id]={s:'pm_leave',det:'',from:date};fills[p.id]=nr[p.id];changed=true;return;}
+          if(tod==='1300'||tod==='1730'){nr[p.id]={s:'pm_leave',det:'',from:date,...alMb};fills[p.id]=nr[p.id];changed=true;return;}
           return;
         }
         if(al&&CARRY_DATE_RANGE.has(al.s)&&al.from&&date>=al.from&&(!al.det||date<=al.det)){
-          nr[p.id]={s:al.s,det:al.det,from:al.from,...(al.label?{label:al.label}:{})};fills[p.id]=nr[p.id];changed=true;return;
+          nr[p.id]={s:al.s,det:al.det,from:al.from,...(al.label?{label:al.label}:{}),...alMb};fills[p.id]=nr[p.id];changed=true;return;
         }
       });
       return changed?nr:prev;
@@ -2603,13 +2651,15 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   function setRec(id,s,det,from,label){
     const rec={s,det:det||'',from:from||''};
     if(label!==undefined)rec.label=label||'';
+    if(s&&currentUser?.uid)rec.markedBy={uid:currentUser.uid,name:currentUser.name||currentUser.email||''};
     setRecords(p=>({...p,[id]:rec}));
     // Atomic per-record write — prevents concurrent sgts from overwriting each other's marks
     if(s){DB.ref(`${attPath}/records/${id}`).set(rec);}
     else{DB.ref(`${attPath}/records/${id}`).remove();}
   }
   function setPersonLeave(id,s,from,till,label){
-    const leave=s?{s,from:from||todayStr(),det:till||'',...(label?{label}:{})}:null;
+    const mb=currentUser?.uid?{uid:currentUser.uid,name:currentUser.name||currentUser.email||''}:null;
+    const leave=s?{s,from:from||todayStr(),det:till||'',...(label?{label}:{}),...(mb?{markedBy:mb}:{})}:null;
     // Targeted write — avoids race condition from full-replace when multiple sgts write simultaneously
     if(leave) DB.ref(`${DB_ROOT}/personnel/${id}/activeLeave`).set(leave);
     else DB.ref(`${DB_ROOT}/personnel/${id}/activeLeave`).remove();
@@ -2620,10 +2670,11 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       const ndStr=`${nd.getFullYear()}-${String(nd.getMonth()+1).padStart(2,'0')}-${String(nd.getDate()).padStart(2,'0')}`;
       for(const t of['HLS','0745']){
         const tRef=DB.ref(`${DB_ROOT}/att/${ndStr}/${todKey(t)}/records/${id}`);
+        const mbField=leave?.markedBy?{markedBy:leave.markedBy}:{};
         if(leave&&leave.s==='am_leave'&&leave.from===ndStr){
-          tRef.transaction(curr=>curr&&curr.s?undefined:{s:'am_leave',det:'',from:ndStr});
+          tRef.transaction(curr=>curr&&curr.s?undefined:{s:'am_leave',det:'',from:ndStr,...mbField});
         }else if(leave&&CARRY_DATE_RANGE.has(leave.s)){
-          const rec={s:leave.s,det:leave.det||'',from:leave.from||'',...(leave.label?{label:leave.label}:{})};
+          const rec={s:leave.s,det:leave.det||'',from:leave.from||'',...(leave.label?{label:leave.label}:{}),...mbField};
           tRef.transaction(curr=>curr&&curr.s?undefined:rec);
         }else{
           tRef.once('value').then(snap=>{
@@ -2635,7 +2686,8 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
     }
   }
   function setPersonDailyDuty(id,s,d){
-    const duty=s?{s,date:d}:null;
+    const mb=currentUser?.uid?{uid:currentUser.uid,name:currentUser.name||currentUser.email||''}:null;
+    const duty=s?{s,date:d,...(mb?{markedBy:mb}:{})}:null;
     // Targeted write — same race-condition fix as setPersonLeave
     if(duty) DB.ref(`${DB_ROOT}/personnel/${id}/dailyDuty`).set(duty);
     else DB.ref(`${DB_ROOT}/personnel/${id}/dailyDuty`).remove();
@@ -2699,7 +2751,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         )}
       </div>
       <div className="main">
-        {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setPersonDailyDuty={setPersonDailyDuty} setAllPresent={setAllPresent} clearAll={clearAll} submitted={submitted} setSubmitted={setSubmitted} markedBy={markedBy} setMarkedBy={setMarkedBy} toast_={toast_} overrideUnlocked={isAdmin||overrideUnlocked} onPlatoonSubmit={saveToHistory} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={isAdmin?deleteOtherReason:undefined} jumpTo={jumpTo} onJumpDone={()=>setJumpTo(null)} isNR={isNR} attLoaded={attLoaded}/>}
+        {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setPersonDailyDuty={setPersonDailyDuty} setAllPresent={setAllPresent} clearAll={clearAll} submitted={submitted} setSubmitted={setSubmitted} markedBy={markedBy} setMarkedBy={setMarkedBy} toast_={toast_} overrideUnlocked={isAdmin||overrideUnlocked} onPlatoonSubmit={saveToHistory} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={isAdmin?deleteOtherReason:undefined} jumpTo={jumpTo} onJumpDone={()=>setJumpTo(null)} isNR={isNR} attLoaded={attLoaded} currentUser={currentUser}/>}
         {isNR&&screen==='telegram'&&<NRGenerateScreen date={date} eventName={eventName} records={records} personnel={personnelOnDate(personnel,date)} toast_={toast_}/>}
         {!isNR&&screen==='telegram'&&<GenerateScreen msg={msg} total={total} setTotal={setTotal} totalManual={totalManual} setTotalManual={setTotalManual} autoTotal={personnelOnDate(personnel,date).length} extra={extra} setExtra={setExtra} toast_={toast_} date={date} tod={tod} records={records} personnel={personnelOnDate(personnel,date)} isAdmin={isAdmin}/>}
         {screen==='manage'&&<ManageScreen personnel={personnel} setPersonnel={setPersonnelAndSync} toast_={toast_} customSections={customSections} addCustomSection={addCustomSection} isAdmin={isAdmin} pendingPersonnel={pendingPersonnel} approvePending={approvePending} rejectPending={rejectPending}/>}
@@ -3109,7 +3161,7 @@ function NRHistoryScreen({nrHistory,personnel,overrideUnlocked,setOverrideUnlock
 }
 
 // ─── ATTENDANCE SCREEN ──────────────────────────────────────────
-function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setPersonDailyDuty,setAllPresent,clearAll,submitted,setSubmitted,markedBy,setMarkedBy,toast_,overrideUnlocked,onPlatoonSubmit,otherReasons,addOtherReason,deleteOtherReason,jumpTo,onJumpDone,isNR,attLoaded}){
+function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setPersonDailyDuty,setAllPresent,clearAll,submitted,setSubmitted,markedBy,setMarkedBy,toast_,overrideUnlocked,onPlatoonSubmit,otherReasons,addOtherReason,deleteOtherReason,jumpTo,onJumpDone,isNR,attLoaded,currentUser}){
   const[search,setSearch]=useState('');
   const[plt,setPlt]=useState('P1');
   const[confirmClear,setConfirmClear]=useState(null); // null or plt key
@@ -3221,6 +3273,7 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setP
               <PlatoonFooter plt={p} allPersonnel={active} records={records} pltColors={pltColors}
                 submitted={submitted} setSubmitted={setSubmitted} markedBy={markedBy} setMarkedBy={setMarkedBy} toast_={toast_}
                 date={date} overrideUnlocked={overrideUnlocked} onSubmit={onPlatoonSubmit}
+                currentUser={currentUser}
                 onHighlight={ids=>setHighlightIds(new Set(ids))}/>
             </div>
           )}
@@ -3233,20 +3286,17 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setP
 
 // ─── PLATOON FOOTER ─────────────────────────────────────────────
 const OVERRIDE_PASS='Transport1409$';
-function PlatoonFooter({plt,allPersonnel,records,pltColors,submitted,setSubmitted,markedBy,setMarkedBy,toast_,date,overrideUnlocked,onSubmit,onHighlight}){
+function PlatoonFooter({plt,allPersonnel,records,pltColors,submitted,setSubmitted,markedBy,setMarkedBy,toast_,date,overrideUnlocked,onSubmit,onHighlight,currentUser}){
   const pltPersonnel=allPersonnel.filter(p=>p.plt===plt);
   const unassignedList=pltPersonnel.filter(p=>!records[p.id]||!records[p.id].s);
-  const NON_CMDR=new Set(['REC','PTE','LCP','CPL','CFC']);
-  const commanders=allPersonnel.filter(p=>!NON_CMDR.has(p.rank));
   const marker=markedBy[plt]||'';
   const isSubmitted=submitted[plt]||false;
-  const markerPerson=commanders.find(c=>c.id===marker);
   const accentColor=plt==='P1'?'#0d9488':plt==='P2'?'#16a34a':'#d97706';
   const isPastDate=date<todayStr();
   const canEdit=!isPastDate||overrideUnlocked;
+  const userName=currentUser?.name||currentUser?.email||'';
 
   function handleSubmit(){
-    if(!marker){toast_('⚠ Please select your name before submitting');return;}
     if(unassignedList.length>0){
       const names=unassignedList.slice(0,3).map(p=>`${p.rank} ${p.dn||p.name.split(' ')[0]}`).join(', ');
       const more=unassignedList.length>3?` +${unassignedList.length-3} more`:'';
@@ -3255,6 +3305,8 @@ function PlatoonFooter({plt,allPersonnel,records,pltColors,submitted,setSubmitte
       setTimeout(()=>{const el=document.getElementById(`pr-${unassignedList[0].id}`);if(el)el.scrollIntoView({behavior:'smooth',block:'center'});},80);
       return;
     }
+    // Auto-record current user as sign-off
+    if(userName)setMarkedBy(m=>({...m,[plt]:userName}));
     setSubmitted(s=>({...s,[plt]:true}));
     toast_(`✓ ${P_LABEL[plt]} submitted`);
     if(onSubmit)onSubmit();
@@ -3277,18 +3329,11 @@ function PlatoonFooter({plt,allPersonnel,records,pltColors,submitted,setSubmitte
         {!isPastDate&&unassignedList.length===0&&!isSubmitted&&<span style={{fontSize:'11px',fontWeight:700,color:'#16a34a'}}>All marked ✓</span>}
       </div>
       <div className="plt-footer">
-        <div>
-          <div className="label">Signed off by</div>
-          <select value={marker} onChange={e=>setMarkedBy(m=>({...m,[plt]:e.target.value}))} disabled={isSubmitted}
-            style={{borderColor:!marker&&!isSubmitted?'#fcd34d':'',background:!marker&&!isSubmitted?'#fffbeb':''}}>
-            <option value="">— Select your name —</option>
-            {commanders.map(c=><option key={c.id} value={c.id}>{c.rank} {c.dn||c.name.split(' ')[0]}</option>)}
-          </select>
-        </div>
+        {userName&&!isSubmitted&&<div style={{fontSize:'12px',color:'#64748b',padding:'2px 0 6px'}}>Submitting as: <strong style={{color:'#0f766e'}}>{userName}</strong></div>}
         {isSubmitted?(
           <div style={{display:'flex',gap:'8px',alignItems:'center'}}>
             <div className="submit-btn submit-btn-done" style={{flex:1,textAlign:'center',padding:'12px'}}>
-              ✓ Signed off — {markerPerson?`${markerPerson.rank} ${markerPerson.dn||markerPerson.name.split(' ')[0]}`:''}
+              ✓ Submitted — {marker||userName}
             </div>
             <button className="btn-cancel" style={{padding:'12px 14px',borderRadius:'10px',opacity:canEdit?1:.5}} onClick={handleEdit}>✏ Edit</button>
           </div>
@@ -3306,6 +3351,7 @@ function PlatoonFooter({plt,allPersonnel,records,pltColors,submitted,setSubmitte
 // ─── PERSON ROW ─────────────────────────────────────────────────
 function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,locked,currentDate,otherReasons,addOtherReason,deleteOtherReason,tempUnlocked,onLockBack,isNR,highlighted}){
   const[showMore,setShowMore]=useState(false);
+  const[showMarker,setShowMarker]=useState(false);
   const si=record.s?SM[record.s]:null;
   const colorClass=record.s?`sc-${record.s}`:'';
   const pltClass={P1:'plt-p1',P2:'plt-p2',HQ:'plt-hq'}[person.plt]||'';
@@ -3339,7 +3385,8 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
     if(!isNR){
       if(SM[s]?.halfDay){
         setPersonLeave(person.id,s,_halfDayLeaveDate(s),null);
-      } else if(SM[s]?.fromOnly){
+      } else if(SM[s]?.fromOnly||SM[s]?.dateRange){
+        // Set activeLeave immediately so carry works even before till date is picked
         setPersonLeave(person.id,s,currentDate,null);
       } else {
         if(person.activeLeave)setPersonLeave(person.id,null,null,null);
@@ -3354,7 +3401,7 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
     if(newS.startsWith('__or__')){
       const reason=newS.slice(6);
       setRec(person.id,'others','',currentDate,reason);
-      if(!isNR&&person.activeLeave)setPersonLeave(person.id,null,null,null);
+      if(!isNR)setPersonLeave(person.id,'others',currentDate,null,reason);
       setShowMore(false);
       return;
     }
@@ -3364,7 +3411,8 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
     if(!isNR){
       if(SM[newS]?.halfDay){
         setPersonLeave(person.id,newS,_halfDayLeaveDate(newS),null);
-      } else if(SM[newS]?.fromOnly){
+      } else if(SM[newS]?.fromOnly||SM[newS]?.dateRange){
+        // Set activeLeave immediately so carry works even before till date is picked
         setPersonLeave(person.id,newS,currentDate,null);
       } else {
         if(person.activeLeave)setPersonLeave(person.id,null,null,null);
@@ -3428,8 +3476,12 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
           <div style={{display:'flex',flexDirection:'column',flex:1,gap:'2px'}}>
             <span className="prow-cur-chip">{record.s==='others'&&record.label?`Others (specify) → ${record.label}`:si?.l||record.s}</span>
             {dateSummary()&&<span style={{fontSize:'11px',color:'#0f766e',fontWeight:600,paddingLeft:'2px'}}>{dateSummary()}</span>}
+            {showMarker&&record.markedBy&&<span style={{fontSize:'10px',color:'#7c3aed',fontWeight:600,paddingLeft:'2px'}}>Marked by: {record.markedBy.name||record.markedBy.uid}</span>}
           </div>
-          {!locked&&<button className="prow-clear-btn" onClick={()=>quickSet('')}>✕</button>}
+          <div style={{display:'flex',gap:'4px',alignItems:'center'}}>
+            {record.markedBy&&<button onClick={()=>setShowMarker(v=>!v)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'14px',color:showMarker?'#7c3aed':'#94a3b8',padding:'2px 4px',lineHeight:1}} title="Who marked this?">ⓘ</button>}
+            {!locked&&<button className="prow-clear-btn" onClick={()=>quickSet('')}>✕</button>}
+          </div>
         </div>
       ):(
         <div className="prow-unassigned">⚠ Not assigned yet</div>
@@ -4085,6 +4137,38 @@ function BulkImportModal({personnel,setPersonnel,toast_,onClose}){
 function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSection,isAdmin,pendingPersonnel,approvePending,rejectPending}){
   const[showAdd,setShowAdd]=useState(false);
   const[confirm,setConfirm]=useState(null);
+  // Auth pending users (Google accounts awaiting approval)
+  const[authPending,setAuthPending]=useState([]);
+  const[authUsers,setAuthUsers]=useState([]);
+  const[approveAuthRole,setApproveAuthRole]=useState({});
+  useEffect(()=>{
+    if(!isAdmin)return;
+    const pendRef=DB.ref('jrn/pending_users');
+    const usersRef=DB.ref('jrn/users');
+    pendRef.on('value',snap=>{
+      const d=snap.val()||{};
+      setAuthPending(Object.entries(d).map(([uid,v])=>({uid,...v})));
+    });
+    usersRef.on('value',snap=>{
+      const d=snap.val()||{};
+      setAuthUsers(Object.entries(d).map(([uid,v])=>({uid,...v})));
+    });
+    return()=>{pendRef.off();usersRef.off();};
+  },[isAdmin]);
+  function approveAuthUser(uid,role){
+    DB.ref(`jrn/users/${uid}`).update({role,approvedAt:new Date().toISOString()});
+    DB.ref(`jrn/pending_users/${uid}`).remove();
+    toast_(`✓ User approved as ${role}`);
+  }
+  function rejectAuthUser(uid){
+    DB.ref(`jrn/pending_users/${uid}`).remove();
+    AUTH.currentUser&&AUTH.currentUser.uid!==uid&&DB.ref(`jrn/users/${uid}`).remove();
+    toast_('User rejected');
+  }
+  function updateAuthUserRole(uid,role){
+    DB.ref(`jrn/users/${uid}/role`).set(role);
+    toast_(`Role updated to ${role}`);
+  }
   const[editId,setEditId]=useState(null);
   const[approveEntry,setApproveEntry]=useState(null);
   const[approveData,setApproveData]=useState({plt:'P1',sec:'BASE',dn:'',rank:''});
@@ -4158,6 +4242,50 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
   }
   return(
     <div>
+      {/* Auth pending users section */}
+      {isAdmin&&authPending.length>0&&(
+        <div className="card" style={{marginBottom:'12px',border:'2px solid #7c3aed'}}>
+          <div className="card-hdr" style={{background:'#f3e8ff',color:'#5b21b6'}}>🔐 New Account Requests ({authPending.length})</div>
+          {authPending.map(u=>(
+            <div key={u.uid} className="auth-pending-row">
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:700,fontSize:'13px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{u.googleName||'—'}</div>
+                <div style={{fontSize:'11px',color:'#64748b'}}>{u.email}</div>
+              </div>
+              <div style={{display:'flex',gap:'6px',alignItems:'center',flexShrink:0}}>
+                <select style={{padding:'4px 6px',fontSize:'12px',borderRadius:'6px',border:'1.5px solid #e2e8f0'}}
+                  value={approveAuthRole[u.uid]||'sgt'}
+                  onChange={e=>setApproveAuthRole(r=>({...r,[u.uid]:e.target.value}))}>
+                  <option value="sgt">SGT/Comd</option>
+                  <option value="admin">Admin</option>
+                </select>
+                <button onClick={()=>approveAuthUser(u.uid,approveAuthRole[u.uid]||'sgt')} style={{padding:'5px 10px',background:'#16a34a',color:'#fff',border:'none',borderRadius:'7px',fontSize:'12px',fontWeight:700,cursor:'pointer'}}>✓</button>
+                <button onClick={()=>rejectAuthUser(u.uid)} style={{padding:'5px 10px',background:'#fee2e2',color:'#991b1b',border:'none',borderRadius:'7px',fontSize:'12px',fontWeight:700,cursor:'pointer'}}>✕</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {/* Approved users management */}
+      {isAdmin&&authUsers.length>0&&(
+        <div className="card" style={{marginBottom:'12px'}}>
+          <div className="card-hdr">👥 Approved Accounts ({authUsers.length})</div>
+          {authUsers.map(u=>(
+            <div key={u.uid} className="auth-pending-row">
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:700,fontSize:'13px'}}>{u.name||'(name not set)'}</div>
+                <div style={{fontSize:'11px',color:'#64748b'}}>{u.email} — <span style={{color:u.role==='admin'?'#7c3aed':'#0d9488',fontWeight:700}}>{u.role==='admin'?'Admin':'SGT/Comd'}</span></div>
+              </div>
+              <select style={{padding:'4px 6px',fontSize:'12px',borderRadius:'6px',border:'1.5px solid #e2e8f0'}}
+                value={u.role||'sgt'}
+                onChange={e=>updateAuthUserRole(u.uid,e.target.value)}>
+                <option value="sgt">SGT/Comd</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+          ))}
+        </div>
+      )}
       {/* Pending approvals section */}
       {isAdmin&&pendingPersonnel&&pendingPersonnel.length>0&&(
         <div className="card" style={{marginBottom:'12px',border:'2px solid #f59e0b'}}>
