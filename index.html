@@ -3236,10 +3236,9 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setP
           </button>
         ))}
       </div>
-      {(()=>{const pltList=PLATOONS.filter(p=>tree[p]);const pi=pltList.indexOf(plt);const nextPltGlobal=pltList[pi+1];return pltList.filter(p=>p===plt).map((p)=>{const nextPlt=nextPltGlobal;
+      {(()=>{const pltList=PLATOONS.filter(p=>tree[p]);const pi=pltList.indexOf(plt);const nextPlt=pltList[pi+1];return pltList.filter(p=>p===plt).map((p)=>{
         const isPastDate=date<todayStr();
         const isLocked=isPastDate&&!overrideUnlocked;
-        const nextPlt=pltList[pi+1];
         return(
         <div key={p} id={`plt-anchor-${p}`} style={isLocked?{opacity:.7}:{}}>
           {[...new Set([...(P_SECTIONS[p]||[]),...Object.keys(tree[p]||{})])].filter(s=>tree[p]&&tree[p][s]&&tree[p][s].length>0).map(s=>{
