@@ -3236,7 +3236,7 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setP
           </button>
         ))}
       </div>
-      {(()=>{const pltList=PLATOONS.filter(p=>tree[p]);const pi=pltList.indexOf(plt);const nextPlt=pltList[pi+1];return pltList.filter(p=>p===plt).map((p)=>{
+      {(()=>{const pltList=PLATOONS.filter(p=>tree[p]);return pltList.filter(p=>p===plt).map((p)=>{
         const isPastDate=date<todayStr();
         const isLocked=isPastDate&&!overrideUnlocked;
         return(
@@ -3262,10 +3262,7 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setP
               </div>
             );
           })}
-          <div style={{display:'flex',gap:'8px',marginBottom:'16px'}}>
-            <button onClick={()=>window.scrollTo({top:0,behavior:'smooth'})} style={{flex:1,padding:'10px',background:'#f1f5f9',color:'#475569',border:'1.5px solid #e2e8f0',borderRadius:'10px',fontSize:'13px',fontWeight:700,cursor:'pointer'}}>↑ Back to Top</button>
-            {nextPlt&&<button onClick={()=>{setPlt(nextPlt);window.scrollTo({top:0,behavior:'smooth'});}} style={{flex:1,padding:'10px',background:'#0d9488',color:'#fff',border:'none',borderRadius:'10px',fontSize:'13px',fontWeight:700,cursor:'pointer'}}>{P_LABEL[nextPlt]} →</button>}
-          </div>
+          <button onClick={()=>window.scrollTo({top:0,behavior:'smooth'})} style={{width:'100%',marginBottom:'16px',padding:'10px',background:'#f1f5f9',color:'#475569',border:'1.5px solid #e2e8f0',borderRadius:'10px',fontSize:'13px',fontWeight:700,cursor:'pointer'}}>↑ Back to Top</button>
         </div>
         );
       });})()}
