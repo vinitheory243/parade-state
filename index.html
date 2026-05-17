@@ -3236,11 +3236,12 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setP
           </button>
         ))}
       </div>
-      {PLATOONS.filter(p=>tree[p]).map(p=>{
+      {(()=>{const pltList=PLATOONS.filter(p=>tree[p]);return pltList.map((p,pi)=>{
         const isPastDate=date<todayStr();
         const isLocked=isPastDate&&!overrideUnlocked;
+        const nextPlt=pltList[pi+1];
         return(
-        <div key={p} style={isLocked?{opacity:.7}:{}}>
+        <div key={p} id={`plt-anchor-${p}`} style={isLocked?{opacity:.7}:{}}>
           {[...new Set([...(P_SECTIONS[p]||[]),...Object.keys(tree[p]||{})])].filter(s=>tree[p]&&tree[p][s]&&tree[p][s].length>0).map(s=>{
             const secPpl=tree[p][s];
             const filled=secPpl.filter(person=>records[person.id]?.s).length;
@@ -3262,9 +3263,13 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setP
               </div>
             );
           })}
+          <div style={{display:'flex',gap:'8px',marginBottom:'16px'}}>
+            <button onClick={()=>window.scrollTo({top:0,behavior:'smooth'})} style={{flex:1,padding:'10px',background:'#f1f5f9',color:'#475569',border:'1.5px solid #e2e8f0',borderRadius:'10px',fontSize:'13px',fontWeight:700,cursor:'pointer'}}>↑ Back to Top</button>
+            {nextPlt&&<button onClick={()=>{const el=document.getElementById(`plt-anchor-${nextPlt}`);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});}} style={{flex:1,padding:'10px',background:'#0d9488',color:'#fff',border:'none',borderRadius:'10px',fontSize:'13px',fontWeight:700,cursor:'pointer'}}>{P_LABEL[nextPlt]} →</button>}
+          </div>
         </div>
         );
-      })}
+      });})()}
     </div>
   );
 }
