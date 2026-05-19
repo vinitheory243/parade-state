@@ -2173,20 +2173,28 @@ function Root(){
       }
       const uid=firebaseUser.uid;
       setCurrentUser({uid,name:rec.name,email:firebaseUser.email||'',role:rec.role});
-      // Check for unseen fixes
-      const now=Date.now();const TEN=10*24*3600*1000;
-      const [fbSnap,seenSnap]=await Promise.all([
-        DB.ref(`jrn/feedback`).once('value'),
-        DB.ref(`jrn/users/${uid}/seenFixes`).once('value')
-      ]);
-      const seenIds=new Set(Object.keys(seenSnap.val()||{}));
-      const rawFb=fbSnap.val()||{};
-      const newFixes=Object.entries(rawFb)
-        .filter(([id,v])=>v.tag==='fixed'&&v.fixedAt&&now<=v.fixedAt+TEN&&!seenIds.has(id))
-        .map(([id,v])=>({id,...v}))
-        .sort((a,b)=>b.fixedAt-a.fixedAt);
-      setPendingFixes(newFixes);
       setAuthState('ready');
+      // Check for unseen fixes (non-blocking — skip splash if this times out)
+      try{
+        const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),5000));
+        const now=Date.now();const TEN=10*24*3600*1000;
+        const [fbSnap,seenSnap]=await Promise.race([
+          Promise.all([
+            DB.ref(`jrn/feedback`).once('value'),
+            DB.ref(`jrn/users/${uid}/seenFixes`).once('value')
+          ]),
+          timeout
+        ]);
+        const seenIds=new Set(Object.keys(seenSnap.val()||{}));
+        const rawFb=fbSnap.val()||{};
+        const newFixes=Object.entries(rawFb)
+          .filter(([id,v])=>v.tag==='fixed'&&v.fixedAt&&now<=v.fixedAt+TEN&&!seenIds.has(id))
+          .map(([id,v])=>({id,...v}))
+          .sort((a,b)=>b.fixedAt-a.fixedAt);
+        setPendingFixes(newFixes);
+      }catch(e){
+        setPendingFixes([]);
+      }
     });
     return unsub;
   },[]);
