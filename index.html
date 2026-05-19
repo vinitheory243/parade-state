@@ -2521,6 +2521,50 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         DB.ref(`${attPath}/records/${id}`).transaction(curr=>curr&&curr.s&&curr.s!==r.s?undefined:r)
       ));
     }
+    // Self-heal: for anyone still unassigned with no activeLeave, scan yesterday's sessions
+    // and restore their status + activeLeave automatically (guards against data wipes)
+    const noLeave=personnelOnDate(personnel,date).filter(p=>!p.activeLeave?.s&&!fills[p.id]);
+    if(noLeave.length&&!isNR){
+      (async()=>{
+        const nd=new Date(date+'T00:00:00');nd.setDate(nd.getDate()-1);
+        const prev=`${nd.getFullYear()}-${String(nd.getMonth()+1).padStart(2,'0')}-${String(nd.getDate()).padStart(2,'0')}`;
+        const healed={};
+        for(const t of['HLS','0745','1300','1730','2030_2230']){
+          if(Object.keys(healed).length>=noLeave.length)break;
+          const snap=await DB.ref(`${DB_ROOT}/att/${prev}/${t}/records`).once('value');
+          const recs=snap.val()||{};
+          noLeave.forEach(p=>{
+            if(healed[p.id])return;
+            const pr=recs[p.id];
+            if(!pr||!pr.s||!CARRY_DATE_RANGE.has(pr.s))return;
+            if(pr.from&&date<pr.from)return;
+            if(pr.det&&date>pr.det)return;
+            healed[p.id]=pr;
+          });
+        }
+        if(!Object.keys(healed).length)return;
+        // Write attendance records and restore activeLeave
+        Object.entries(healed).forEach(([id,pr])=>{
+          const rec={s:pr.s,det:pr.det||'',from:pr.from||'',...(pr.label?{label:pr.label}:{})};
+          DB.ref(`${attPath}/records/${id}`).transaction(curr=>curr&&curr.s?undefined:rec);
+          DB.ref(`${DB_ROOT}/personnel/${id}/activeLeave`).once('value').then(snap=>{
+            if(!snap.val()?.s)DB.ref(`${DB_ROOT}/personnel/${id}/activeLeave`).set({s:pr.s,from:pr.from||'',det:pr.det||'',...(pr.label?{label:pr.label}:{})});
+          });
+        });
+        setRecords(prev=>{
+          const next={...prev};let changed=false;
+          Object.entries(healed).forEach(([id,pr])=>{if(!next[id]?.s){next[id]={s:pr.s,det:pr.det||'',from:pr.from||'',...(pr.label?{label:pr.label}:{})};changed=true;}});
+          return changed?next:prev;
+        });
+        setPersonnel(prev=>prev.map(p=>{
+          if(!healed[p.id]||p.activeLeave?.s)return p;
+          const pr=healed[p.id];
+          const al={s:pr.s,from:pr.from||'',det:pr.det||'',...(pr.label?{label:pr.label}:{})};
+          personnelRef.current=personnelRef.current.map(x=>x.id===p.id?{...x,activeLeave:al}:x);
+          return {...p,activeLeave:al};
+        }));
+      })();
+    }
   },[personnel,date,tod]);
   // History listener
   useEffect(()=>{
@@ -3262,7 +3306,6 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setP
   const[search,setSearch]=useState('');
   const[plt,setPlt]=useState('P1');
   const[confirmClear,setConfirmClear]=useState(null); // null or plt key
-  const[recovering,setRecovering]=useState(false);
   const[tempUnlocked,setTempUnlocked]=useState(null); // person id temporarily unlocked via search
   const[highlightIds,setHighlightIds]=useState(new Set()); // IDs of unmarked pax highlighted after failed submit
   // Once a highlighted person gets marked, remove them so clearing later doesn't re-highlight
@@ -3284,46 +3327,6 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setP
     if(onJumpDone)onJumpDone();
   },[jumpTo]);
   const isAdmin=currentUser?.role==='admin';
-  async function recoverCarries(){
-    if(recovering)return;
-    setRecovering(true);
-    try{
-      // Build a list of recent sessions to scan (last 7 days, all TODs), newest first
-      const sessions=[];
-      for(let daysBack=1;daysBack<=7;daysBack++){
-        const nd=new Date(date+'T00:00:00');nd.setDate(nd.getDate()-daysBack);
-        const ds=`${nd.getFullYear()}-${String(nd.getMonth()+1).padStart(2,'0')}-${String(nd.getDate()).padStart(2,'0')}`;
-        for(const t of['HLS','0745','1300','1730','2030_2230']){
-          sessions.push(`${DB_ROOT}/att/${ds}/${t}/records`);
-        }
-      }
-      // For each unassigned person, find their last known date-range status
-      const needed=personnelOnDate(personnel,date).filter(p=>!records[p.id]?.s);
-      if(!needed.length){toast_('Nothing to recover — all already assigned');setRecovering(false);return;}
-      const found={}; // id -> record
-      for(const path of sessions){
-        if(Object.keys(found).length===needed.length)break; // all found
-        const snap=await DB.ref(path).once('value');
-        const recs=snap.val()||{};
-        needed.forEach(p=>{
-          if(found[p.id])return;
-          const pr=recs[p.id];
-          if(!pr||!pr.s||!CARRY_DATE_RANGE.has(pr.s))return;
-          if(pr.from&&date<pr.from)return;
-          if(pr.det&&date>pr.det)return;
-          found[p.id]={...pr};
-        });
-      }
-      let count=0;
-      Object.entries(found).forEach(([id,pr])=>{
-        setRec(id,pr.s,pr.det||'',pr.from||'',pr.label||undefined);
-        setPersonLeave(id,pr.s,pr.from||'',pr.det||null,pr.label||undefined);
-        count++;
-      });
-      toast_(count>0?`✓ Recovered ${count} person${count!==1?'s':''} with active date-range status`:'No recoverable date-range statuses found in last 7 days');
-    }catch(e){toast_('Recovery failed — check connection');}
-    finally{setRecovering(false);}
-  }
   const active=personnelOnDate(personnel,date);
   const expiredSiso=active.filter(p=>sisoExpired(p));
   const filtered=active.filter(p=>{
@@ -3361,12 +3364,6 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setP
         <div className="stat-box"><div className="stat-n" style={{color:'#16a34a'}}>{attLoaded?presentCnt:'—'}</div><div className="stat-l">Present</div></div>
         <div className="stat-box" onClick={()=>{if(!attLoaded||unCnt===0)return;const unassigned=active.filter(p=>p.plt===plt&&(!records[p.id]||!records[p.id].s));const first=unassigned[0]||active.filter(p=>!records[p.id]||!records[p.id].s)[0];if(first){const el=document.getElementById(`pr-${first.id}`);if(el)el.scrollIntoView({behavior:'smooth',block:'center'});}}} style={{cursor:attLoaded&&unCnt>0?'pointer':'default',transition:'transform .15s',userSelect:'none'}} onMouseEnter={e=>{if(attLoaded&&unCnt>0)e.currentTarget.style.transform='scale(1.04)';}} onMouseLeave={e=>{e.currentTarget.style.transform='';}}><div className="stat-n" style={{color:attLoaded?(unCnt>0?'#f59e0b':'#16a34a'):'#94a3b8'}}>{attLoaded?unCnt:'—'}</div><div className="stat-l">Unassigned{attLoaded&&unCnt>0?' ↓':''}</div></div>
       </div>
-      {isAdmin&&!isNR&&(
-        <button onClick={recoverCarries} disabled={recovering}
-          style={{width:'100%',marginBottom:'8px',padding:'10px',background:recovering?'#f1f5f9':'#f0fdf4',color:recovering?'#94a3b8':'#16a34a',border:'1.5px solid',borderColor:recovering?'#e2e8f0':'#86efac',borderRadius:'10px',fontSize:'13px',fontWeight:700,cursor:recovering?'not-allowed':'pointer'}}>
-          {recovering?'Recovering…':'↺ Recover Missing Statuses from Night Strength'}
-        </button>
-      )}
       {(()=>{const isPastDate=date<todayStr();const isLocked=isPastDate&&!overrideUnlocked;return confirmClear===plt?(
         <div style={{display:'flex',gap:'8px',marginBottom:'10px',background:'#fef2f2',border:'1.5px solid #fca5a5',borderRadius:'10px',padding:'10px 12px',alignItems:'center'}}>
           <span style={{flex:1,fontSize:'13px',fontWeight:700,color:'#991b1b'}}>Clear all {P_LABEL[plt]||plt} statuses?</span>
