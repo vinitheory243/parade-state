@@ -2274,6 +2274,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   const attInitRef=useRef(false); // blocks write until first Firebase read completes
   const[attLoaded,setAttLoaded]=useState(false);
   const skipCarryPltRef=useRef(null); // set to plt key after clearAll to suppress carry re-application
+  const clearedLeaveRef=useRef(new Set()); // IDs whose activeLeave was intentionally cleared this session
   const listenerPausedRef=useRef(false); // blocks attendance listener from overwriting during clearAll
   const personnelRef=useRef(IP);
   const totalManualRef=useRef(false);
@@ -2540,7 +2541,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
     }
     // Self-heal: for anyone still unassigned with no activeLeave, scan yesterday's sessions
     // and restore their status + activeLeave automatically (guards against data wipes)
-    const noLeave=personnelOnDate(personnel,date).filter(p=>!p.activeLeave?.s&&!fills[p.id]);
+    const noLeave=personnelOnDate(personnel,date).filter(p=>!p.activeLeave?.s&&!fills[p.id]&&!clearedLeaveRef.current.has(p.id));
     if(noLeave.length&&!isNR){
       (async()=>{
         const nd=new Date(date+'T00:00:00');nd.setDate(nd.getDate()-1);
@@ -2583,6 +2584,8 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       })();
     }
   },[personnel,date,tod]);
+  // Reset intentional-clear tracking when navigating to a different date/tod
+  useEffect(()=>{clearedLeaveRef.current=new Set();},[date,tod]);
   // History listener
   useEffect(()=>{
     const ref=DB.ref(`${DB_ROOT}/history`);
@@ -2822,6 +2825,9 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
     const leave=s?{s,from:from||todayStr(),det:till||'',...(label?{label}:{}),...(mb?{markedBy:mb}:{})}:null;
     // Update ref immediately so carry doesn't re-apply during the Firebase roundtrip
     personnelRef.current=personnelRef.current.map(p=>p.id===id?{...p,activeLeave:leave}:p);
+    // Track intentional clears so self-heal doesn't restore them
+    if(!leave) clearedLeaveRef.current.add(id);
+    else clearedLeaveRef.current.delete(id);
     // Targeted write — avoids race condition from full-replace when multiple sgts write simultaneously
     if(leave) DB.ref(`${DB_ROOT}/personnel/${id}/activeLeave`).set(leave);
     else DB.ref(`${DB_ROOT}/personnel/${id}/activeLeave`).remove();
