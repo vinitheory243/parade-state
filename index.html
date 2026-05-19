@@ -2355,11 +2355,19 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       // ── CARRY RULE ──────────────────────────────────────────────
       function applyCarry(nr,p){
         if(skipCarryPltRef.current===p.plt)return;
-        if(nr[p.id]&&nr[p.id].s)return;
-        const dd=p.dailyDuty;
-        if(dd&&dd.date===date&&WHOLE_DAY_DUTY.has(dd.s)){nr[p.id]={s:dd.s,det:'',from:'',...(dd.markedBy?{markedBy:dd.markedBy}:{})};return;}
         const al=p.activeLeave;
         const alMb=al?.markedBy?{markedBy:al.markedBy}:{};
+        if(nr[p.id]?.s){
+          // Same dateRange status but activeLeave has updated dates → override pre-written record
+          if(al&&CARRY_DATE_RANGE.has(al.s)&&nr[p.id].s===al.s&&al.from&&date>=al.from&&(!al.det||date<=al.det)){
+            if((nr[p.id].from||'')!==(al.from||'')||(nr[p.id].det||'')!==(al.det||'')){
+              nr[p.id]={s:al.s,det:al.det||'',from:al.from||'',...(al.label?{label:al.label}:{}),...alMb};
+            }
+          }
+          return;
+        }
+        const dd=p.dailyDuty;
+        if(dd&&dd.date===date&&WHOLE_DAY_DUTY.has(dd.s)){nr[p.id]={s:dd.s,det:'',from:'',...(dd.markedBy?{markedBy:dd.markedBy}:{})};return;}
         if(al&&al.s==='am_leave'&&al.from===date){
           if(tod==='HLS'||tod==='0745'){nr[p.id]={s:'am_leave',det:'',from:date,...alMb};return;}
           return;
@@ -2497,11 +2505,20 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
       const nr={...prev};
       personnelOnDate(personnel,date).forEach(p=>{
         if(skipCarryPltRef.current===p.plt)return;
-        if(nr[p.id]?.s)return;
-        const dd=p.dailyDuty;
-        if(dd&&dd.date===date&&WHOLE_DAY_DUTY.has(dd.s)){nr[p.id]={s:dd.s,det:'',from:'',...(dd.markedBy?{markedBy:dd.markedBy}:{})};fills[p.id]=nr[p.id];changed=true;return;}
         const al=p.activeLeave;
         const alMb=al?.markedBy?{markedBy:al.markedBy}:{};
+        if(nr[p.id]?.s){
+          // Same dateRange status but activeLeave has updated dates → override pre-written record
+          if(al&&CARRY_DATE_RANGE.has(al.s)&&nr[p.id].s===al.s&&al.from&&date>=al.from&&(!al.det||date<=al.det)){
+            if((nr[p.id].from||'')!==(al.from||'')||(nr[p.id].det||'')!==(al.det||'')){
+              nr[p.id]={s:al.s,det:al.det||'',from:al.from||'',...(al.label?{label:al.label}:{}),...alMb};
+              fills[p.id]=nr[p.id];changed=true;
+            }
+          }
+          return;
+        }
+        const dd=p.dailyDuty;
+        if(dd&&dd.date===date&&WHOLE_DAY_DUTY.has(dd.s)){nr[p.id]={s:dd.s,det:'',from:'',...(dd.markedBy?{markedBy:dd.markedBy}:{})};fills[p.id]=nr[p.id];changed=true;return;}
         if(al&&al.s==='am_leave'&&al.from===date){
           if(tod==='HLS'||tod==='0745'){nr[p.id]={s:'am_leave',det:'',from:date,...alMb};fills[p.id]=nr[p.id];changed=true;return;}
           return;
