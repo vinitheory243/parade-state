@@ -2667,10 +2667,10 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         const tRef=DB.ref(`${DB_ROOT}/att/${ndStr}/${todKey(t)}/records/${id}`);
         const mbField=leave?.markedBy?{markedBy:leave.markedBy}:{};
         if(leave&&leave.s==='am_leave'&&leave.from===ndStr){
-          tRef.transaction(curr=>curr&&curr.s?undefined:{s:'am_leave',det:'',from:ndStr,...mbField});
+          tRef.transaction(curr=>curr&&curr.s&&curr.s!=='am_leave'?undefined:{s:'am_leave',det:'',from:ndStr,...mbField});
         }else if(leave&&CARRY_DATE_RANGE.has(leave.s)){
           const rec={s:leave.s,det:leave.det||'',from:leave.from||'',...(leave.label?{label:leave.label}:{}),...mbField};
-          tRef.transaction(curr=>curr&&curr.s?undefined:rec);
+          tRef.transaction(curr=>curr&&curr.s&&curr.s!==leave.s?undefined:rec);
         }else{
           tRef.once('value').then(snap=>{
             const sv=snap.val();
@@ -3352,7 +3352,7 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
   function handleFromDate(from){
     setRec(person.id,record.s,record.det||'',from,record.label);
     if(!isNR){
-      if(record.det&&CARRY_DATE_RANGE.has(record.s))setPersonLeave(person.id,record.s,from,record.det,record.label);
+      if(CARRY_DATE_RANGE.has(record.s))setPersonLeave(person.id,record.s,from,record.det||null,record.label);
       else if(SM[record.s]?.fromOnly)setPersonLeave(person.id,record.s,from,null);
     }
   }
