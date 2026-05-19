@@ -2274,8 +2274,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   const attInitRef=useRef(false); // blocks write until first Firebase read completes
   const[attLoaded,setAttLoaded]=useState(false);
   const skipCarryPltRef=useRef(null); // set to plt key after clearAll to suppress carry re-application
-  const clearedLeaveRef=useRef(new Set()); // IDs whose activeLeave was intentionally cleared this session
-  const listenerPausedRef=useRef(false); // blocks attendance listener from overwriting during clearAll
+const listenerPausedRef=useRef(false); // blocks attendance listener from overwriting during clearAll
   const personnelRef=useRef(IP);
   const totalManualRef=useRef(false);
   useEffect(()=>{personnelRef.current=personnel;},[personnel]);
@@ -2539,53 +2538,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         DB.ref(`${attPath}/records/${id}`).transaction(curr=>curr&&curr.s&&curr.s!==r.s?undefined:r)
       ));
     }
-    // Self-heal: for anyone still unassigned with no activeLeave, scan yesterday's sessions
-    // and restore their status + activeLeave automatically (guards against data wipes)
-    const noLeave=personnelOnDate(personnel,date).filter(p=>!p.activeLeave?.s&&!fills[p.id]&&!clearedLeaveRef.current.has(p.id));
-    if(noLeave.length&&!isNR){
-      (async()=>{
-        const nd=new Date(date+'T00:00:00');nd.setDate(nd.getDate()-1);
-        const prev=`${nd.getFullYear()}-${String(nd.getMonth()+1).padStart(2,'0')}-${String(nd.getDate()).padStart(2,'0')}`;
-        const healed={};
-        for(const t of['HLS','0745','1300','1730','2030_2230']){
-          if(Object.keys(healed).length>=noLeave.length)break;
-          const snap=await DB.ref(`${DB_ROOT}/att/${prev}/${t}/records`).once('value');
-          const recs=snap.val()||{};
-          noLeave.forEach(p=>{
-            if(healed[p.id])return;
-            const pr=recs[p.id];
-            if(!pr||!pr.s||!CARRY_DATE_RANGE.has(pr.s))return;
-            if(pr.from&&date<pr.from)return;
-            if(pr.det&&date>pr.det)return;
-            healed[p.id]=pr;
-          });
-        }
-        if(!Object.keys(healed).length)return;
-        // Write attendance records and restore activeLeave
-        Object.entries(healed).forEach(([id,pr])=>{
-          const rec={s:pr.s,det:pr.det||'',from:pr.from||'',...(pr.label?{label:pr.label}:{})};
-          DB.ref(`${attPath}/records/${id}`).transaction(curr=>curr&&curr.s?undefined:rec);
-          DB.ref(`${DB_ROOT}/personnel/${id}/activeLeave`).once('value').then(snap=>{
-            if(!snap.val()?.s)DB.ref(`${DB_ROOT}/personnel/${id}/activeLeave`).set({s:pr.s,from:pr.from||'',det:pr.det||'',...(pr.label?{label:pr.label}:{})});
-          });
-        });
-        setRecords(prev=>{
-          const next={...prev};let changed=false;
-          Object.entries(healed).forEach(([id,pr])=>{if(!next[id]?.s){next[id]={s:pr.s,det:pr.det||'',from:pr.from||'',...(pr.label?{label:pr.label}:{})};changed=true;}});
-          return changed?next:prev;
-        });
-        setPersonnel(prev=>prev.map(p=>{
-          if(!healed[p.id]||p.activeLeave?.s)return p;
-          const pr=healed[p.id];
-          const al={s:pr.s,from:pr.from||'',det:pr.det||'',...(pr.label?{label:pr.label}:{})};
-          personnelRef.current=personnelRef.current.map(x=>x.id===p.id?{...x,activeLeave:al}:x);
-          return {...p,activeLeave:al};
-        }));
-      })();
-    }
   },[personnel,date,tod]);
-  // Reset intentional-clear tracking when navigating to a different date/tod
-  useEffect(()=>{clearedLeaveRef.current=new Set();},[date,tod]);
   // History listener
   useEffect(()=>{
     const ref=DB.ref(`${DB_ROOT}/history`);
@@ -2825,9 +2778,6 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
     const leave=s?{s,from:from||todayStr(),det:till||'',...(label?{label}:{}),...(mb?{markedBy:mb}:{})}:null;
     // Update ref immediately so carry doesn't re-apply during the Firebase roundtrip
     personnelRef.current=personnelRef.current.map(p=>p.id===id?{...p,activeLeave:leave}:p);
-    // Track intentional clears so self-heal doesn't restore them
-    if(!leave) clearedLeaveRef.current.add(id);
-    else clearedLeaveRef.current.delete(id);
     // Targeted write — avoids race condition from full-replace when multiple sgts write simultaneously
     if(leave) DB.ref(`${DB_ROOT}/personnel/${id}/activeLeave`).set(leave);
     else DB.ref(`${DB_ROOT}/personnel/${id}/activeLeave`).remove();
