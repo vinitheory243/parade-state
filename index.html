@@ -3288,22 +3288,39 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setP
     if(recovering)return;
     setRecovering(true);
     try{
-      const nd=new Date(date+'T00:00:00');nd.setDate(nd.getDate()-1);
-      const prev=`${nd.getFullYear()}-${String(nd.getMonth()+1).padStart(2,'0')}-${String(nd.getDate()).padStart(2,'0')}`;
-      const snap=await DB.ref(`${DB_ROOT}/att/${prev}/2030_2230/records`).once('value');
-      const prevRecs=snap.val()||{};
+      // Build a list of recent sessions to scan (last 7 days, all TODs), newest first
+      const sessions=[];
+      for(let daysBack=1;daysBack<=7;daysBack++){
+        const nd=new Date(date+'T00:00:00');nd.setDate(nd.getDate()-daysBack);
+        const ds=`${nd.getFullYear()}-${String(nd.getMonth()+1).padStart(2,'0')}-${String(nd.getDate()).padStart(2,'0')}`;
+        for(const t of['HLS','0745','1300','1730','2030_2230']){
+          sessions.push(`${DB_ROOT}/att/${ds}/${t}/records`);
+        }
+      }
+      // For each unassigned person, find their last known date-range status
+      const needed=personnelOnDate(personnel,date).filter(p=>!records[p.id]?.s);
+      if(!needed.length){toast_('Nothing to recover — all already assigned');setRecovering(false);return;}
+      const found={}; // id -> record
+      for(const path of sessions){
+        if(Object.keys(found).length===needed.length)break; // all found
+        const snap=await DB.ref(path).once('value');
+        const recs=snap.val()||{};
+        needed.forEach(p=>{
+          if(found[p.id])return;
+          const pr=recs[p.id];
+          if(!pr||!pr.s||!CARRY_DATE_RANGE.has(pr.s))return;
+          if(pr.from&&date<pr.from)return;
+          if(pr.det&&date>pr.det)return;
+          found[p.id]={...pr};
+        });
+      }
       let count=0;
-      personnelOnDate(personnel,date).forEach(p=>{
-        if(records[p.id]?.s)return; // already assigned
-        const pr=prevRecs[p.id];
-        if(!pr||!pr.s||!CARRY_DATE_RANGE.has(pr.s))return;
-        if(pr.from&&date<pr.from)return; // not started yet
-        if(pr.det&&date>pr.det)return;   // already ended
-        setRec(p.id,pr.s,pr.det||'',pr.from||'',pr.label||undefined);
-        setPersonLeave(p.id,pr.s,pr.from||'',pr.det||null,pr.label||undefined);
+      Object.entries(found).forEach(([id,pr])=>{
+        setRec(id,pr.s,pr.det||'',pr.from||'',pr.label||undefined);
+        setPersonLeave(id,pr.s,pr.from||'',pr.det||null,pr.label||undefined);
         count++;
       });
-      toast_(count>0?`✓ Recovered ${count} person${count!==1?'s':''} from night strength (${prev})`:'Nothing new to recover — all already assigned');
+      toast_(count>0?`✓ Recovered ${count} person${count!==1?'s':''} with active date-range status`:'No recoverable date-range statuses found in last 7 days');
     }catch(e){toast_('Recovery failed — check connection');}
     finally{setRecovering(false);}
   }
