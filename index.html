@@ -2820,6 +2820,8 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
   function setPersonLeave(id,s,from,till,label){
     const mb=currentUser?.uid?{uid:currentUser.uid,name:currentUser.name||currentUser.email||'',markedAt:Date.now()}:null;
     const leave=s?{s,from:from||todayStr(),det:till||'',...(label?{label}:{}),...(mb?{markedBy:mb}:{})}:null;
+    // Update ref immediately so carry doesn't re-apply during the Firebase roundtrip
+    personnelRef.current=personnelRef.current.map(p=>p.id===id?{...p,activeLeave:leave}:p);
     // Targeted write — avoids race condition from full-replace when multiple sgts write simultaneously
     if(leave) DB.ref(`${DB_ROOT}/personnel/${id}/activeLeave`).set(leave);
     else DB.ref(`${DB_ROOT}/personnel/${id}/activeLeave`).remove();
