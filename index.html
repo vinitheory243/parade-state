@@ -2307,7 +2307,11 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
         setPersonnel(ppl);
         if(!totalManualRef.current)setTotal(personnelOnDate(ppl,todayStr()).length);
       } else {
-        const obj={};SEED.forEach(p=>{obj[p.id]=p;});ref.set(obj);
+        // Only seed on first load if data is truly absent — never reseed after data existed,
+        // as that would wipe activeLeave for everyone currently on leave/course
+        if(!personnelRef.current||personnelRef.current.length===0){
+          const obj={};SEED.forEach(p=>{obj[p.id]=p;});ref.set(obj);
+        }
       }
     });
     return()=>ref.off();
