@@ -2414,7 +2414,7 @@ function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmi
     });
     if(Object.keys(fills).length){
       Promise.all(Object.entries(fills).map(([id,r])=>
-        DB.ref(`${attPath}/records/${id}`).transaction(curr=>curr&&curr.s?undefined:r)
+        DB.ref(`${attPath}/records/${id}`).transaction(curr=>curr&&curr.s&&curr.s!==r.s?undefined:r)
       ));
     }
   },[personnel,date,tod]);
@@ -3345,9 +3345,10 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
     if(newS)setShowMore(false);
   }
   function handleTillDate(till){
-    setRec(person.id,record.s,till,record.from||currentDate,record.label);
-    // Only set activeLeave (carry) for statuses that are in the carry date-range set
-    if(!isNR&&CARRY_DATE_RANGE.has(record.s))setPersonLeave(person.id,record.s,record.from||currentDate,till,record.label);
+    // Use activeLeave.from as authoritative source — record.from may have drifted from pre-writes
+    const authFrom=(person.activeLeave?.s===record.s&&person.activeLeave?.from)||record.from||currentDate;
+    setRec(person.id,record.s,till,authFrom,record.label);
+    if(!isNR&&CARRY_DATE_RANGE.has(record.s))setPersonLeave(person.id,record.s,authFrom,till,record.label);
   }
   function handleFromDate(from){
     setRec(person.id,record.s,record.det||'',from,record.label);
@@ -3439,8 +3440,8 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
               {(si.dateRange||si.fromOnly)&&(
                 <div className="dpick-row">
                   <span className="dpick-lbl">From</span>
-                  <input type="date" className="dpick-inp" value={record.from||currentDate||''}
-                    min={currentDate} onChange={e=>handleFromDate(e.target.value)}/>
+                  <input type="date" className="dpick-inp" value={(person.activeLeave?.s===record.s&&person.activeLeave?.from)||record.from||currentDate||''}
+                    onChange={e=>handleFromDate(e.target.value)}/>
                 </div>
               )}
               {!si.fromOnly&&(
