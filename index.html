@@ -3373,6 +3373,10 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setP
 function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,locked,currentDate,otherReasons,addOtherReason,deleteOtherReason,tempUnlocked,onLockBack,isNR,highlighted}){
   const[showMore,setShowMore]=useState(false);
   const[showMarker,setShowMarker]=useState(false);
+  // Track from/till intent immediately so handleTillDate doesn't read stale state
+  const fromIntentRef=useRef(null);
+  const detIntentRef=useRef(null);
+  React.useEffect(()=>{fromIntentRef.current=null;detIntentRef.current=null;},[record.s,person.id]);
   const si=record.s?SM[record.s]:null;
   const colorClass=record.s?`sc-${record.s}`:'';
   const pltClass={P1:'plt-p1',P2:'plt-p2',HQ:'plt-hq'}[person.plt]||'';
@@ -3444,15 +3448,18 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
     if(newS)setShowMore(false);
   }
   function handleTillDate(till){
-    // Use activeLeave.from as authoritative source — record.from may have drifted from pre-writes
-    const authFrom=(person.activeLeave?.s===record.s&&person.activeLeave?.from)||record.from||currentDate;
+    detIntentRef.current=till;
+    const displayedFrom=(person.activeLeave?.s===record.s&&person.activeLeave?.from)||record.from||currentDate;
+    const authFrom=fromIntentRef.current||displayedFrom;
     setRec(person.id,record.s,till,authFrom,record.label);
     if(!isNR&&CARRY_DATE_RANGE.has(record.s))setPersonLeave(person.id,record.s,authFrom,till,record.label);
   }
   function handleFromDate(from){
-    setRec(person.id,record.s,record.det||'',from,record.label);
+    fromIntentRef.current=from;
+    const det=detIntentRef.current||record.det||'';
+    setRec(person.id,record.s,det,from,record.label);
     if(!isNR){
-      if(CARRY_DATE_RANGE.has(record.s))setPersonLeave(person.id,record.s,from,record.det||null,record.label);
+      if(CARRY_DATE_RANGE.has(record.s))setPersonLeave(person.id,record.s,from,det||null,record.label);
       else if(SM[record.s]?.fromOnly)setPersonLeave(person.id,record.s,from,null);
     }
   }
