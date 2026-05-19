@@ -3236,7 +3236,7 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setP
           </button>
         ))}
       </div>
-      {(()=>{const pltList=PLATOONS.filter(p=>tree[p]);return pltList.filter(p=>p===plt).map((p)=>{
+      {(()=>{const pltList=PLATOONS.filter(p=>tree[p]);return pltList.filter(p=>search?true:p===plt).map((p)=>{
         const isPastDate=date<todayStr();
         const isLocked=isPastDate&&!overrideUnlocked;
         return(
