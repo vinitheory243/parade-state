@@ -1831,6 +1831,10 @@ function LandingScreen({onPick,onLogout,isAdmin,isDemo,currentUserLabel}){
     await DB.ref(`${DB_ROOT}/feedback/${id}`).update(upd);
     setFbList(prev=>prev.map(f=>f.id===id?{...f,...upd}:f));
   }
+  async function deleteFbEntry(id){
+    await DB.ref(`${DB_ROOT}/feedback/${id}`).remove();
+    setFbList(prev=>prev.filter(f=>f.id!==id));
+  }
 
   function openNR(){setNrModal('choose');}
   async function openTodayNR(){
@@ -1949,6 +1953,10 @@ function LandingScreen({onPick,onLogout,isAdmin,isDemo,currentUserLabel}){
                           <button onClick={()=>setFbTag(f.id,'fixed')}
                             style={{padding:'4px 10px',borderRadius:'20px',border:'none',fontSize:'11px',fontWeight:700,cursor:'pointer',background:!isPending?'#10b981':'#e2e8f0',color:!isPending?'#fff':'#64748b'}}>
                             Fixed ✓
+                          </button>
+                          <button onClick={()=>deleteFbEntry(f.id)}
+                            style={{padding:'4px 10px',borderRadius:'20px',border:'none',fontSize:'11px',fontWeight:700,cursor:'pointer',background:'#fee2e2',color:'#991b1b'}}>
+                            Delete
                           </button>
                         </div>
                       ):(
@@ -2073,11 +2081,72 @@ function LandingScreen({onPick,onLogout,isAdmin,isDemo,currentUserLabel}){
 }
 
 // ─── ROOT (auth gate) ───────────────────────────────────────────
+// ─── UPDATE SPLASH ──────────────────────────────────────────────
+function UpdateSplash({fixes,onDone}){
+  const[progress,setProgress]=useState(0);
+  const[visible,setVisible]=useState(false);
+  const DURATION=5000;
+  React.useEffect(()=>{
+    document.body.style.overflow='hidden';
+    return()=>{document.body.style.overflow='';};
+  },[]);
+  React.useEffect(()=>{
+    setTimeout(()=>setVisible(true),50);
+    const start=Date.now();
+    const raf=()=>{
+      const pct=Math.min(100,(Date.now()-start)/DURATION*100);
+      setProgress(pct);
+      if(pct<100)requestAnimationFrame(raf);
+      else onDone();
+    };
+    requestAnimationFrame(raf);
+  },[]);
+  const secs=Math.max(0,Math.ceil((100-progress)/100*5));
+  return(
+    <div style={{position:'fixed',inset:0,background:'#0f2235',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',zIndex:9999,padding:'24px'}}>
+      <style>{`
+        @keyframes wrench-rock{0%,100%{transform:rotate(-15deg)}50%{transform:rotate(15deg)}}
+        @keyframes splash-in{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+      `}</style>
+      <div style={{maxWidth:'440px',width:'100%',opacity:visible?1:0,transition:'opacity .4s ease'}}>
+        {/* icon area */}
+        <div style={{textAlign:'center',marginBottom:'28px'}}>
+          <div style={{fontSize:'52px',display:'inline-block',animation:'wrench-rock 1.4s ease-in-out infinite',marginBottom:'14px'}}>🔧</div>
+          <div style={{fontSize:'22px',fontWeight:900,color:'#fff',marginBottom:'6px'}}>What's New</div>
+          <div style={{fontSize:'13px',color:'#64748b'}}>New fixes since your last login</div>
+        </div>
+        {/* fix cards */}
+        <div style={{display:'flex',flexDirection:'column',gap:'10px',marginBottom:'28px',maxHeight:'45vh',overflowY:'auto',scrollbarWidth:'none',msOverflowStyle:'none'}}>
+          {fixes.map((f,i)=>(
+            <div key={f.id} style={{background:'#162d44',border:'1px solid #1e3a52',borderRadius:'12px',padding:'14px 16px',display:'flex',gap:'12px',alignItems:'center',animation:`splash-in .4s ease ${i*0.1}s both`}}>
+              <div style={{width:28,height:28,borderRadius:'50%',background:'#0d9488',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:'13px',color:'#fff',fontWeight:800}}>✓</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:'13.5px',fontWeight:700,color:'#f1f5f9',marginBottom:'2px'}}>{f.text}</div>
+                <div style={{fontSize:'11px',color:'#475569'}}>Fixed {new Date(f.fixedAt).toLocaleDateString('en-SG',{day:'numeric',month:'short',year:'numeric'})}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* button */}
+        <button onClick={onDone} style={{width:'100%',padding:'13px',background:'#0d9488',color:'#fff',border:'none',borderRadius:'10px',fontSize:'14px',fontWeight:800,cursor:'pointer',marginBottom:'16px'}}>
+          Got it — Continue to App
+        </button>
+        {/* progress bar */}
+        <div style={{background:'rgba(255,255,255,.08)',borderRadius:'99px',height:'4px',overflow:'hidden',marginBottom:'8px'}}>
+          <div style={{height:'100%',background:'#0d9488',borderRadius:'99px',width:`${progress}%`,transition:'width 0.1s linear'}}/>
+        </div>
+        <div style={{textAlign:'center',fontSize:'11px',color:'#334155'}}>Auto-continuing in {secs}s</div>
+      </div>
+    </div>
+  );
+}
+
 function Root(){
   // authState: 'loading' | 'unauthenticated' | 'pending' | 'set-name' | 'ready'
   const[authState,setAuthState]=useState('loading');
   const[currentUser,setCurrentUser]=useState(null); // {uid,name,email,role}
   const[picked,setPicked]=useState(null);
+  const[pendingFixes,setPendingFixes]=useState(null); // null=checking, []=none, [...]=unseen fixes
 
   React.useEffect(()=>{
     const unsub=AUTH.onAuthStateChanged(async firebaseUser=>{
@@ -2102,7 +2171,21 @@ function Root(){
         setAuthState('set-name');
         return;
       }
-      setCurrentUser({uid:firebaseUser.uid,name:rec.name,email:firebaseUser.email||'',role:rec.role});
+      const uid=firebaseUser.uid;
+      setCurrentUser({uid,name:rec.name,email:firebaseUser.email||'',role:rec.role});
+      // Check for unseen fixes
+      const now=Date.now();const TEN=10*24*3600*1000;
+      const [fbSnap,seenSnap]=await Promise.all([
+        DB.ref(`jrn/feedback`).once('value'),
+        DB.ref(`jrn/users/${uid}/seenFixes`).once('value')
+      ]);
+      const seenIds=new Set(Object.keys(seenSnap.val()||{}));
+      const rawFb=fbSnap.val()||{};
+      const newFixes=Object.entries(rawFb)
+        .filter(([id,v])=>v.tag==='fixed'&&v.fixedAt&&now<=v.fixedAt+TEN&&!seenIds.has(id))
+        .map(([id,v])=>({id,...v}))
+        .sort((a,b)=>b.fixedAt-a.fixedAt);
+      setPendingFixes(newFixes);
       setAuthState('ready');
     });
     return unsub;
@@ -2118,6 +2201,14 @@ function Root(){
     setAuthState('ready');
   }
   function handleLogout(){handleSignOut();}
+  async function handleSplashDone(){
+    if(pendingFixes&&pendingFixes.length>0){
+      const updates={};
+      pendingFixes.forEach(f=>{updates[f.id]=true;});
+      await DB.ref(`jrn/users/${currentUser.uid}/seenFixes`).update(updates);
+    }
+    setPendingFixes([]);
+  }
 
   if(authState==='loading')return(
     <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'linear-gradient(160deg,#0f2235 0%,#0d4a45 60%,#064e3b 100%)'}}>
@@ -2130,6 +2221,7 @@ function Root(){
 
   const isAdmin=currentUser?.role==='admin';
   const isDemo=false;
+  if(pendingFixes===null||pendingFixes.length>0)return <UpdateSplash fixes={pendingFixes||[]} onDone={handleSplashDone}/>;
   if(!picked)return <LandingScreen onPick={(date,tod,eventName,eventKey)=>setPicked({date,tod,eventName,eventKey})} onLogout={handleLogout} isAdmin={isAdmin} isDemo={isDemo} currentUserLabel={currentUser?.name||currentUser?.email||'User'}/>;
   return <App initDate={picked.date} initTod={picked.tod} initEventName={picked.eventName||''} initEventKey={picked.eventKey||''} isAdmin={isAdmin} isDemo={isDemo} currentUser={currentUser} onHome={()=>setPicked(null)} onLogout={handleLogout}/>;
 }
