@@ -2467,17 +2467,20 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
               return true;
             }
             let seeded={};
+            // Per person: take their locked non-present status from the most recent TOD that has one
             for(let i=todIdx-1;i>=0;i--){
               const snap2=await DB.ref(fbAttPath(date,TODS[i])).once('value');
               const td=snap2.val();
               if(!td||!td.records)continue;
-              const confirmed=Object.fromEntries(Object.entries(td.records).filter(([,r])=>isConfirmedRec(r)));
-              if(Object.keys(confirmed).length){seeded=confirmed;break;}
+              Object.entries(td.records).forEach(([id,r])=>{
+                if(seeded[id])return;
+                if(!isConfirmedRec(r)||r.s==='present')return;
+                seeded[id]=r;
+              });
             }
             // Re-read personnel AFTER awaits — by now it should have loaded
             const activePpl=personnelOnDate(personnelRef.current,date);
             const nr={...seeded};
-            Object.keys(nr).forEach(id=>{if(nr[id]?.s==='present')delete nr[id];});
             // Strip half-day leaves that don't carry to this TOD
             Object.keys(nr).forEach(id=>{
               const s=nr[id]?.s;
