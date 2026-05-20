@@ -141,6 +141,10 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .prow-cur-chip{padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;background:#ccfbf1;color:#0f766e;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .prow-clear-btn{padding:3px 9px;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0}
 .prow-clear-btn:active{background:#e2e8f0}
+.prow-lock-btn{padding:3px 8px;background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;border-radius:8px;font-size:12px;cursor:pointer;flex-shrink:0;line-height:1.4}
+.prow-lock-btn:active{background:#bae6fd}
+.prow.prow-confirmed{opacity:0.52;filter:grayscale(40%)}
+.prow.prow-confirmed .prow-cur-chip{background:#e2e8f0;color:#64748b}
 /* ── Date picker ── */
 .dpick-wrap{background:#f0f9f8;border:1.5px solid #99f6e4;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
 .dpick-row{display:flex;gap:8px;align-items:center}
@@ -2359,7 +2363,7 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
         const alMb=al?.markedBy?{markedBy:al.markedBy}:{};
         if(nr[p.id]?.s){
           // Same dateRange status but activeLeave has updated dates → override pre-written record
-          if(al&&CARRY_DATE_RANGE.has(al.s)&&nr[p.id].s===al.s&&al.from&&date>=al.from&&(!al.det||date<=al.det)){
+          if(!nr[p.id].confirmed&&al&&CARRY_DATE_RANGE.has(al.s)&&nr[p.id].s===al.s&&al.from&&date>=al.from&&(!al.det||date<=al.det)){
             if((nr[p.id].from||'')!==(al.from||'')||(nr[p.id].det||'')!==(al.det||'')){
               nr[p.id]={s:al.s,det:al.det||'',from:al.from||'',...(al.label?{label:al.label}:{}),...alMb};
             }
@@ -2764,14 +2768,32 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
       return next;
     });
   }
+  function isRecComplete(s,det,from){
+    if(!s)return false;
+    const si=SM[s];
+    if(!si)return true;
+    if(si.halfDay)return true;
+    if(si.dateRange)return !!(from&&det);
+    if(si.fromOnly)return !!from;
+    return true;
+  }
   function setRec(id,s,det,from,label){
     const rec={s,det:det||'',from:from||''};
     if(label!==undefined)rec.label=label||'';
     if(s&&currentUser?.uid)rec.markedBy={uid:currentUser.uid,name:currentUser.name||currentUser.email||'',markedAt:Date.now()};
+    if(isRecComplete(s,det,from))rec.confirmed=true;
     setRecords(p=>({...p,[id]:rec}));
     // Atomic per-record write — prevents concurrent sgts from overwriting each other's marks
     if(s){DB.ref(`${attPath}/records/${id}`).set(rec);}
     else{DB.ref(`${attPath}/records/${id}`).remove();}
+  }
+  function toggleConfirm(id){
+    const r=records[id];
+    if(!r?.s)return;
+    const confirmed=!r.confirmed;
+    setRecords(p=>({...p,[id]:{...p[id],confirmed}}));
+    if(confirmed)DB.ref(`${attPath}/records/${id}/confirmed`).set(true);
+    else DB.ref(`${attPath}/records/${id}/confirmed`).remove();
   }
   function setPersonLeave(id,s,from,till,label){
     const mb=currentUser?.uid?{uid:currentUser.uid,name:currentUser.name||currentUser.email||'',markedAt:Date.now()}:null;
@@ -3379,7 +3401,7 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setP
                 <div className="sec-prog"><div className={`sec-prog-fill${done?' complete':''}`} style={{width:`${pct}%`}}/></div>
                 <div className="card-body">
                   {secPpl.map(person=>(
-                    <PersonRow key={person.id} person={person} record={records[person.id]||{}} setRec={setRec} setPersonLeave={setPersonLeave} setPersonDailyDuty={setPersonDailyDuty} tod={tod} locked={isLocked&&tempUnlocked!==person.id} currentDate={date} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={deleteOtherReason} tempUnlocked={tempUnlocked===person.id} onLockBack={()=>setTempUnlocked(null)} isNR={isNR} highlighted={highlightIds.has(person.id)&&!records[person.id]?.s}/>
+                    <PersonRow key={person.id} person={person} record={records[person.id]||{}} setRec={setRec} setPersonLeave={setPersonLeave} setPersonDailyDuty={setPersonDailyDuty} toggleConfirm={toggleConfirm} tod={tod} locked={isLocked&&tempUnlocked!==person.id} currentDate={date} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={deleteOtherReason} tempUnlocked={tempUnlocked===person.id} onLockBack={()=>setTempUnlocked(null)} isNR={isNR} highlighted={highlightIds.has(person.id)&&!records[person.id]?.s}/>
                   ))}
                 </div>
               </div>
@@ -3394,7 +3416,7 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setP
 }
 
 // ─── PERSON ROW ─────────────────────────────────────────────────
-function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,locked,currentDate,otherReasons,addOtherReason,deleteOtherReason,tempUnlocked,onLockBack,isNR,highlighted}){
+function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,toggleConfirm,tod,locked,currentDate,otherReasons,addOtherReason,deleteOtherReason,tempUnlocked,onLockBack,isNR,highlighted}){
   const[showMore,setShowMore]=useState(false);
   const[showMarker,setShowMarker]=useState(false);
   // Track from/till intent immediately so handleTillDate doesn't read stale state
@@ -3404,6 +3426,7 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
   const si=record.s?SM[record.s]:null;
   const colorClass=record.s?`sc-${record.s}`:'';
   const pltClass={P1:'plt-p1',P2:'plt-p2',HQ:'plt-hq'}[person.plt]||'';
+  const isConfirmed=!!record.confirmed;
   const expired=sisoExpired(person);
   const isPresent=record.s==='present';
   const isSO=record.s==='so'||record.s==='so_till';
@@ -3500,7 +3523,7 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
   }
 
   return(
-    <div id={`pr-${person.id}`} className={`prow ${colorClass}${!record.s?' prow-no-status':''}${expired?' siso-row-alert':''}${record.s?' has-status':''}${tempUnlocked?' temp-unlock':''}${highlighted?' highlight-unmarked':''}`}>
+    <div id={`pr-${person.id}`} className={`prow ${colorClass}${!record.s?' prow-no-status':''}${expired?' siso-row-alert':''}${record.s?' has-status':''}${tempUnlocked?' temp-unlock':''}${highlighted?' highlight-unmarked':''}${isConfirmed?' prow-confirmed':''}`}>
       <div className="prow-top">
         <div className="prow-name">{person.rank} {person.name}</div>
         <div style={{display:'flex',alignItems:'center',gap:'6px',flexShrink:0}}>
@@ -3532,8 +3555,11 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
             {showMarker&&record.markedBy&&<span style={{fontSize:'10px',color:'#7c3aed',fontWeight:600,paddingLeft:'2px'}}>Marked by: {record.markedBy.name||record.markedBy.uid}{record.markedBy.markedAt?' on '+new Date(record.markedBy.markedAt).toLocaleDateString('en-SG',{day:'2-digit',month:'2-digit',year:'numeric'})+' at '+new Date(record.markedBy.markedAt).toLocaleTimeString('en-SG',{hour:'numeric',minute:'2-digit',hour12:true}):''}</span>}
           </div>
           <div style={{display:'flex',gap:'4px',alignItems:'center'}}>
-            {record.markedBy&&<button onClick={()=>setShowMarker(v=>!v)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'14px',color:showMarker?'#7c3aed':'#94a3b8',padding:'2px 4px',lineHeight:1}} title="Who marked this?">ⓘ</button>}
-            {!locked&&<button className="prow-clear-btn" onClick={()=>quickSet('')}>✕</button>}
+            {record.markedBy&&!isConfirmed&&<button onClick={()=>setShowMarker(v=>!v)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'14px',color:showMarker?'#7c3aed':'#94a3b8',padding:'2px 4px',lineHeight:1}} title="Who marked this?">ⓘ</button>}
+            {isConfirmed
+              ?<button className="prow-lock-btn" onClick={()=>toggleConfirm(person.id)} title="Click to unlock">🔒</button>
+              :!locked&&<button className="prow-clear-btn" onClick={()=>quickSet('')}>✕</button>
+            }
           </div>
         </div>
       ):(
@@ -3546,7 +3572,7 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
           <button onClick={onLockBack} style={{background:'#16a34a',color:'#fff',border:'none',borderRadius:'8px',padding:'5px 12px',fontSize:'13px',fontWeight:800,cursor:'pointer'}}>✓ Done</button>
         </div>
       )}
-      {!locked&&(
+      {!locked&&!isConfirmed&&(
         <>
           <div className="prow-quick">
             <button className={`pq${isPresent?' pq-on-g':''}`} onClick={()=>quickSet('present')}>✓ Present</button>
