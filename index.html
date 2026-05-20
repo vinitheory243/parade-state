@@ -2085,7 +2085,7 @@ function LandingScreen({onPick,onLogout,isAdmin,isDemo,currentUserLabel}){
 function UpdateSplash({fixes,onDone}){
   const[progress,setProgress]=useState(0);
   const[visible,setVisible]=useState(false);
-  const DURATION=5000;
+  const DURATION=15000;
   React.useEffect(()=>{
     document.body.style.overflow='hidden';
     return()=>{document.body.style.overflow='';};
@@ -2101,7 +2101,7 @@ function UpdateSplash({fixes,onDone}){
     };
     requestAnimationFrame(raf);
   },[]);
-  const secs=Math.max(0,Math.ceil((100-progress)/100*5));
+  const secs=Math.max(0,Math.ceil((100-progress)/100*DURATION/1000));
   return(
     <div style={{position:'fixed',inset:0,background:'#0f2235',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',zIndex:9999,padding:'24px'}}>
       <style>{`
