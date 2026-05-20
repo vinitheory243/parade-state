@@ -2802,6 +2802,17 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
       if(currentUser?.uid)tomb.clearedBy={uid:currentUser.uid,name:currentUser.name||currentUser.email||'',clearedAt:Date.now()};
       setRecords(p=>({...p,[id]:tomb}));
       DB.ref(`${attPath}/records/${id}`).set(tomb);
+      // Propagate tombstone forward to any subsequent TODs that already have a status for this
+      // person — so clearing in MP also clears LP and NS if they were already seeded.
+      if(!isNR){
+        const todIdx=TODS.indexOf(tod);
+        for(let i=todIdx+1;i<TODS.length;i++){
+          DB.ref(`${fbAttPath(date,TODS[i])}/records/${id}`).transaction(curr=>{
+            if(!curr||curr.cleared)return undefined; // no record or already tombstoned — skip
+            return tomb;
+          });
+        }
+      }
       return;
     }
     const rec={s,det:det||'',from:from||''};
