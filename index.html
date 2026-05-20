@@ -2453,19 +2453,26 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
             setSubmitted({P1:false,P2:false,HQ:false});setMarkedBy({P1:'',P2:'',HQ:''});
           })();
         } else {
-          // FP/MP/LP/NS: seed from most complete previous TOD (most assigned), strip present, then carry
+          // FP/MP/LP/NS: seed from most recent previous TOD that has confirmed records, then carry
           (async()=>{
             const todIdx=TODS.indexOf(tod);
-            // Use raw record counts (not filtered by activePpl) so seeding works even
-            // if personnelRef hasn't loaded yet when this IIFE starts.
+            function isConfirmedRec(r){
+              if(!r||!r.s)return false;
+              if(r.confirmed===false)return false;
+              if(r.confirmed===true)return true;
+              const si=SM[r.s];
+              if(!si||si.halfDay)return true;
+              if(si.dateRange)return !!(r.from&&r.det);
+              if(si.fromOnly)return !!r.from;
+              return true;
+            }
             let seeded={};
-            let bestCount=0;
             for(let i=todIdx-1;i>=0;i--){
               const snap2=await DB.ref(fbAttPath(date,TODS[i])).once('value');
               const td=snap2.val();
               if(!td||!td.records)continue;
-              const count=Object.values(td.records).filter(r=>r&&r.s).length;
-              if(count>bestCount){bestCount=count;seeded={...td.records};}
+              const confirmed=Object.fromEntries(Object.entries(td.records).filter(([,r])=>isConfirmedRec(r)));
+              if(Object.keys(confirmed).length){seeded=confirmed;break;}
             }
             // Re-read personnel AFTER awaits — by now it should have loaded
             const activePpl=personnelOnDate(personnelRef.current,date);
