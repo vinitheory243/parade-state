@@ -3438,7 +3438,7 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
         // Set activeLeave immediately so carry works even before till date is picked
         setPersonLeave(person.id,s,currentDate,null);
       } else {
-        if(person.activeLeave)setPersonLeave(person.id,null,null,null);
+        setPersonLeave(person.id,null,null,null);
       }
       if(WHOLE_DAY_DUTY.has(s))setPersonDailyDuty(person.id,s,currentDate);
       else if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
@@ -3464,7 +3464,7 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,tod,l
         // Set activeLeave immediately so carry works even before till date is picked
         setPersonLeave(person.id,newS,currentDate,null);
       } else {
-        if(person.activeLeave)setPersonLeave(person.id,null,null,null);
+        setPersonLeave(person.id,null,null,null);
       }
       if(WHOLE_DAY_DUTY.has(newS))setPersonDailyDuty(person.id,newS,currentDate);
       else if(person.dailyDuty)setPersonDailyDuty(person.id,null,null);
