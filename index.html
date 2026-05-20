@@ -3568,7 +3568,7 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,toggl
             {record.markedBy&&!isConfirmed&&<button onClick={()=>setShowMarker(v=>!v)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'14px',color:showMarker?'#7c3aed':'#94a3b8',padding:'2px 4px',lineHeight:1}} title="Who marked this?">ⓘ</button>}
             {isConfirmed
               ?<button className="prow-lock-btn" onClick={()=>toggleConfirm(person.id)} title="Click to unlock">🔒</button>
-              :!locked&&<button className="prow-clear-btn" onClick={()=>quickSet('')}>✕</button>
+              :<>{!locked&&<button className="prow-lock-btn" style={{background:'#f0fdf4',color:'#15803d',border:'1px solid #bbf7d0'}} onClick={()=>toggleConfirm(person.id)} title="Click to lock">🔓</button>}{!locked&&<button className="prow-clear-btn" onClick={()=>quickSet('')}>✕</button>}</>
             }
           </div>
         </div>
