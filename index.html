@@ -2361,6 +2361,7 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
         if(skipCarryPltRef.current===p.plt)return;
         const al=p.activeLeave;
         const alMb=al?.markedBy?{markedBy:al.markedBy}:{};
+        if(nr[p.id]?.cleared)return; // explicit clear — never carry over a tombstone
         if(nr[p.id]?.s){
           // Same dateRange status but activeLeave has updated dates → override pre-written record
           if(!nr[p.id].confirmed&&al&&CARRY_DATE_RANGE.has(al.s)&&nr[p.id].s===al.s&&al.from&&date>=al.from&&(!al.det||date<=al.det)){
@@ -2410,7 +2411,7 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
                 const next={...prev};let changed=false;
                 personnelOnDate(personnelRef.current,date).forEach(p=>{
                   const ps=prevRec[p.id]?.s;
-                  if(!next[p.id]?.s&&ps&&ps!=='present'){next[p.id]={...prevRec[p.id]};changed=true;}
+                  if(!next[p.id]?.s&&!next[p.id]?.cleared&&ps&&ps!=='present'){next[p.id]={...prevRec[p.id]};changed=true;}
                 });
                 return changed?next:prev;
               });
@@ -2467,20 +2468,25 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
               return true;
             }
             let seeded={};
-            // Per person: take their locked non-present status from the most recent TOD that has one
+            // Per person: take their locked non-present status from the most recent TOD that has one.
+            // Tombstones (cleared:true) act as stop signals — they block seeding from earlier TODs
+            // without themselves contributing a status.
             for(let i=todIdx-1;i>=0;i--){
               const snap2=await DB.ref(fbAttPath(date,TODS[i])).once('value');
               const td=snap2.val();
               if(!td||!td.records)continue;
               Object.entries(td.records).forEach(([id,r])=>{
                 if(seeded[id])return;
+                if(r.cleared){seeded[id]=r;return;} // tombstone — block earlier TODs, no status applied
                 if(!isConfirmedRec(r)||r.s==='present')return;
                 seeded[id]=r;
               });
             }
             // Re-read personnel AFTER awaits — by now it should have loaded
             const activePpl=personnelOnDate(personnelRef.current,date);
-            const nr={...seeded};
+            // Filter tombstones out — they don't contribute a status, just block re-seeding
+            const nr={};
+            Object.entries(seeded).forEach(([id,r])=>{if(!r.cleared&&r.s)nr[id]=r;});
             // Strip half-day leaves that don't carry to this TOD
             Object.keys(nr).forEach(id=>{
               const s=nr[id]?.s;
@@ -2488,9 +2494,9 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
               if(s==='pm_leave'&&tod==='2030/2230')delete nr[id];
             });
             activePpl.forEach(p=>applyCarry(nr,p));
-            setRecords(prev=>{const m={...nr};Object.entries(prev).forEach(([id,r])=>{if(r?.s)m[id]=r;});return m;});
+            setRecords(prev=>{const m={...nr};Object.entries(prev).forEach(([id,r])=>{if(r?.s||r?.cleared)m[id]=r;});return m;});
             await Promise.all(Object.entries(nr).map(([id,r])=>
-              DB.ref(`${attPath}/records/${id}`).transaction(curr=>curr&&curr.s?undefined:r)
+              DB.ref(`${attPath}/records/${id}`).transaction(curr=>curr&&(curr.s||curr.cleared)?undefined:r)
             ));
             setSubmitted({P1:false,P2:false,HQ:false});setMarkedBy({P1:'',P2:'',HQ:''});
           })();
@@ -2521,6 +2527,7 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
         if(skipCarryPltRef.current===p.plt)return;
         const al=p.activeLeave;
         const alMb=al?.markedBy?{markedBy:al.markedBy}:{};
+        if(nr[p.id]?.cleared)return; // explicit clear — never carry over a tombstone
         if(nr[p.id]?.s){
           // Same dateRange status but activeLeave has updated dates → override pre-written record
           if(al&&CARRY_DATE_RANGE.has(al.s)&&nr[p.id].s===al.s&&al.from&&date>=al.from&&(!al.det||date<=al.det)){
@@ -2788,14 +2795,21 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
     return true;
   }
   function setRec(id,s,det,from,label){
+    if(!s){
+      // Tombstone — explicit clear. Persists to Firebase so re-entering or seeding into the next
+      // TOD both see the clear and don't re-seed this person from an earlier TOD.
+      const tomb={s:'',cleared:true};
+      if(currentUser?.uid)tomb.clearedBy={uid:currentUser.uid,name:currentUser.name||currentUser.email||'',clearedAt:Date.now()};
+      setRecords(p=>({...p,[id]:tomb}));
+      DB.ref(`${attPath}/records/${id}`).set(tomb);
+      return;
+    }
     const rec={s,det:det||'',from:from||''};
     if(label!==undefined)rec.label=label||'';
-    if(s&&currentUser?.uid)rec.markedBy={uid:currentUser.uid,name:currentUser.name||currentUser.email||'',markedAt:Date.now()};
+    if(currentUser?.uid)rec.markedBy={uid:currentUser.uid,name:currentUser.name||currentUser.email||'',markedAt:Date.now()};
     if(isRecComplete(s,det,from))rec.confirmed=true;
     setRecords(p=>({...p,[id]:rec}));
-    // Atomic per-record write — prevents concurrent sgts from overwriting each other's marks
-    if(s){DB.ref(`${attPath}/records/${id}`).set(rec);}
-    else{DB.ref(`${attPath}/records/${id}`).remove();}
+    DB.ref(`${attPath}/records/${id}`).set(rec);
   }
   function toggleConfirm(id){
     const r=records[id];
