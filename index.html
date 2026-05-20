@@ -2790,10 +2790,12 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
   function toggleConfirm(id){
     const r=records[id];
     if(!r?.s)return;
-    const confirmed=!r.confirmed;
-    setRecords(p=>({...p,[id]:{...p[id],confirmed}}));
-    if(confirmed)DB.ref(`${attPath}/records/${id}/confirmed`).set(true);
-    else DB.ref(`${attPath}/records/${id}/confirmed`).remove();
+    const si=SM[r.s];
+    const isComplete=!si?.datePick||si?.halfDay||(si?.dateRange?!!(r.from&&r.det):si?.fromOnly?!!r.from:true);
+    const effectiveConfirmed=r.confirmed===true||(r.confirmed!==false&&isComplete);
+    const next=effectiveConfirmed?false:true;
+    setRecords(p=>({...p,[id]:{...p[id],confirmed:next}}));
+    DB.ref(`${attPath}/records/${id}/confirmed`).set(next);
   }
   function setPersonLeave(id,s,from,till,label){
     const mb=currentUser?.uid?{uid:currentUser.uid,name:currentUser.name||currentUser.email||'',markedAt:Date.now()}:null;
@@ -3426,7 +3428,15 @@ function PersonRow({person,record,setRec,setPersonLeave,setPersonDailyDuty,toggl
   const si=record.s?SM[record.s]:null;
   const colorClass=record.s?`sc-${record.s}`:'';
   const pltClass={P1:'plt-p1',P2:'plt-p2',HQ:'plt-hq'}[person.plt]||'';
-  const isConfirmed=!!record.confirmed;
+  function recordIsComplete(){
+    if(!record.s)return false;
+    if(!si?.datePick||si?.halfDay)return true;
+    if(si?.dateRange)return !!(record.from&&record.det);
+    if(si?.fromOnly)return !!record.from;
+    return true;
+  }
+  // confirmed===true → explicit lock; confirmed===false → explicit unlock; undefined → auto from completeness
+  const isConfirmed=record.confirmed===true||(record.confirmed!==false&&recordIsComplete());
   const expired=sisoExpired(person);
   const isPresent=record.s==='present';
   const isSO=record.s==='so'||record.s==='so_till';
