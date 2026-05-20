@@ -2889,7 +2889,7 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
         )}
       </div>
       <div className="main">
-        {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setPersonDailyDuty={setPersonDailyDuty} setAllPresent={setAllPresent} clearAll={clearAll} toast_={toast_} overrideUnlocked={isAdmin||overrideUnlocked} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={isAdmin?deleteOtherReason:undefined} jumpTo={jumpTo} onJumpDone={()=>setJumpTo(null)} isNR={isNR} attLoaded={attLoaded} currentUser={currentUser}/>}
+        {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setPersonDailyDuty={setPersonDailyDuty} toggleConfirm={toggleConfirm} setAllPresent={setAllPresent} clearAll={clearAll} toast_={toast_} overrideUnlocked={isAdmin||overrideUnlocked} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={isAdmin?deleteOtherReason:undefined} jumpTo={jumpTo} onJumpDone={()=>setJumpTo(null)} isNR={isNR} attLoaded={attLoaded} currentUser={currentUser}/>}
         {isNR&&screen==='telegram'&&<NRGenerateScreen date={date} eventName={eventName} records={records} personnel={personnelOnDate(personnel,date)} toast_={toast_}/>}
         {!isNR&&screen==='telegram'&&<GenerateScreen msg={msg} total={total} setTotal={setTotal} totalManual={totalManual} setTotalManual={setTotalManual} autoTotal={personnelOnDate(personnel,date).length} extra={extra} setExtra={setExtra} toast_={toast_} date={date} tod={tod} records={records} personnel={personnelOnDate(personnel,date)} isAdmin={isAdmin}/>}
         {screen==='manage'&&<ManageScreen personnel={personnel} setPersonnel={setPersonnelAndSync} toast_={toast_} customSections={customSections} addCustomSection={addCustomSection} isAdmin={isAdmin} pendingPersonnel={pendingPersonnel} approvePending={approvePending} rejectPending={rejectPending} currentUser={currentUser}/>}
@@ -3299,7 +3299,7 @@ function NRHistoryScreen({nrHistory,personnel,overrideUnlocked,setOverrideUnlock
 }
 
 // ─── ATTENDANCE SCREEN ──────────────────────────────────────────
-function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setPersonDailyDuty,setAllPresent,clearAll,toast_,overrideUnlocked,otherReasons,addOtherReason,deleteOtherReason,jumpTo,onJumpDone,isNR,attLoaded,currentUser}){
+function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setPersonDailyDuty,toggleConfirm,setAllPresent,clearAll,toast_,overrideUnlocked,otherReasons,addOtherReason,deleteOtherReason,jumpTo,onJumpDone,isNR,attLoaded,currentUser}){
   const[search,setSearch]=useState('');
   const[plt,setPlt]=useState('P1');
   const[confirmClear,setConfirmClear]=useState(null); // null or plt key
