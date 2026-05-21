@@ -303,25 +303,25 @@ const SL = [
   {k:'duty',         l:'Duty',                     d:false},
   {k:'dto',          l:'DTO',                      d:false},
   {k:'adtl',         l:'ADTL',                     d:false},
-  {k:'dto_r',        l:'DTO/R',                    d:false},
-  {k:'adtl_r',       l:'ADTL/R',                   d:false},
+  {k:'dto_r',        l:'DTO/R',                    d:false, todOnly:true},
+  {k:'adtl_r',       l:'ADTL/R',                   d:false, todOnly:true},
   {k:'dtl',          l:'DTL',                      d:false},
   {k:'amb_t1',       l:'AMB T1',                   d:true, datePick:true, dateRange:true},
   {k:'amb_t2',       l:'AMB T2',                   d:true, datePick:true, dateRange:true},
   {k:'doo',          l:'DOO',                      d:false},
   {k:'so',           l:'Stay Out (S/O)',             d:false},
   {k:'so_till',      l:'Stay Out Till (S/O Till)',   d:true, datePick:true, dateRange:true, names:true, pre:'TILL '},
-  {k:'late',         l:'Late',                      d:false, names:true},
+  {k:'late',         l:'Late',                      d:false, names:true, todOnly:true},
   {k:'detail',       l:'Detail',                    d:true,  dp:'Detail info e.g. Guard Duty', names:true},
   {k:'arf',          l:'ARF',                       d:true, names:true},
-  {k:'ddr',          l:'Duty/Detail Rest',          d:false, names:true},
-  {k:'ma',           l:'MA (Medical Appt)',          d:true,  datePick:true, dateRange:true, names:true},
+  {k:'ddr',          l:'Duty/Detail Rest',          d:false, names:true, todOnly:true},
+  {k:'ma',           l:'MA (Medical Appt)',          d:false, names:true, todOnly:true},
   {k:'mc',           l:'MC (Medical Certificate)',   d:true,  datePick:true, dateRange:true, names:true, pre:'TILL '},
   {k:'hl',           l:'Hospitalisation Leave',      d:true,  datePick:true, dateRange:true, names:true, pre:'TILL '},
   {k:'hospitalised', l:'Hospitalised',               d:true, names:true},
-  {k:'mtl',          l:'MTL',                        d:false, names:true},
-  {k:'rso',          l:'RSO',                        d:false},
-  {k:'rsi',          l:'RSI',                        d:false, names:true},
+  {k:'mtl',          l:'MTL',                        d:false, names:true, todOnly:true},
+  {k:'rso',          l:'RSO',                        d:false, todOnly:true},
+  {k:'rsi',          l:'RSI',                        d:false, names:true, todOnly:true},
   {k:'off',          l:'OFF',                        d:true,  datePick:true, dateRange:true, names:true},
   {k:'birthday_off', l:'Birthday OFF',               d:true,  datePick:true, dateRange:true, names:true},
   {k:'oil',          l:'Off-In-Lieu (OIL)',          d:true,  datePick:true, dateRange:true, names:true},
@@ -348,10 +348,10 @@ const SL = [
   {k:'cse',          l:'CSE',                        d:true,  datePick:true, dateRange:true, names:true},
   {k:'lashing',      l:'LASHING',                    d:false},
   {k:'dcp',          l:'DCP',                        d:true,  datePick:true, dateRange:true, names:true},
-  {k:'jc1',          l:'JC1',                        d:false},
-  {k:'hq',           l:'HQ',                         d:false},
+  {k:'jc1',          l:'JC1',                        d:false, todOnly:true},
+  {k:'hq',           l:'HQ',                         d:false, todOnly:true},
   {k:'db_visits',    l:'DB visits',                  d:false},
-  {k:'meeting',      l:'Meeting',                    d:false},
+  {k:'meeting',      l:'Meeting',                    d:false, todOnly:true},
   {k:'rib',          l:'Rest In Bunk',               d:true,  datePick:true, dateRange:true, names:true},
   {k:'6ton_fam',     l:'6TON FAM (COE)',             d:false, names:true},
   {k:'gp_fam',       l:'GP FAM',                     d:false},
@@ -2411,7 +2411,7 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
                 const next={...prev};let changed=false;
                 personnelOnDate(personnelRef.current,date).forEach(p=>{
                   const ps=prevRec[p.id]?.s;
-                  if(!next[p.id]?.s&&!next[p.id]?.cleared&&ps&&ps!=='present'){next[p.id]={...prevRec[p.id]};changed=true;}
+                  if(!next[p.id]?.s&&!next[p.id]?.cleared&&ps&&ps!=='present'&&!SM[ps]?.todOnly){next[p.id]={...prevRec[p.id]};changed=true;}
                 });
                 return changed?next:prev;
               });
@@ -2460,6 +2460,7 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
             function isConfirmedRec(r){
               if(!r||!r.s)return false;
               if(r.confirmed===false)return false;
+              if(SM[r.s]?.todOnly)return false; // todOnly — never seeds into next TOD
               if(r.confirmed===true)return true;
               const si=SM[r.s];
               if(!si||si.halfDay)return true;
