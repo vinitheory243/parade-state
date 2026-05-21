@@ -2484,9 +2484,9 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
             }
             // Re-read personnel AFTER awaits — by now it should have loaded
             const activePpl=personnelOnDate(personnelRef.current,date);
-            // Filter tombstones out — they don't contribute a status, just block re-seeding
+            // Filter tombstones and presents out — seeded records must never include present
             const nr={};
-            Object.entries(seeded).forEach(([id,r])=>{if(!r.cleared&&r.s)nr[id]=r;});
+            Object.entries(seeded).forEach(([id,r])=>{if(!r.cleared&&r.s&&r.s!=='present')nr[id]=r;});
             // Strip half-day leaves that don't carry to this TOD
             Object.keys(nr).forEach(id=>{
               const s=nr[id]?.s;
@@ -2495,7 +2495,7 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
             });
             activePpl.forEach(p=>applyCarry(nr,p));
             setRecords(prev=>{const m={...nr};Object.entries(prev).forEach(([id,r])=>{if(r?.s||r?.cleared)m[id]=r;});return m;});
-            await Promise.all(Object.entries(nr).map(([id,r])=>
+            await Promise.all(Object.entries(nr).filter(([,r])=>r.s&&r.s!=='present').map(([id,r])=>
               DB.ref(`${attPath}/records/${id}`).transaction(curr=>curr&&(curr.s||curr.cleared)?undefined:r)
             ));
             setSubmitted({P1:false,P2:false,HQ:false});setMarkedBy({P1:'',P2:'',HQ:''});
