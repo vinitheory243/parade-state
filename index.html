@@ -995,6 +995,19 @@ function getExcelCell(rec){
   if(!rec||!rec.s)return'';
   return EXCEL_STATUS_MAP[rec.s]||'OTHERS';
 }
+function addOthersComments(ws,pplList,allTodRecs,XLSX){
+  // Row 0=title, row 1=headers, row 2+ = data. Cols: SN=0,RANK=1,NAME=2,HLS=3,0745=4,...
+  pplList.forEach((p,i)=>{
+    TODS.forEach((tod,ci)=>{
+      const rec=(allTodRecs[tod]||{})[p.id];
+      if(!rec?.s||getExcelCell(rec)!=='OTHERS')return;
+      const addr=XLSX.utils.encode_cell({r:2+i,c:3+ci});
+      if(!ws[addr])return;
+      const label=rec.s==='others'?(rec.label||rec.det||'Others').toUpperCase():(SM[rec.s]?.l||rec.s);
+      ws[addr].c=[{a:'',t:label}];
+    });
+  });
+}
 function getRemarkText(allTodRecs,pid){
   let dateRemark='',othersRemark='';
   for(const tod of TODS){
@@ -1473,6 +1486,7 @@ function PDFPreviewModal({date,personnel,allTodRecs,total,allTodMarkedBy,onClose
       });
       rows.push([],[`Total Node Strength: ${total}`]);
       const ws=XLSX.utils.aoa_to_sheet(rows);
+      addOthersComments(ws,allPpl,allTodRecs,XLSX);
       ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:8}}];
       ws['!cols']=[{wch:5},{wch:8},{wch:28},{wch:8},{wch:8},{wch:8},{wch:8},{wch:12},{wch:30}];
       XLSX.utils.book_append_sheet(wb,ws,'Parade State');
@@ -2779,6 +2793,7 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
           });
           rowsBulk.push([],[`Total Node Strength: ${pTotal}`]);
           const wsBulk=XLSX.utils.aoa_to_sheet(rowsBulk);
+          addOthersComments(wsBulk,allPplDate,allTodRecs,XLSX);
           wsBulk['!merges']=[{s:{r:0,c:0},e:{r:0,c:8}}];
           wsBulk['!cols']=[{wch:5},{wch:8},{wch:28},{wch:8},{wch:8},{wch:8},{wch:8},{wch:12},{wch:30}];
           XLSX.utils.book_append_sheet(wb,wsBulk,'Parade State');
