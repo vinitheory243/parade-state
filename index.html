@@ -974,6 +974,27 @@ function getStatusCell(rec){
   if(k==='suspended')return'SUSP';
   return k.substring(0,4).toUpperCase();
 }
+const EXCEL_STATUS_MAP={
+  present:'P',     duty:'DUTY',     dto:'DTO',       adtl:'ADTL',
+  dto_r:'P',       adtl_r:'P',      dtl:'DTL',       amb_t1:'T1',
+  amb_t2:'T2',     doo:'DUTY',      so:'SO',          so_till:'SO',
+  late:'P',        detail:'DETAIL', arf:'DETAIL',     ddr:'P',
+  ma:'OTHERS',     mc:'MC',         hl:'HL',          hospitalised:'HL',
+  mtl:'P',         rso:'RSO',       rsi:'RSI',        off:'OFF',
+  birthday_off:'OFF', oil:'OFF',    node_off:'OFF',   ol:'OL',
+  ll:'LL',         am_leave:'AL',   pm_leave:'PL',    ao_local:'AO',
+  ao_overseas:'AO',safer_upcat:'SAFER', ul:'LL',      fcl:'FCL',
+  cl:'CL',         ccl:'CCL',       court:'CIVIL',    ca:'RTC',
+  civil:'CIVIL',   db_prison:'DB',  do_gcm:'OTHERS',  awol:'AWOL',
+  sol:'OTHERS',    suspended:'OTHERS', cse:'CSE',     lashing:'OOC',
+  dcp:'OOC',       jc1:'P',         hq:'P',           db_visits:'OTHERS',
+  meeting:'P',     rib:'P',         '6ton_fam':'OTHERS', gp_fam:'OOC',
+  driving:'CSE',   others:'OTHERS',
+};
+function getExcelCell(rec){
+  if(!rec||!rec.s)return'';
+  return EXCEL_STATUS_MAP[rec.s]||'OTHERS';
+}
 function getRemarkText(allTodRecs,pid){
   let dateRemark='',othersRemark='';
   for(const tod of TODS){
@@ -1448,7 +1469,7 @@ function PDFPreviewModal({date,personnel,allTodRecs,total,allTodMarkedBy,onClose
         ['S/N','RANK','NAME','HLS','0745','1300','1730','2030/2230','REMARK'],
       ];
       allPpl.forEach((p,i)=>{
-        rows.push([i+1,p.rank,p.name,...TODS.map(tod=>getStatusCell((allTodRecs[tod]||{})[p.id])||''),getRemarkText(allTodRecs,p.id)]);
+        rows.push([i+1,p.rank,p.name,...TODS.map(tod=>getExcelCell((allTodRecs[tod]||{})[p.id])||''),getRemarkText(allTodRecs,p.id)]);
       });
       rows.push([],[`Total Node Strength: ${total}`]);
       const ws=XLSX.utils.aoa_to_sheet(rows);
@@ -2754,7 +2775,7 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
             ['S/N','RANK','NAME','HLS','0745','1300','1730','2030/2230','REMARK'],
           ];
           allPplDate.forEach((p,i)=>{
-            rowsBulk.push([i+1,p.rank,p.name,...TODS.map(t=>getStatusCell((allTodRecs[t]||{})[p.id])||''),getRemarkText(allTodRecs,p.id)]);
+            rowsBulk.push([i+1,p.rank,p.name,...TODS.map(t=>getExcelCell((allTodRecs[t]||{})[p.id])||''),getRemarkText(allTodRecs,p.id)]);
           });
           rowsBulk.push([],[`Total Node Strength: ${pTotal}`]);
           const wsBulk=XLSX.utils.aoa_to_sheet(rowsBulk);
