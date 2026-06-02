@@ -2368,7 +2368,7 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
     const id=`p${Date.now()}`;
     const safeJoinDate=joinDate&&joinDate<=todayStr()?joinDate:todayStr();
     const safeSiso=siso||{type:'si'};
-    const p={id,rank:rank||entry.rank||'PTE',name:(entry.name||'').toUpperCase().trim(),dn:(dn||entry.name||'').toUpperCase().trim().split(' ')[0],plt,sec,siso:safeSiso,active:true,joinDate:safeJoinDate,...(entry.pes?{pes:entry.pes}:{}),...(entry.phone?{phone:entry.phone}:{}),...(entry.nokRelation?{nokRelation:entry.nokRelation}:{}),...(entry.nokPhone?{nokPhone:entry.nokPhone}:{})};
+    const p={id,rank:rank||entry.rank||'PTE',name:(entry.name||'').toUpperCase().trim(),dn:(dn||entry.name||'').toUpperCase().trim().split(' ')[0],plt,sec,siso:safeSiso,active:true,joinDate:safeJoinDate,...(entry.pes?{pes:entry.pes}:{}),...(entry.phone?{phone:entry.phone}:{}),...(entry.nokRelation?{nokRelation:entry.nokRelation}:{}),...(entry.nokPhone?{nokPhone:entry.nokPhone}:{}),...(entry.vocation?{vocation:(entry.vocation||'').toUpperCase().trim()}:{})};
     setPersonnelAndSync(prev=>[...prev,p]);
     DB.ref(`${DB_ROOT}/pending_personnel/${entry._fbKey}`).remove();
     toast_('✓ Personnel approved and added');
@@ -4162,6 +4162,7 @@ function GenerateScreen({msg,total,setTotal,totalManual,setTotalManual,autoTotal
 // ─── BULK IMPORT MODAL ──────────────────────────────────────────
 const BULK_FIELDS=[
   {k:'pes',         l:'PES Status',       hint:'e.g. A, B1, B2, C9…'},
+  {k:'vocation',    l:'Vocation',         hint:'e.g. Medic, Driver, Signaller'},
   {k:'phone',       l:'Phone Number',     hint:'e.g. 91234567'},
   {k:'dn',          l:'Nickname',         hint:'e.g. AH KOW (used in Telegram)'},
   {k:'rank',        l:'Rank',             hint:'e.g. PTE, CPL, 3SG…'},
@@ -4341,7 +4342,7 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
   const[approveData,setApproveData]=useState({plt:'P1',sec:'BASE',dn:'',rank:''});
   const[editData,setEditData]=useState({});
   const[filterPlt,setFilterPlt]=useState('ALL');
-  const[np,setNp]=useState({rank:'PTE',name:'',dn:'',plt:'P1',sec:'BASE',siso:{type:'si'},pes:''});
+  const[np,setNp]=useState({rank:'PTE',name:'',dn:'',plt:'P1',sec:'BASE',siso:{type:'si'},pes:'',vocation:''});
   const[newSecInput,setNewSecInput]=useState('');
   const[addingNewSec,setAddingNewSec]=useState(false);
   const[editSecInput,setEditSecInput]=useState('');
@@ -4378,15 +4379,15 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
     if(!np.name.trim()){toast_('Enter a name');return}
     if(!np.sec||np.sec==='__new__'){toast_('Enter a section name');return}
     const rawPes=(np.pes||'').replace(/^OTHER:/,'').trim();
-    const p={id:`p${Date.now()}`,rank:np.rank,name:np.name.toUpperCase().trim(),dn:np.dn.toUpperCase().trim()||np.name.toUpperCase().trim().split(' ')[0],plt:np.plt,sec:np.sec,siso:np.siso||{type:'si'},pes:rawPes,active:true,joinDate:todayStr(),...(np.nokRelation?{nokRelation:np.nokRelation}:{}),...(np.nokPhone?{nokPhone:np.nokPhone}:{})};
-    setPersonnel(prev=>[...prev,p]);setNp({rank:'PTE',name:'',dn:'',plt:'P1',sec:'BASE',siso:{type:'si'},pes:''});setNewSecInput('');setAddingNewSec(false);setShowAdd(false);toast_('✓ Personnel added');
+    const p={id:`p${Date.now()}`,rank:np.rank,name:np.name.toUpperCase().trim(),dn:np.dn.toUpperCase().trim()||np.name.toUpperCase().trim().split(' ')[0],plt:np.plt,sec:np.sec,siso:np.siso||{type:'si'},pes:rawPes,active:true,joinDate:todayStr(),...(np.nokRelation?{nokRelation:np.nokRelation}:{}),...(np.nokPhone?{nokPhone:np.nokPhone}:{}),...(np.vocation?{vocation:np.vocation.toUpperCase().trim()}:{})};
+    setPersonnel(prev=>[...prev,p]);setNp({rank:'PTE',name:'',dn:'',plt:'P1',sec:'BASE',siso:{type:'si'},pes:'',vocation:''});setNewSecInput('');setAddingNewSec(false);setShowAdd(false);toast_('✓ Personnel added');
   }
   function deactivate(id){setPersonnel(prev=>prev.map(p=>p.id===id?{...p,active:false,removedDate:todayStr()}:p));setConfirm(null);toast_('Removed from roster')}
   function restore(id){setPersonnel(prev=>prev.map(p=>p.id===id?{...p,active:true,removedDate:null}:p));toast_('✓ Restored')}
-  function startEdit(p){setEditId(p.id);setEditData({rank:p.rank,name:p.name,dn:p.dn||'',plt:p.plt,sec:p.sec,siso:p.siso||{type:'si'},phone:p.phone||'',pes:p.pes||'',nokRelation:p.nokRelation||'',nokPhone:p.nokPhone||''});setAddingNewSecEdit(false);setEditSecInput('');}
+  function startEdit(p){setEditId(p.id);setEditData({rank:p.rank,name:p.name,dn:p.dn||'',plt:p.plt,sec:p.sec,siso:p.siso||{type:'si'},phone:p.phone||'',pes:p.pes||'',vocation:p.vocation||'',nokRelation:p.nokRelation||'',nokPhone:p.nokPhone||''});setAddingNewSecEdit(false);setEditSecInput('');}
   function saveEdit(id){
     const rawPes=(editData.pes||'').replace(/^OTHER:/,'').trim();
-    setPersonnel(prev=>prev.map(p=>p.id===id?{...p,...editData,name:editData.name.toUpperCase().trim(),dn:editData.dn.toUpperCase().trim()||editData.name.toUpperCase().trim().split(' ')[0],pes:rawPes}:p));
+    setPersonnel(prev=>prev.map(p=>p.id===id?{...p,...editData,name:editData.name.toUpperCase().trim(),dn:editData.dn.toUpperCase().trim()||editData.name.toUpperCase().trim().split(' ')[0],pes:rawPes,vocation:(editData.vocation||'').toUpperCase().trim()||undefined}:p));
     setEditId(null);setEditSecInput('');setAddingNewSecEdit(false);toast_('✓ Updated');
   }
   // Group active by plt → sec
@@ -4484,6 +4485,7 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
                   <span>Phone: {entry.phone||'—'}</span>
                   <span>NOK: {entry.nokRelation||'—'}</span>
                   <span>NOK Ph: {entry.nokPhone||'—'}</span>
+                  {entry.vocation&&<span>Vocation: {entry.vocation}</span>}
                   <span>Post-in: {entry.joinDate||'—'}</span>
                   <span>Submitted: {entry.submittedAt?new Date(entry.submittedAt).toLocaleDateString('en-SG'):'-'}</span>
                 </div>
@@ -4644,6 +4646,9 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
               </select>
               {!PES_LIST.includes(np.pes||'')&&<input type="text" placeholder="e.g. BP3" value={np.pes.replace(/^OTHER:/,'')} onChange={e=>setNp({...np,pes:e.target.value.toUpperCase().trim()||'OTHER:'})} style={{marginTop:'6px'}}/>}
             </div>
+            <div><div className="label">Vocation</div>
+              <input type="text" placeholder="e.g. Medic, Driver, Signaller" value={np.vocation||''} onChange={e=>setNp({...np,vocation:e.target.value})}/>
+            </div>
             <button className="sbtn" style={{margin:0}} onClick={add}>Add Personnel</button>
           </div>
         </div>
@@ -4737,6 +4742,9 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
                           </select>
                           {!PES_LIST.includes(editData.pes||'')&&<input type="text" placeholder="e.g. BP3" value={editData.pes.replace(/^OTHER:/,'')} onChange={e=>setEditData({...editData,pes:e.target.value.toUpperCase().trim()||'OTHER:'})} style={{marginTop:'6px'}}/>}
                         </div>
+                        <div><div className="label">Vocation</div>
+                          <input type="text" placeholder="e.g. Medic, Driver, Signaller" value={editData.vocation||''} onChange={e=>setEditData({...editData,vocation:e.target.value})}/>
+                        </div>
                         <div className="btn-row">
                           <button className="btn-save" onClick={()=>saveEdit(person.id)}>Save</button>
                           <button className="btn-cancel" onClick={()=>setEditId(null)}>Cancel</button>
@@ -4746,7 +4754,7 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
                       <div className="mrow">
                         <div className="mrow-info">
                           <div className="mrow-name">{person.rank} {person.name} <span className={sisoBadgeClass(person)} style={{marginLeft:'4px'}}>{sisoLabel(person)}</span>{person.pes&&<span className="prow-pes" style={{marginLeft:'4px',fontSize:'10px'}}>PES {person.pes}</span>}</div>
-                          <div className="mrow-sub">Msg: {person.dn}</div>
+                          <div className="mrow-sub">Msg: {person.dn}{person.vocation&&<span style={{marginLeft:'8px',color:'#6366f1',fontWeight:600}}>{person.vocation}</span>}</div>
                         </div>
                         <div style={{display:'flex',gap:'5px',flexShrink:0}}>
                           <button className="ebtn" onClick={()=>startEdit(person)}>Edit</button>
