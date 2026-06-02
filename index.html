@@ -4541,6 +4541,7 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
               <div className="add-2col">
                 <div><div className="label">Post-in Date</div>
                   <input type="date" value={approveData.joinDate||todayStr()} onChange={e=>setApproveData({...approveData,joinDate:e.target.value})}/>
+                  {(()=>{const jd=approveData.joinDate||todayStr();const[y,m,d]=jd.split('-');const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1];const old=jd<new Date(Date.now()-14*864e5).toISOString().slice(0,10);return<div style={{fontSize:'11px',marginTop:'3px',fontWeight:700,color:old?'#dc2626':'#0d9488'}}>{+d} {mn} {y}{old?' ⚠ Date seems far back — check for day/month swap':''}</div>;})()}
                 </div>
                 <div><div className="label">Strength Status{approveEntry?.siso&&<span style={{fontSize:'10px',color:'#0d9488',fontWeight:600}}> ✦ auto</span>}</div>
                   <select value={(approveData.siso||{}).type||'si'} onChange={e=>setApproveData({...approveData,siso:e.target.value==='so_till'?{type:'so_till',date:''}:{type:e.target.value}})}>
