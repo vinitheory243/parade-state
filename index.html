@@ -1247,7 +1247,7 @@ function NominalRollPreviewModal({date,eventName,personnel,records,total,onClose
       const XLSX=window.XLSX;
       const wb=XLSX.utils.book_new();
       const allPpl=['HQ','P1','P2'].flatMap(plt=>personnel.filter(p=>p.plt===plt));
-      const rows=[[title],['S/N','RANK','NAME','STATUS','REMARK']];
+      const rows=[[title],['S/N','RANK','NAME','VOCATION','STATUS','REMARK']];
       allPpl.forEach((p,i)=>{
         const rec=records[p.id];
         const status=getStatusCell(rec)||'P';
@@ -1259,13 +1259,12 @@ function NominalRollPreviewModal({date,eventName,personnel,records,total,onClose
           else if(rec.from&&rec.det)remark=`${(si.l||rec.s).toUpperCase()} ${fmtDate(rec.from)} – ${fmtDate(rec.det)}`;
           else if(rec.from)remark=`${(si.l||rec.s).toUpperCase()} TILL ${fmtDate(rec.from)}`;
         }
-        rows.push([i+1,p.rank,p.name,status,remark]);
+        rows.push([i+1,p.rank,p.name,p.vocation||'',status,remark]);
       });
       rows.push([],[`Total Node Strength: ${total}`]);
       const ws=XLSX.utils.aoa_to_sheet(rows);
-      // Merge title row across all 5 columns
-      ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:4}}];
-      ws['!cols']=[{wch:5},{wch:8},{wch:30},{wch:10},{wch:35}];
+      ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:5}}];
+      ws['!cols']=[{wch:5},{wch:8},{wch:30},{wch:15},{wch:10},{wch:35}];
       XLSX.utils.book_append_sheet(wb,ws,'Nominal Roll');
       const safeTitle=title.replace(/[/\\?*[\]:]/g,'_');
       XLSX.writeFile(wb,`NR_${safeTitle}.xlsx`);
