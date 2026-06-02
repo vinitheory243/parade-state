@@ -993,12 +993,12 @@ function getExcelCell(rec){
   return EXCEL_STATUS_MAP[rec.s]||'OTHERS';
 }
 function addOthersComments(ws,pplList,allTodRecs,XLSX){
-  // Row 0=title, row 1=headers, row 2+ = data. Cols: SN=0,RANK=1,NAME=2,HLS=3,0745=4,...
+  // Row 0=title, row 1=headers, row 2+ = data. Cols: SN=0,RANK=1,NAME=2,ORD=3,HLS=4,0745=5,...
   pplList.forEach((p,i)=>{
     TODS.forEach((tod,ci)=>{
       const rec=(allTodRecs[tod]||{})[p.id];
       if(!rec?.s||getExcelCell(rec)!=='OTHERS')return;
-      const addr=XLSX.utils.encode_cell({r:2+i,c:3+ci});
+      const addr=XLSX.utils.encode_cell({r:2+i,c:4+ci});
       if(!ws[addr])return;
       const label=rec.s==='others'?(rec.label||rec.det||'Others').toUpperCase():(SM[rec.s]?.l||rec.s);
       ws[addr].c=[{a:'',t:label}];
@@ -1477,16 +1477,17 @@ function PDFPreviewModal({date,personnel,allTodRecs,total,allTodMarkedBy,onClose
       const allPpl=['HQ','P1','P2'].flatMap(plt=>personnel.filter(p=>p.plt===plt));
       const rows=[
         ['JURONG NODE — PARADE STATE'],
-        ['S/N','RANK','NAME','HLS','0745','1300','1730','2030/2230','REMARK'],
+        ['S/N','RANK','NAME','ORD','HLS','0745','1300','1730','2030/2230','REMARK'],
       ];
       allPpl.forEach((p,i)=>{
-        rows.push([i+1,p.rank,p.name,...TODS.map(tod=>getExcelCell((allTodRecs[tod]||{})[p.id])||''),getRemarkText(allTodRecs,p.id)]);
+        const ord=p.ord?(([y,m,d])=>`${+d}/${+m}/${y}`)(p.ord.split('-')):'';
+        rows.push([i+1,p.rank,p.name,ord,...TODS.map(tod=>getExcelCell((allTodRecs[tod]||{})[p.id])||''),getRemarkText(allTodRecs,p.id)]);
       });
       rows.push([],[`Total Node Strength: ${total}`]);
       const ws=XLSX.utils.aoa_to_sheet(rows);
       addOthersComments(ws,allPpl,allTodRecs,XLSX);
-      ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:8}}];
-      ws['!cols']=[{wch:5},{wch:8},{wch:28},{wch:8},{wch:8},{wch:8},{wch:8},{wch:12},{wch:30}];
+      ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:9}}];
+      ws['!cols']=[{wch:5},{wch:8},{wch:28},{wch:12},{wch:8},{wch:8},{wch:8},{wch:8},{wch:12},{wch:30}];
       XLSX.utils.book_append_sheet(wb,ws,'Parade State');
       XLSX.writeFile(wb,`ParadeState_JRN_${date}.xlsx`);
       if(onDownloaded)onDownloaded();
