@@ -554,12 +554,13 @@ function genMsg(date,tod,total,records,personnel,extra){
     if(r&&r.s){grp[r.s]=grp[r.s]||[];grp[r.s].push({p,det:r.det||'',from:r.from||'',label:r.label||''});}
   });
   const cnt=k=>(grp[k]||[]).length;
+  const tc=n=>n.toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
   // All non-duty statuses show rank + name (and date if applicable)
   const lst=(k,pre)=>{
     const items=grp[k]||[];
     if(!items.length)return'';
     return'\n'+items.map((x,i)=>{
-      let line=`${i+1}. ${x.p.rank} ${x.p.dn||x.p.name.split(' ')[0]}`;
+      let line=`${i+1}. ${x.p.rank} ${tc(x.p.dn||x.p.name.split(' ')[0])}`;
       const dateVal=x.det||x.from||'';
       if(dateVal){
         const isDate=/^\d{4}-\d{2}-\d{2}$/.test(dateVal);
@@ -572,11 +573,11 @@ function genMsg(date,tod,total,records,personnel,extra){
     }).join('\n');
   };
   const line=(label,k,pre)=>`${label}: ${cnt(k)}${lst(k,pre)}`;
-  const lineMulti=(label,keys,pre)=>{const items=keys.flatMap(k=>grp[k]||[]);const n=items.length;if(!n)return`${label}: 0`;const names='\n'+items.map((x,i)=>{let l=`${i+1}. ${x.p.rank} ${x.p.dn||x.p.name.split(' ')[0]}`;const dateVal=x.det||x.from||'';if(dateVal){const isDate=/^\d{4}-\d{2}-\d{2}$/.test(dateVal);const d=isDate?fmtTeleDate(dateVal):dateVal;if(isDate)l+=` ${pre||'TILL '}${d}`;else if(pre)l+=` ${pre}${d}`;else l+=` (${d})`;}return l;}).join('\n');return`${label}: ${n}${names}`;};
+  const lineMulti=(label,keys,pre)=>{const items=keys.flatMap(k=>grp[k]||[]);const n=items.length;if(!n)return`${label}: 0`;const names='\n'+items.map((x,i)=>{let l=`${i+1}. ${x.p.rank} ${tc(x.p.dn||x.p.name.split(' ')[0])}`;const dateVal=x.det||x.from||'';if(dateVal){const isDate=/^\d{4}-\d{2}-\d{2}$/.test(dateVal);const d=isDate?fmtTeleDate(dateVal):dateVal;if(isDate)l+=` ${pre||'TILL '}${d}`;else if(pre)l+=` ${pre}${d}`;else l+=` (${d})`;}return l;}).join('\n');return`${label}: ${n}${names}`;};
   // Duty Personnel: collect all with their status label
   const dutyItems=[...DUTY_STATUSES].flatMap(k=>(grp[k]||[]).map(x=>({x,label:(SM[k]?.l||k).toUpperCase()})));
   const dutyCount=dutyItems.length;
-  const dutyList=dutyItems.length?'\n'+dutyItems.map((d,i)=>`${i+1}. ${d.x.p.rank} ${d.x.p.dn||d.x.p.name.split(' ')[0]} (${d.label})`).join('\n'):'';
+  const dutyList=dutyItems.length?'\n'+dutyItems.map((d,i)=>`${i+1}. ${d.x.p.rank} ${tc(d.x.p.dn||d.x.p.name.split(' ')[0])} (${d.label})`).join('\n'):'';
   const L=[];
   const todAmPm=({'HLS':'AM','0745':'AM','1300':'PM','1730':'PM','2030/2230':'NIGHT STR'})[tod]||tod;
   L.push(`JRN PARADE STATE ${fmtTeleDate(date)} (${todAmPm})`);
@@ -591,7 +592,7 @@ function genMsg(date,tod,total,records,personnel,extra){
     const soTillItems=(grp['so_till']||[]).map(x=>{const d=x.det||getSiso(x.p)?.date||'';return{x,suffix:d?` TILL ${fmtTeleDate(d)}`:''};});
     const soItems=[...soPermItems,...soTillItems];
     L.push(soItems.length
-      ?`Stay Out: ${soItems.length}\n`+soItems.map((d,i)=>`${i+1}. ${d.x.p.rank} ${d.x.p.dn||d.x.p.name.split(' ')[0]}${d.suffix}`).join('\n')
+      ?`Stay Out: ${soItems.length}\n`+soItems.map((d,i)=>`${i+1}. ${d.x.p.rank} ${tc(d.x.p.dn||d.x.p.name.split(' ')[0])}${d.suffix}`).join('\n')
       :`Stay Out: NIL`);
     L.push('');
   }
@@ -611,7 +612,7 @@ function genMsg(date,tod,total,records,personnel,extra){
   L.push('');
   L.push(line('Hospitalisation Leave','hl','TILL '));
   L.push('');
-  L.push((()=>{const items=grp['hospitalised']||[];if(!items.length)return'Hospitalised: 0';return`Hospitalised: ${items.length}\n`+items.map((x,i)=>`${i+1}. ${x.p.rank} ${x.p.dn||x.p.name.split(' ')[0]}`).join('\n');})());
+  L.push((()=>{const items=grp['hospitalised']||[];if(!items.length)return'Hospitalised: 0';return`Hospitalised: ${items.length}\n`+items.map((x,i)=>`${i+1}. ${x.p.rank} ${tc(x.p.dn||x.p.name.split(' ')[0])}`).join('\n');})());
   L.push('');
   L.push(line('RSO','rso'));
   L.push('');
@@ -632,7 +633,7 @@ function genMsg(date,tod,total,records,personnel,extra){
       ...amItems.map(x=>({x,suffix:' (AM LEAVE)'})),
       ...pmItems.map(x=>({x,suffix:' (PM LEAVE)'})),
     ];
-    const names='\n'+allItems.map((d,i)=>`${i+1}. ${d.x.p.rank} ${d.x.p.dn||d.x.p.name.split(' ')[0]}${d.suffix}`).join('\n');
+    const names='\n'+allItems.map((d,i)=>`${i+1}. ${d.x.p.rank} ${tc(d.x.p.dn||d.x.p.name.split(' ')[0])}${d.suffix}`).join('\n');
     return`LOCAL LEAVE: ${total}${names}`;
   })());
   L.push('');
@@ -688,7 +689,7 @@ function genMsg(date,tod,total,records,personnel,extra){
   L.push('');
   L.push(line('GP FAM','gp_fam'));
   L.push('');
-  {const di=grp['driving']||[];L.push(`Driving Course: ${di.length}`+(di.length?'\n'+di.map((x,i)=>`${i+1}. ${x.p.rank} ${x.p.dn||x.p.name.split(' ')[0]}`).join('\n'):''));}
+  {const di=grp['driving']||[];L.push(`Driving Course: ${di.length}`+(di.length?'\n'+di.map((x,i)=>`${i+1}. ${x.p.rank} ${tc(x.p.dn||x.p.name.split(' ')[0])}`).join('\n'):''));}
   if(cnt('others')){
     const othersItems=grp['others']||[];
     const byReason={};
@@ -701,7 +702,7 @@ function genMsg(date,tod,total,records,personnel,extra){
     Object.entries(byReason).forEach(([reason,items])=>{
       L.push('');
       L.push(`${reason}: ${items.length}\n`+items.map((x,i)=>{
-        let name=`${i+1}. ${x.p.rank} ${x.p.dn||x.p.name.split(' ')[0]}`;
+        let name=`${i+1}. ${x.p.rank} ${tc(x.p.dn||x.p.name.split(' ')[0])}`;
         const tillDate=x.det||x.from||'';
         if(tillDate&&/^\d{4}-\d{2}-\d{2}$/.test(tillDate))name+=` TILL ${fmtTeleDate(tillDate)}`;
         return name;
