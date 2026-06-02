@@ -1140,8 +1140,9 @@ function NominalRollPDFPage({plt,personnel,records,date,total,eventName}){
           <tr>
             <th className="pdf-th-sn">S/N</th>
             <th className="pdf-th-rk">RANK</th>
-            <th className="pdf-th-nm" style={{width:'50%'}}>NAME</th>
-            <th className="pdf-th-rm" style={{width:'30%'}}>ATTENDANCE</th>
+            <th className="pdf-th-nm" style={{width:'36%'}}>NAME</th>
+            <th className="pdf-th-nm" style={{width:'18%'}}>VOCATION</th>
+            <th className="pdf-th-rm" style={{width:'26%'}}>ATTENDANCE</th>
           </tr>
         </thead>
         <tbody>
@@ -1153,12 +1154,13 @@ function NominalRollPDFPage({plt,personnel,records,date,total,eventName}){
               :`${P_LABEL[plt].toUpperCase()} TO (${sec})`;
             return(
               <React.Fragment key={sec}>
-                <tr className="pdf-sec-hdr"><td colSpan={4}>{lbl}</td></tr>
+                <tr className="pdf-sec-hdr"><td colSpan={5}>{lbl}</td></tr>
                 {ppl.map(p=>{sn++;return(
                   <tr key={p.id}>
                     <td className="pdf-c-ctr">{sn}</td>
                     <td className="pdf-c-ctr">{p.rank}</td>
                     <td className="pdf-c-lft">{p.name}</td>
+                    <td className="pdf-c-lft">{p.vocation||''}</td>
                     <td className="pdf-c-lft">{nrAttLabel(records[p.id])}</td>
                   </tr>
                 );})}
