@@ -4763,7 +4763,7 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
                       <div className="mrow">
                         <div className="mrow-info">
                           <div className="mrow-name">{person.rank} {person.name} <span className={sisoBadgeClass(person)} style={{marginLeft:'4px'}}>{sisoLabel(person)}</span>{person.pes&&<span className="prow-pes" style={{marginLeft:'4px',fontSize:'10px'}}>PES {person.pes}</span>}</div>
-                          <div className="mrow-sub">Msg: {person.dn}{person.vocation&&<span style={{marginLeft:'8px',color:'#6366f1',fontWeight:600}}>{person.vocation}</span>}{person.ord&&<span style={{marginLeft:'8px',color:'#0891b2',fontWeight:600}}>ORD {person.ord}</span>}</div>
+                          <div className="mrow-sub">Msg: {person.dn}{person.vocation&&<span style={{marginLeft:'8px',color:'#6366f1',fontWeight:600}}>{person.vocation}</span>}{person.ord&&<span style={{marginLeft:'8px',color:'#0891b2',fontWeight:600}}>ORD {(([y,m,d])=>`${+d}/${+m}/${y}`)(person.ord.split('-'))}</span>}</div>
                         </div>
                         <div style={{display:'flex',gap:'5px',flexShrink:0}}>
                           <button className="ebtn" onClick={()=>startEdit(person)}>Edit</button>
