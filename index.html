@@ -4388,7 +4388,7 @@ function ManageScreen({personnel,setPersonnel,toast_,customSections,addCustomSec
   function startEdit(p){setEditId(p.id);setEditData({rank:p.rank,name:p.name,dn:p.dn||'',plt:p.plt,sec:p.sec,siso:p.siso||{type:'si'},phone:p.phone||'',pes:p.pes||'',vocation:p.vocation||'',nokRelation:p.nokRelation||'',nokPhone:p.nokPhone||''});setAddingNewSecEdit(false);setEditSecInput('');}
   function saveEdit(id){
     const rawPes=(editData.pes||'').replace(/^OTHER:/,'').trim();
-    setPersonnel(prev=>prev.map(p=>p.id===id?{...p,...editData,name:editData.name.toUpperCase().trim(),dn:editData.dn.toUpperCase().trim()||editData.name.toUpperCase().trim().split(' ')[0],pes:rawPes,vocation:(editData.vocation||'').toUpperCase().trim()||undefined}:p));
+    setPersonnel(prev=>prev.map(p=>p.id===id?{...p,...editData,name:editData.name.toUpperCase().trim(),dn:editData.dn.toUpperCase().trim()||editData.name.toUpperCase().trim().split(' ')[0],pes:rawPes,vocation:(editData.vocation||'').toUpperCase().trim()||null}:p));
     setEditId(null);setEditSecInput('');setAddingNewSecEdit(false);toast_('✓ Updated');
   }
   // Group active by plt → sec
