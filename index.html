@@ -1772,13 +1772,11 @@ function LandingScreen({onPick,onLogout,isAdmin,isDemo,currentUserLabel}){
   const d=new Date(today+'T00:00:00');
   const dayStr=d.toLocaleDateString('en-MY',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   const[viewDate,setViewDate]=useState(null); // null = today, string = past date being browsed
-  const dateInputRef=useRef(null);
   const isViewingPast=!!viewDate;
   const activeDate=viewDate||today;
   const activeD=new Date(activeDate+'T00:00:00');
   const activeDayStr=activeD.toLocaleDateString('en-MY',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   const yesterday=(()=>{const y=new Date(today+'T00:00:00');y.setDate(y.getDate()-1);return`${y.getFullYear()}-${String(y.getMonth()+1).padStart(2,'0')}-${String(y.getDate()).padStart(2,'0')}`;})();
-  function openDatePicker(){const el=dateInputRef.current;if(!el)return;if(el.showPicker)el.showPicker();else el.click();}
   function handleDateInput(e){const v=e.target.value;if(!v||v>=today){setViewDate(null);}else{setViewDate(v);}}
   // NR modal states
   const[nrModal,setNrModal]=useState(null); // null | 'loading' | 'pick' | 'new'
@@ -1890,15 +1888,15 @@ function LandingScreen({onPick,onLogout,isAdmin,isDemo,currentUserLabel}){
           <button className="land-signout" onClick={onLogout}>Sign Out</button>
         </div>
       </div>
-      <div className="land-date-box" style={isViewingPast?{borderColor:'rgba(251,191,36,.5)',background:'rgba(251,191,36,.07)'}:{}} onClick={openDatePicker}>
+      <div className="land-date-box" style={{position:'relative',cursor:'pointer',...(isViewingPast?{borderColor:'rgba(251,191,36,.5)',background:'rgba(251,191,36,.07)'}:{})}}>
         <div className="land-date-icon">📅</div>
         <div style={{flex:1}}>
-          <div className="land-date-lbl">{isViewingPast?'Past Date — View Only':'Today\'s Date'}</div>
+          <div className="land-date-lbl">{isViewingPast?'Past Date — View Only':'Today\'s Date — tap to browse'}</div>
           <div className="land-date-val" style={isViewingPast?{color:'#fbbf24',fontSize:'18px'}:{}}>{activeDayStr}</div>
         </div>
-        <span style={{color:'rgba(255,255,255,.45)',fontSize:'20px',lineHeight:1,paddingLeft:'6px'}}>▾</span>
-        <input ref={dateInputRef} type="date" max={yesterday} value={viewDate||''} onChange={handleDateInput}
-          style={{position:'fixed',opacity:0,pointerEvents:'none',width:0,height:0,top:0,left:0}}/>
+        <span style={{color:'rgba(255,255,255,.55)',fontSize:'24px',lineHeight:1,paddingLeft:'8px'}}>▾</span>
+        <input type="date" max={yesterday} value={viewDate||''} onChange={handleDateInput}
+          style={{position:'absolute',inset:0,width:'100%',height:'100%',opacity:0,cursor:'pointer',zIndex:2}}/>
       </div>
       {isViewingPast&&(
         <div style={{display:'flex',justifyContent:'center',marginTop:'10px'}}>
