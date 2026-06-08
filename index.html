@@ -2417,7 +2417,7 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
           if(tod==='1300'||tod==='1730'){nr[p.id]={s:'pm_leave',det:'',from:date,...alMb};return;}
           return;
         }
-        if(al&&CARRY_DATE_RANGE.has(al.s)&&al.from&&date>=al.from&&(!al.det||date<=al.det)){
+        if(al&&CARRY_DATE_RANGE.has(al.s)&&al.from&&date>=al.from&&(!al.det||date<=al.det)&&!(al.s==='others'&&al.det&&al.from===al.det)){
           nr[p.id]={s:al.s,det:al.det,from:al.from,...(al.label?{label:al.label}:{}),...alMb};return;
         }
       }
@@ -2585,7 +2585,7 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
           if(tod==='1300'||tod==='1730'){nr[p.id]={s:'pm_leave',det:'',from:date,...alMb};fills[p.id]=nr[p.id];changed=true;return;}
           return;
         }
-        if(al&&CARRY_DATE_RANGE.has(al.s)&&al.from&&date>=al.from&&(!al.det||date<=al.det)){
+        if(al&&CARRY_DATE_RANGE.has(al.s)&&al.from&&date>=al.from&&(!al.det||date<=al.det)&&!(al.s==='others'&&al.det&&al.from===al.det)){
           nr[p.id]={s:al.s,det:al.det,from:al.from,...(al.label?{label:al.label}:{}),...alMb};fills[p.id]=nr[p.id];changed=true;return;
         }
       });
@@ -2911,7 +2911,7 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
         const mbField=leave?.markedBy?{markedBy:leave.markedBy}:{};
         if(leave&&leave.s==='am_leave'&&leave.from===ndStr){
           tRef.transaction(curr=>curr&&curr.s&&curr.s!=='am_leave'?undefined:{s:'am_leave',det:'',from:ndStr,...mbField});
-        }else if(leave&&CARRY_DATE_RANGE.has(leave.s)){
+        }else if(leave&&CARRY_DATE_RANGE.has(leave.s)&&!(leave.s==='others'&&leave.det&&leave.from===leave.det)){
           const rec={s:leave.s,det:leave.det||'',from:leave.from||'',...(leave.label?{label:leave.label}:{}),...mbField};
           tRef.transaction(curr=>curr&&curr.s&&curr.s!==leave.s?undefined:rec);
         }else{
