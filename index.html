@@ -1771,6 +1771,15 @@ function LandingScreen({onPick,onLogout,isAdmin,isDemo,currentUserLabel}){
   const today=todayStr();
   const d=new Date(today+'T00:00:00');
   const dayStr=d.toLocaleDateString('en-MY',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const[viewDate,setViewDate]=useState(null); // null = today, string = past date being browsed
+  const dateInputRef=useRef(null);
+  const isViewingPast=!!viewDate;
+  const activeDate=viewDate||today;
+  const activeD=new Date(activeDate+'T00:00:00');
+  const activeDayStr=activeD.toLocaleDateString('en-MY',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const yesterday=(()=>{const y=new Date(today+'T00:00:00');y.setDate(y.getDate()-1);return y.toISOString().slice(0,10);})();
+  function openDatePicker(){const el=dateInputRef.current;if(!el)return;if(el.showPicker)el.showPicker();else el.click();}
+  function handleDateInput(e){const v=e.target.value;if(!v||v>=today){setViewDate(null);}else{setViewDate(v);}}
   // NR modal states
   const[nrModal,setNrModal]=useState(null); // null | 'loading' | 'pick' | 'new'
   const[todayNRs,setTodayNRs]=useState([]); // [{eventKey, eventName}]
@@ -1881,17 +1890,25 @@ function LandingScreen({onPick,onLogout,isAdmin,isDemo,currentUserLabel}){
           <button className="land-signout" onClick={onLogout}>Sign Out</button>
         </div>
       </div>
-      <div className="land-date-box">
+      <div className="land-date-box" style={isViewingPast?{borderColor:'rgba(251,191,36,.5)',background:'rgba(251,191,36,.07)'}:{}} onClick={openDatePicker}>
         <div className="land-date-icon">📅</div>
-        <div>
-          <div className="land-date-lbl">Today's Date</div>
-          <div className="land-date-val">{dayStr}</div>
+        <div style={{flex:1}}>
+          <div className="land-date-lbl">{isViewingPast?'Past Date — View Only':'Today\'s Date'}</div>
+          <div className="land-date-val" style={isViewingPast?{color:'#fbbf24',fontSize:'18px'}:{}}>{activeDayStr}</div>
         </div>
+        <span style={{color:'rgba(255,255,255,.45)',fontSize:'20px',lineHeight:1,paddingLeft:'6px'}}>▾</span>
+        <input ref={dateInputRef} type="date" max={yesterday} value={viewDate||''} onChange={handleDateInput}
+          style={{position:'fixed',opacity:0,pointerEvents:'none',width:0,height:0,top:0,left:0}}/>
       </div>
-      <div className="land-pick-lbl" style={{marginTop:'24px'}}>Select Parade Time</div>
+      {isViewingPast&&(
+        <div style={{display:'flex',justifyContent:'center',marginTop:'10px'}}>
+          <button onClick={e=>{e.stopPropagation();setViewDate(null);}} style={{background:'rgba(255,255,255,.1)',border:'1px solid rgba(255,255,255,.2)',color:'rgba(255,255,255,.8)',borderRadius:'20px',padding:'6px 16px',fontSize:'12px',fontWeight:700,cursor:'pointer'}}>← Back to Today</button>
+        </div>
+      )}
+      <div className="land-pick-lbl" style={{marginTop:'24px'}}>{isViewingPast?'View Parade Time':'Select Parade Time'}</div>
       <div className="land-slots">
         {TODS.map(t=>(
-          <div key={t} className="land-slot" onClick={()=>onPick(today,t)}>
+          <div key={t} className="land-slot" style={isViewingPast?{opacity:.9}:{}} onClick={()=>isViewingPast?onPick(activeDate,t,undefined,undefined,true):onPick(today,t)}>
             <div className={`land-slot-tag${t==='2030/2230'?' night':''}`}>{TOD_LABEL[t]}</div>
             <div className="land-slot-info">
               <div className="land-slot-name">{TOD_FULL[t]}</div>
@@ -2234,12 +2251,12 @@ function Root(){
   const isAdmin=currentUser?.role==='admin';
   const isDemo=false;
   if(pendingFixes===null||pendingFixes.length>0)return <UpdateSplash fixes={pendingFixes||[]} onDone={handleSplashDone}/>;
-  if(!picked)return <LandingScreen onPick={(date,tod,eventName,eventKey)=>setPicked({date,tod,eventName,eventKey})} onLogout={handleLogout} isAdmin={isAdmin} isDemo={isDemo} currentUserLabel={currentUser?.name||currentUser?.email||'User'}/>;
-  return <App initDate={picked.date} initTod={picked.tod} initEventName={picked.eventName||''} initEventKey={picked.eventKey||''} isAdmin={isAdmin} isDemo={isDemo} currentUser={currentUser} onHome={()=>setPicked(null)} onLogout={handleLogout}/>;
+  if(!picked)return <LandingScreen onPick={(date,tod,eventName,eventKey,viewOnly)=>setPicked({date,tod,eventName,eventKey,viewOnly:!!viewOnly})} onLogout={handleLogout} isAdmin={isAdmin} isDemo={isDemo} currentUserLabel={currentUser?.name||currentUser?.email||'User'}/>;
+  return <App initDate={picked.date} initTod={picked.tod} initEventName={picked.eventName||''} initEventKey={picked.eventKey||''} initViewOnly={picked.viewOnly||false} isAdmin={isAdmin} isDemo={isDemo} currentUser={currentUser} onHome={()=>setPicked(null)} onLogout={handleLogout}/>;
 }
 
 // ─── APP ────────────────────────────────────────────────────────
-function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,isAdmin,isDemo,currentUser}){
+function App({onLogout,onHome,initDate,initTod,initEventName,initEventKey,initViewOnly,isAdmin,isDemo,currentUser}){
   const isNR=initTod==='NR';
   const eventName=initEventName||'';
   const eventKey=initEventKey||'';
@@ -2951,7 +2968,7 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
         )}
       </div>
       <div className="main">
-        {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setPersonDailyDuty={setPersonDailyDuty} toggleConfirm={toggleConfirm} setAllPresent={setAllPresent} clearAll={clearAll} toast_={toast_} overrideUnlocked={isAdmin||overrideUnlocked} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={isAdmin?deleteOtherReason:undefined} jumpTo={jumpTo} onJumpDone={()=>setJumpTo(null)} isNR={isNR} attLoaded={attLoaded} currentUser={currentUser}/>}
+        {screen==='attendance'&&<AttendanceScreen date={date} tod={tod} personnel={personnel} records={records} setRec={setRec} setPersonLeave={setPersonLeave} setPersonDailyDuty={setPersonDailyDuty} toggleConfirm={toggleConfirm} setAllPresent={setAllPresent} clearAll={clearAll} toast_={toast_} overrideUnlocked={isAdmin||overrideUnlocked} forceViewOnly={initViewOnly} otherReasons={otherReasons} addOtherReason={addOtherReason} deleteOtherReason={isAdmin?deleteOtherReason:undefined} jumpTo={jumpTo} onJumpDone={()=>setJumpTo(null)} isNR={isNR} attLoaded={attLoaded} currentUser={currentUser}/>}
         {isNR&&screen==='telegram'&&<NRGenerateScreen date={date} eventName={eventName} records={records} personnel={personnelOnDate(personnel,date)} toast_={toast_}/>}
         {!isNR&&screen==='telegram'&&<GenerateScreen msg={msg} total={total} setTotal={setTotal} totalManual={totalManual} setTotalManual={setTotalManual} autoTotal={personnelOnDate(personnel,date).length} extra={extra} setExtra={setExtra} toast_={toast_} date={date} tod={tod} records={records} personnel={personnelOnDate(personnel,date)} isAdmin={isAdmin}/>}
         {screen==='manage'&&<ManageScreen personnel={personnel} setPersonnel={setPersonnelAndSync} toast_={toast_} customSections={customSections} addCustomSection={addCustomSection} isAdmin={isAdmin} pendingPersonnel={pendingPersonnel} approvePending={approvePending} rejectPending={rejectPending} currentUser={currentUser}/>}
@@ -3361,7 +3378,7 @@ function NRHistoryScreen({nrHistory,personnel,overrideUnlocked,setOverrideUnlock
 }
 
 // ─── ATTENDANCE SCREEN ──────────────────────────────────────────
-function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setPersonDailyDuty,toggleConfirm,setAllPresent,clearAll,toast_,overrideUnlocked,otherReasons,addOtherReason,deleteOtherReason,jumpTo,onJumpDone,isNR,attLoaded,currentUser}){
+function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setPersonDailyDuty,toggleConfirm,setAllPresent,clearAll,toast_,overrideUnlocked,forceViewOnly,otherReasons,addOtherReason,deleteOtherReason,jumpTo,onJumpDone,isNR,attLoaded,currentUser}){
   const[search,setSearch]=useState('');
   const[plt,setPlt]=useState('P1');
   const[confirmClear,setConfirmClear]=useState(null); // null or plt key
@@ -3423,7 +3440,7 @@ function AttendanceScreen({date,tod,personnel,records,setRec,setPersonLeave,setP
         <div className="stat-box"><div className="stat-n" style={{color:'#16a34a'}}>{attLoaded?presentCnt:'—'}</div><div className="stat-l">Present</div></div>
         <div className="stat-box" onClick={()=>{if(!attLoaded||unCnt===0)return;const unassigned=active.filter(p=>p.plt===plt&&(!records[p.id]||!records[p.id].s));const first=unassigned[0]||active.filter(p=>!records[p.id]||!records[p.id].s)[0];if(first){const el=document.getElementById(`pr-${first.id}`);if(el)el.scrollIntoView({behavior:'smooth',block:'center'});}}} style={{cursor:attLoaded&&unCnt>0?'pointer':'default',transition:'transform .15s',userSelect:'none'}} onMouseEnter={e=>{if(attLoaded&&unCnt>0)e.currentTarget.style.transform='scale(1.04)';}} onMouseLeave={e=>{e.currentTarget.style.transform='';}}><div className="stat-n" style={{color:attLoaded?(unCnt>0?'#f59e0b':'#16a34a'):'#94a3b8'}}>{attLoaded?unCnt:'—'}</div><div className="stat-l">Unassigned{attLoaded&&unCnt>0?' ↓':''}</div></div>
       </div>
-      {(()=>{const isPastDate=date<todayStr();const isLocked=isPastDate&&!overrideUnlocked;return confirmClear===plt?(
+      {(()=>{const isPastDate=date<todayStr();const isLocked=forceViewOnly||(isPastDate&&!overrideUnlocked);return confirmClear===plt?(
         <div style={{display:'flex',gap:'8px',marginBottom:'10px',background:'#fef2f2',border:'1.5px solid #fca5a5',borderRadius:'10px',padding:'10px 12px',alignItems:'center'}}>
           <span style={{flex:1,fontSize:'13px',fontWeight:700,color:'#991b1b'}}>Clear all {P_LABEL[plt]||plt} statuses?</span>
           <button className="conf-yes" onClick={()=>{setConfirmClear(null);clearAll(plt);}}>Clear</button>
