@@ -1777,7 +1777,7 @@ function LandingScreen({onPick,onLogout,isAdmin,isDemo,currentUserLabel}){
   const activeDate=viewDate||today;
   const activeD=new Date(activeDate+'T00:00:00');
   const activeDayStr=activeD.toLocaleDateString('en-MY',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  const yesterday=(()=>{const y=new Date(today+'T00:00:00');y.setDate(y.getDate()-1);return y.toISOString().slice(0,10);})();
+  const yesterday=(()=>{const y=new Date(today+'T00:00:00');y.setDate(y.getDate()-1);return`${y.getFullYear()}-${String(y.getMonth()+1).padStart(2,'0')}-${String(y.getDate()).padStart(2,'0')}`;})();
   function openDatePicker(){const el=dateInputRef.current;if(!el)return;if(el.showPicker)el.showPicker();else el.click();}
   function handleDateInput(e){const v=e.target.value;if(!v||v>=today){setViewDate(null);}else{setViewDate(v);}}
   // NR modal states
