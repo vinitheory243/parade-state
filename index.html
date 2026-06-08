@@ -363,6 +363,8 @@ const SM = Object.fromEntries(SL.map(s=>[s.k,s]));
 const DUTY_STATUSES = new Set(['duty','dto','adtl','doo','dtl','amb_t1','amb_t2']);
 // Whole-day duty statuses: carried across all TODs on the same date
 const WHOLE_DAY_DUTY = new Set(['duty','dto','adtl','doo','dtl']);
+// Roles where only one person can hold the status per TOD — new assignment evicts the previous holder
+const EXCLUSIVE_ROLES = new Set(['dtl','adtl','dto','amb_t1','amb_t2']);
 // All statuses with dateRange:true auto-carry across TODs within their from→det range.
 // Exceptions (arf, hospitalised) are handled by not having dateRange in SL.
 const CARRY_DATE_RANGE = new Set(SL.filter(s=>s.dateRange).map(s=>s.k));
@@ -2855,6 +2857,17 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
     if(label!==undefined)rec.label=label||'';
     if(currentUser?.uid)rec.markedBy={uid:currentUser.uid,name:currentUser.name||currentUser.email||'',markedAt:Date.now()};
     if(isRecComplete(s,det,from))rec.confirmed=true;
+    // Exclusive roles: evict whoever currently holds this role in this TOD
+    if(EXCLUSIVE_ROLES.has(s)){
+      const tomb={s:'',cleared:true};
+      if(currentUser?.uid)tomb.clearedBy={uid:currentUser.uid,name:currentUser.name||currentUser.email||'',clearedAt:Date.now()};
+      const toEvict=Object.entries(records).filter(([oid,r])=>oid!==id&&r&&r.s===s);
+      if(toEvict.length){
+        toEvict.forEach(([oid])=>DB.ref(`${attPath}/records/${oid}`).set(tomb));
+        setRecords(p=>{const n={...p};toEvict.forEach(([oid])=>{n[oid]={s:'',cleared:true};});return n;});
+        if(WHOLE_DAY_DUTY.has(s))toEvict.forEach(([oid])=>setPersonDailyDuty(oid,null,null));
+      }
+    }
     setRecords(p=>({...p,[id]:rec}));
     DB.ref(`${attPath}/records/${id}`).set(rec);
   }
