@@ -2857,14 +2857,26 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
     if(label!==undefined)rec.label=label||'';
     if(currentUser?.uid)rec.markedBy={uid:currentUser.uid,name:currentUser.name||currentUser.email||'',markedAt:Date.now()};
     if(isRecComplete(s,det,from))rec.confirmed=true;
-    // Exclusive roles: evict whoever currently holds this role in this TOD
-    if(EXCLUSIVE_ROLES.has(s)){
+    // Exclusive roles: evict whoever currently holds this role in this TOD and all future TODs
+    if(EXCLUSIVE_ROLES.has(s)&&!isNR){
       const tomb={s:'',cleared:true};
       if(currentUser?.uid)tomb.clearedBy={uid:currentUser.uid,name:currentUser.name||currentUser.email||'',clearedAt:Date.now()};
       const toEvict=Object.entries(records).filter(([oid,r])=>oid!==id&&r&&r.s===s);
       if(toEvict.length){
+        // Clear current TOD
         toEvict.forEach(([oid])=>DB.ref(`${attPath}/records/${oid}`).set(tomb));
         setRecords(p=>{const n={...p};toEvict.forEach(([oid])=>{n[oid]={s:'',cleared:true};});return n;});
+        // Tombstone forward into subsequent TODs so the old holder isn't re-seeded
+        const todIdx=TODS.indexOf(tod);
+        toEvict.forEach(([oid])=>{
+          for(let i=todIdx+1;i<TODS.length;i++){
+            DB.ref(`${fbAttPath(date,TODS[i])}/records/${oid}`).transaction(curr=>{
+              if(!curr||curr.cleared)return undefined;
+              return tomb;
+            });
+          }
+        });
+        // Clear dailyDuty so they aren't re-seeded on this date
         if(WHOLE_DAY_DUTY.has(s))toEvict.forEach(([oid])=>setPersonDailyDuty(oid,null,null));
       }
     }
