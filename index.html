@@ -2378,13 +2378,17 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
         const alMb=al?.markedBy?{markedBy:al.markedBy}:{};
         if(nr[p.id]?.cleared)return; // explicit clear — never carry over a tombstone
         if(nr[p.id]?.s){
-          // Same dateRange status but activeLeave has updated dates → override pre-written record
-          if(!nr[p.id].confirmed&&al&&CARRY_DATE_RANGE.has(al.s)&&nr[p.id].s===al.s&&al.from&&date>=al.from&&(!al.det||date<=al.det)){
-            if((nr[p.id].from||'')!==(al.from||'')||(nr[p.id].det||'')!==(al.det||'')){
-              nr[p.id]={s:al.s,det:al.det||'',from:al.from||'',...(al.label?{label:al.label}:{}),...alMb};
+          // Pre-written record whose date range has already passed — remove it and fall through
+          if(CARRY_DATE_RANGE.has(nr[p.id].s)&&nr[p.id].det&&nr[p.id].det<date){delete nr[p.id];}
+          else{
+            // Same dateRange status but activeLeave has updated dates → override pre-written record
+            if(!nr[p.id].confirmed&&al&&CARRY_DATE_RANGE.has(al.s)&&nr[p.id].s===al.s&&al.from&&date>=al.from&&(!al.det||date<=al.det)){
+              if((nr[p.id].from||'')!==(al.from||'')||(nr[p.id].det||'')!==(al.det||'')){
+                nr[p.id]={s:al.s,det:al.det||'',from:al.from||'',...(al.label?{label:al.label}:{}),...alMb};
+              }
             }
+            return;
           }
-          return;
         }
         const dd=p.dailyDuty;
         if(dd&&dd.date===date&&WHOLE_DAY_DUTY.has(dd.s)){nr[p.id]={s:dd.s,det:'',from:'',...(dd.markedBy?{markedBy:dd.markedBy}:{})};return;}
@@ -2545,14 +2549,18 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
         const alMb=al?.markedBy?{markedBy:al.markedBy}:{};
         if(nr[p.id]?.cleared)return; // explicit clear — never carry over a tombstone
         if(nr[p.id]?.s){
-          // Same dateRange status but activeLeave has updated dates → override pre-written record
-          if(al&&CARRY_DATE_RANGE.has(al.s)&&nr[p.id].s===al.s&&al.from&&date>=al.from&&(!al.det||date<=al.det)){
-            if((nr[p.id].from||'')!==(al.from||'')||(nr[p.id].det||'')!==(al.det||'')){
-              nr[p.id]={s:al.s,det:al.det||'',from:al.from||'',...(al.label?{label:al.label}:{}),...alMb};
-              fills[p.id]=nr[p.id];changed=true;
+          // Pre-written record whose date range has already passed — remove it and fall through
+          if(CARRY_DATE_RANGE.has(nr[p.id].s)&&nr[p.id].det&&nr[p.id].det<date){delete nr[p.id];fills[p.id]={s:'',cleared:true};changed=true;}
+          else{
+            // Same dateRange status but activeLeave has updated dates → override pre-written record
+            if(al&&CARRY_DATE_RANGE.has(al.s)&&nr[p.id].s===al.s&&al.from&&date>=al.from&&(!al.det||date<=al.det)){
+              if((nr[p.id].from||'')!==(al.from||'')||(nr[p.id].det||'')!==(al.det||'')){
+                nr[p.id]={s:al.s,det:al.det||'',from:al.from||'',...(al.label?{label:al.label}:{}),...alMb};
+                fills[p.id]=nr[p.id];changed=true;
+              }
             }
+            return;
           }
-          return;
         }
         const dd=p.dailyDuty;
         if(dd&&dd.date===date&&WHOLE_DAY_DUTY.has(dd.s)){nr[p.id]={s:dd.s,det:'',from:'',...(dd.markedBy?{markedBy:dd.markedBy}:{})};fills[p.id]=nr[p.id];changed=true;return;}
@@ -2891,7 +2899,7 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
         const mbField=leave?.markedBy?{markedBy:leave.markedBy}:{};
         if(leave&&leave.s==='am_leave'&&leave.from===ndStr){
           tRef.transaction(curr=>curr&&curr.s&&curr.s!=='am_leave'?undefined:{s:'am_leave',det:'',from:ndStr,...mbField});
-        }else if(leave&&CARRY_DATE_RANGE.has(leave.s)&&!(leave.s==='others'&&leave.det&&leave.from===leave.det)){
+        }else if(leave&&CARRY_DATE_RANGE.has(leave.s)&&!(leave.s==='others'&&leave.det&&leave.from===leave.det)&&(!leave.det||leave.det>=ndStr)){
           const rec={s:leave.s,det:leave.det||'',from:leave.from||'',...(leave.label?{label:leave.label}:{}),...mbField};
           tRef.transaction(curr=>curr&&curr.s&&curr.s!==leave.s?undefined:rec);
         }else{
