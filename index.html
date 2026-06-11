@@ -2379,8 +2379,10 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
         if(nr[p.id]?.cleared)return; // explicit clear — never carry over a tombstone
         if(nr[p.id]?.s){
           // Pre-written record whose date range has already passed — remove it and fall through
-          if(CARRY_DATE_RANGE.has(nr[p.id].s)&&nr[p.id].det&&nr[p.id].det<date){delete nr[p.id];}
-          else{
+          if(CARRY_DATE_RANGE.has(nr[p.id].s)&&nr[p.id].det&&nr[p.id].det<date){
+            DB.ref(`${attPath}/records/${p.id}`).remove(); // clean stale Firebase record
+            delete nr[p.id];
+          }else{
             // Same dateRange status but activeLeave has updated dates → override pre-written record
             if(!nr[p.id].confirmed&&al&&CARRY_DATE_RANGE.has(al.s)&&nr[p.id].s===al.s&&al.from&&date>=al.from&&(!al.det||date<=al.det)){
               if((nr[p.id].from||'')!==(al.from||'')||(nr[p.id].det||'')!==(al.det||'')){
@@ -2540,6 +2542,7 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
   useEffect(()=>{
     if(!attInitRef.current)return;
     const fills={};
+    const expiredIds=[];
     setRecords(prev=>{
       let changed=false;
       const nr={...prev};
@@ -2550,7 +2553,7 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
         if(nr[p.id]?.cleared)return; // explicit clear — never carry over a tombstone
         if(nr[p.id]?.s){
           // Pre-written record whose date range has already passed — remove it and fall through
-          if(CARRY_DATE_RANGE.has(nr[p.id].s)&&nr[p.id].det&&nr[p.id].det<date){delete nr[p.id];fills[p.id]={s:'',cleared:true};changed=true;}
+          if(CARRY_DATE_RANGE.has(nr[p.id].s)&&nr[p.id].det&&nr[p.id].det<date){delete nr[p.id];expiredIds.push(p.id);changed=true;}
           else{
             // Same dateRange status but activeLeave has updated dates → override pre-written record
             if(al&&CARRY_DATE_RANGE.has(al.s)&&nr[p.id].s===al.s&&al.from&&date>=al.from&&(!al.det||date<=al.det)){
@@ -2578,6 +2581,7 @@ const listenerPausedRef=useRef(false); // blocks attendance listener from overwr
       });
       return changed?nr:prev;
     });
+    if(expiredIds.length)expiredIds.forEach(id=>DB.ref(`${attPath}/records/${id}`).remove());
     if(Object.keys(fills).length){
       Promise.all(Object.entries(fills).map(([id,r])=>
         DB.ref(`${attPath}/records/${id}`).transaction(curr=>curr&&curr.s&&curr.s!==r.s?undefined:r)
